@@ -47,6 +47,13 @@
   --agent-developer: #f97316; /* orange */
   --agent-product-designer: #ec4899; /* pink */
   --agent-qa: #14b8a6; /* teal */
+
+  --agent-red: #ef4444;
+  --agent-amber: #f59e0b;
+  --agent-lime: #65a30d;
+  --agent-cyan: #06b6d4;
+  --agent-indigo: #6366f1;
+  --agent-rose: #f43f5e;
 }
 
 .dark {
@@ -88,6 +95,13 @@
   --agent-developer: #fb923c;
   --agent-product-designer: #f472b6;
   --agent-qa: #2dd4bf;
+
+  --agent-red: #f87171;
+  --agent-amber: #fbbf24;
+  --agent-lime: #a3e635;
+  --agent-cyan: #22d3ee;
+  --agent-indigo: #818cf8;
+  --agent-rose: #fb7185;
 }
 
 @theme inline {

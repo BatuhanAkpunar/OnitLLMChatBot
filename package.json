@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:agents": "node --env-file=.env.local scripts/seed-agents.mjs"
   },
   "dependencies": {
     "@openrouter/ai-sdk-provider": "^2.9.0",

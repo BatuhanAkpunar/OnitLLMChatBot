@@ -7,7 +7,9 @@ export default async function AdminAgentsPage() {
   const admin = createAdminClient();
   const { data: agents } = await admin
     .from("agent_configs")
-    .select("key, display_name, handle, color, description, system_prompt, version")
+    .select(
+      "key, display_name, handle, color, description, system_prompt, version, enabled, sort_order",
+    )
     .order("sort_order");
 
   return (
