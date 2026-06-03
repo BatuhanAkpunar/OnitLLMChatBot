@@ -280,3 +280,59 @@
   color: #e06c75;
 }
 
+/* ---------------------------------------------------------------------------
+   BorderGlow — subtle, always-on animated composer border
+--------------------------------------------------------------------------- */
+@keyframes onit-border-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.onit-border-glow {
+  --obg-radius: 16px;
+  --obg-base: rgba(150, 160, 190, 0.14);
+  --obg-bright: rgba(150, 160, 190, 0.6);
+  position: relative;
+  z-index: 0;
+  padding: 1px;
+  border-radius: var(--obg-radius);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.dark .onit-border-glow {
+  --obg-base: rgba(190, 200, 255, 0.16);
+  --obg-bright: rgba(190, 200, 255, 0.72);
+}
+
+/* oversized rotating conic; the inner card covers all but a 1px ring,
+   so a faintly glowing border shows with a brighter arc sweeping around */
+.onit-border-glow::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  z-index: 0;
+  background: conic-gradient(
+    from 0deg,
+    var(--obg-base) 0deg,
+    var(--obg-base) 285deg,
+    var(--obg-bright) 345deg,
+    var(--obg-base) 360deg
+  );
+  animation: onit-border-spin 7s linear infinite;
+}
+
+.onit-border-glow__inner {
+  position: relative;
+  z-index: 1;
+  border-radius: calc(var(--obg-radius) - 1px);
+  background: var(--card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onit-border-glow::before {
+    animation: none;
+  }
+}
+

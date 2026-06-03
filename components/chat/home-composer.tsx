@@ -1,10 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { createProjectAndGetId } from "@/app/(app)/actions";
+import { BorderGlow } from "@/components/ui/border-glow";
 import type { Agent } from "./chat-view";
+
+const STARTERS = [
+  "Turn this idea into user stories with acceptance criteria",
+  "Draft an MVP plan and milestones for a new feature",
+  "Review this code and suggest improvements",
+  "Write test cases for a login form",
+];
 
 export function HomeComposer({
   userName,
@@ -22,6 +30,18 @@ export function HomeComposer({
   const [busy, setBusy] = useState(false);
 
   const firstName = userName?.trim().split(/\s+/)[0] || null;
+
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [input]);
+
+  function fillStarter(text: string) {
+    setInput(text);
+    requestAnimationFrame(() => taRef.current?.focus());
+  }
 
   async function start() {
     const text = input.trim();
@@ -67,7 +87,7 @@ export function HomeComposer({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-2 shadow-sm transition-colors focus-within:border-foreground/20">
+        <BorderGlow radius={16} className="shadow-sm" innerClassName="p-2">
           <textarea
             ref={taRef}
             value={input}
@@ -103,7 +123,7 @@ export function HomeComposer({
               <PaperPlaneRight size={16} weight="fill" />
             </button>
           </div>
-        </div>
+        </BorderGlow>
 
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           {agents.map((a) => (
@@ -118,6 +138,19 @@ export function HomeComposer({
                 style={{ backgroundColor: `var(--agent-${a.color})` }}
               />
               {a.handle}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {STARTERS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => fillStarter(s)}
+              className="rounded-xl border border-border bg-card/50 px-3.5 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              {s}
             </button>
           ))}
         </div>

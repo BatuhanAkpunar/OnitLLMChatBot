@@ -96,6 +96,7 @@ export async function POST(req: Request) {
 
   const timeout = new AbortController();
   const timer = setTimeout(() => timeout.abort(), OPENROUTER_TIMEOUT_MS);
+  let aborted = false;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -155,11 +156,15 @@ export async function POST(req: Request) {
           outTok += u?.outputTokens ?? 0;
         } catch {}
       } catch {
-        status = "error";
-        if (!answer) {
-          answer =
-            "Sorry — I couldn't complete that response (the model timed out or failed). Please try again.";
-          send({ type: "answer", delta: answer });
+        if (aborted) {
+          status = "complete";
+        } else {
+          status = "error";
+          if (!answer) {
+            answer =
+              "Sorry — I couldn't complete that response (the model timed out or failed). Please try again.";
+            send({ type: "answer", delta: answer });
+          }
         }
       } finally {
         clearTimeout(timer);
@@ -194,6 +199,11 @@ export async function POST(req: Request) {
           controller.close();
         } catch {}
       }
+    },
+    cancel() {
+      aborted = true;
+      clearTimeout(timer);
+      timeout.abort();
     },
   });
 

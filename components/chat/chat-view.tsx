@@ -1,10 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CaretRight, PaperPlaneRight } from "@phosphor-icons/react";
+import {
+  CaretRight,
+  PaperPlaneRight,
+  Stop,
+  Copy,
+  ArrowClockwise,
+  PencilSimple,
+  ArrowDown,
+} from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { Markdown } from "./markdown";
+import { BorderGlow } from "@/components/ui/border-glow";
 import { parseMentions } from "@/lib/mentions";
-import { sendUserMessage, setProjectMode } from "@/app/(app)/actions";
+import {
+  sendUserMessage,
+  setProjectMode,
+  deleteMessage,
+  truncateFromMessage,
+} from "@/app/(app)/actions";
 
 export type Agent = {
   key: string;
@@ -46,6 +61,9 @@ export function ChatView({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [collapseThinking, setCollapseThinking] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const [mention, setMention] = useState<{ open: boolean; query: string; start: number }>({
     open: false,
@@ -57,6 +75,8 @@ export function ChatView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const startedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const stoppedRef = useRef(false);
 
   const agentByKey = useMemo(
     () => Object.fromEntries(agents.map((a) => [a.key, a])) as Record<string, Agent>,
@@ -69,8 +89,7 @@ export function ChatView({
     const q = mention.query.toLowerCase();
     return agents.filter(
       (a) =>
-        a.handle.toLowerCase().includes(q) ||
-        a.display_name.toLowerCase().includes(q),
+        a.handle.toLowerCase().includes(q) || a.display_name.toLowerCase().includes(q),
     );
   }, [mention, agents]);
 
@@ -79,8 +98,18 @@ export function ChatView({
   }, []);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+    if (atBottom) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }
+  }, [messages, atBottom]);
+
+  // auto-grow the composer textarea
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+  }, [input]);
 
   // Auto-send the first message typed on the home screen.
   useEffect(() => {
@@ -115,6 +144,18 @@ export function ChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function onScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  }
+
+  function scrollToBottom() {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setAtBottom(true);
+  }
+
   function toggleThinking() {
     setCollapseThinking((c) => {
       const next = !c;
@@ -145,8 +186,7 @@ export function ChatView({
   function pickMention(agent: Agent) {
     const ta = taRef.current;
     const pos = ta?.selectionStart ?? input.length;
-    const next =
-      input.slice(0, mention.start) + agent.handle + " " + input.slice(pos);
+    const next = input.slice(0, mention.start) + agent.handle + " " + input.slice(pos);
     setInput(next);
     setMention({ open: false, query: "", start: -1 });
     requestAnimationFrame(() => ta?.focus());
@@ -158,11 +198,14 @@ export function ChatView({
       ...m,
       { id: aid, role: "agent", agent_key: key, content: "", thinking: "", status: "streaming" },
     ]);
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, agentKey: key, mode }),
+        signal: ac.signal,
       });
       if (!res.ok || !res.body) {
         const msg =
@@ -200,9 +243,7 @@ export function ChatView({
             setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: answerAcc } : x)));
           } else if (evt.type === "final") {
             const finalContent = evt.content ?? answerAcc;
-            setMessages((m) =>
-              m.map((x) => (x.id === aid ? { ...x, content: finalContent } : x)),
-            );
+            setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: finalContent } : x)));
           } else if (evt.type === "done") {
             setMessages((m) =>
               m.map((x) =>
@@ -212,39 +253,103 @@ export function ChatView({
           }
         }
       }
-    } catch {
-      setMessages((m) =>
-        m.map((x) =>
-          x.id === aid
-            ? { ...x, status: "error", content: x.content || "Network error. Please try again." }
-            : x,
-        ),
-      );
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") {
+        setMessages((m) => m.map((x) => (x.id === aid ? { ...x, status: "complete" } : x)));
+      } else {
+        setMessages((m) =>
+          m.map((x) =>
+            x.id === aid
+              ? { ...x, status: "error", content: x.content || "Network error. Please try again." }
+              : x,
+          ),
+        );
+      }
+    } finally {
+      abortRef.current = null;
     }
   }
 
   async function submit(text: string, forcedAgents?: string[]) {
     if (!text.trim() || busy) return;
     setBusy(true);
+    stoppedRef.current = false;
     setMention({ open: false, query: "", start: -1 });
 
     const mentioned =
-      forcedAgents ??
-      parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
+      forcedAgents ?? parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
     const targets = mentioned.length ? mentioned : [agentKey];
 
     setMessages((m) => [
       ...m,
       { id: `tmp-u-${Date.now()}`, role: "user", agent_key: null, content: text, status: "complete" },
     ]);
+    setAtBottom(true);
 
     await sendUserMessage(projectId, text);
     setAgentKey(targets[targets.length - 1]);
 
     for (const key of targets) {
       await runAgent(key);
+      if (stoppedRef.current) break;
     }
     setBusy(false);
+  }
+
+  function send() {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    submit(text);
+  }
+
+  function stop() {
+    stoppedRef.current = true;
+    abortRef.current?.abort();
+  }
+
+  async function copyMessage(content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Could not copy");
+    }
+  }
+
+  async function regenerate(message: Message) {
+    if (busy || !message.agent_key) return;
+    setBusy(true);
+    stoppedRef.current = false;
+    setMessages((m) => m.filter((x) => x.id !== message.id));
+    if (!message.id.startsWith("tmp-")) {
+      try {
+        await deleteMessage(message.id);
+      } catch {}
+    }
+    await runAgent(message.agent_key);
+    setBusy(false);
+  }
+
+  function startEdit(message: Message) {
+    setEditingId(message.id);
+    setEditValue(message.content);
+  }
+
+  async function saveEdit(message: Message) {
+    const text = editValue.trim();
+    setEditingId(null);
+    if (!text || busy) return;
+    setMessages((m) => {
+      const idx = m.findIndex((x) => x.id === message.id);
+      return idx >= 0 ? m.slice(0, idx) : m;
+    });
+    if (!message.id.startsWith("tmp-")) {
+      try {
+        await truncateFromMessage(message.id);
+      } catch {}
+    }
+    await submit(text);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -271,18 +376,13 @@ export function ChatView({
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const text = input.trim();
-      setInput("");
-      submit(text);
+      send();
     }
   }
 
   const lastMessage = messages[messages.length - 1];
   const showPlanActions =
-    mode === "plan" &&
-    !busy &&
-    lastMessage?.role === "agent" &&
-    lastMessage.status === "complete";
+    mode === "plan" && !busy && lastMessage?.role === "agent" && lastMessage.status === "complete";
 
   return (
     <div className="flex h-full flex-col">
@@ -303,44 +403,64 @@ export function ChatView({
       </div>
 
       {/* Messages */}
-      <div className="min-h-0 flex-1 overflow-y-auto" ref={scrollRef}>
-        <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
-          {messages.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Mention an agent with @ (e.g. {activeAgent?.handle ?? "@Analyst"}) or just type to
-              message {activeAgent?.display_name ?? "an agent"}.
-            </p>
-          ) : null}
-          {messages.map((m) => (
-            <MessageRow
-              key={m.id}
-              message={m}
-              agent={m.agent_key ? agentByKey[m.agent_key] : undefined}
-              collapseThinking={collapseThinking}
-              onToggleThinking={toggleThinking}
-            />
-          ))}
-          {showPlanActions ? (
-            <div className="flex gap-2 pl-0.5">
-              <button
-                type="button"
-                onClick={() =>
-                  submit("Approved — please continue.", [lastMessage.agent_key!])
-                }
-                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Approve
-              </button>
-              <button
-                type="button"
-                onClick={() => taRef.current?.focus()}
-                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
-              >
-                Modify
-              </button>
-            </div>
-          ) : null}
+      <div className="relative min-h-0 flex-1">
+        <div className="h-full overflow-y-auto" ref={scrollRef} onScroll={onScroll}>
+          <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+            {messages.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Mention an agent with @ (e.g. {activeAgent?.handle ?? "@Analyst"}) or just type to
+                message {activeAgent?.display_name ?? "an agent"}.
+              </p>
+            ) : null}
+            {messages.map((m) => (
+              <MessageRow
+                key={m.id}
+                message={m}
+                agent={m.agent_key ? agentByKey[m.agent_key] : undefined}
+                collapseThinking={collapseThinking}
+                onToggleThinking={toggleThinking}
+                busy={busy}
+                editing={editingId === m.id}
+                editValue={editValue}
+                onEditChange={setEditValue}
+                onCopy={copyMessage}
+                onRegenerate={regenerate}
+                onStartEdit={startEdit}
+                onSaveEdit={saveEdit}
+                onCancelEdit={() => setEditingId(null)}
+              />
+            ))}
+            {showPlanActions ? (
+              <div className="flex gap-2 pl-0.5">
+                <button
+                  type="button"
+                  onClick={() => submit("Approved — please continue.", [lastMessage.agent_key!])}
+                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => taRef.current?.focus()}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
+                >
+                  Modify
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
+
+        {!atBottom ? (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            aria-label="Scroll to bottom"
+            className="absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+          >
+            <ArrowDown size={16} />
+          </button>
+        ) : null}
       </div>
 
       {/* Composer */}
@@ -382,15 +502,13 @@ export function ChatView({
                       style={{ backgroundColor: `var(--agent-${a.color})` }}
                     />
                     <span className="font-medium">{a.handle}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {a.display_name}
-                    </span>
+                    <span className="truncate text-xs text-muted-foreground">{a.display_name}</span>
                   </button>
                 ))}
               </div>
             ) : null}
 
-            <div className="flex items-end gap-2 rounded-xl border border-border bg-card p-2">
+            <BorderGlow radius={14} innerClassName="flex items-end gap-2 p-2">
               <textarea
                 ref={taRef}
                 value={input}
@@ -398,26 +516,58 @@ export function ChatView({
                 onKeyDown={onKeyDown}
                 rows={1}
                 placeholder="Message agents… use @ to mention"
-                className="max-h-40 min-h-[24px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
+                className="max-h-48 min-h-[24px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  const text = input.trim();
-                  setInput("");
-                  submit(text);
-                }}
-                disabled={busy || !input.trim()}
-                aria-label="Send"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
-              >
-                <PaperPlaneRight size={16} weight="fill" />
-              </button>
-            </div>
+              {busy ? (
+                <button
+                  type="button"
+                  onClick={stop}
+                  aria-label="Stop"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity hover:opacity-90"
+                >
+                  <Stop size={14} weight="fill" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={send}
+                  disabled={!input.trim()}
+                  aria-label="Send"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                >
+                  <PaperPlaneRight size={16} weight="fill" />
+                </button>
+              )}
+            </BorderGlow>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function IconButton({
+  title,
+  onClick,
+  disabled,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -426,17 +576,74 @@ function MessageRow({
   agent,
   collapseThinking,
   onToggleThinking,
+  busy,
+  editing,
+  editValue,
+  onEditChange,
+  onCopy,
+  onRegenerate,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
 }: {
   message: Message;
   agent?: Agent;
   collapseThinking: boolean;
   onToggleThinking: () => void;
+  busy: boolean;
+  editing: boolean;
+  editValue: string;
+  onEditChange: (v: string) => void;
+  onCopy: (content: string) => void;
+  onRegenerate: (m: Message) => void;
+  onStartEdit: (m: Message) => void;
+  onSaveEdit: (m: Message) => void;
+  onCancelEdit: () => void;
 }) {
   if (message.role === "user") {
+    if (editing) {
+      return (
+        <div className="flex justify-end">
+          <div className="w-full max-w-[85%]">
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={(e) => onEditChange(e.target.value)}
+              rows={3}
+              className="w-full resize-none rounded-2xl border border-border bg-card p-3 text-sm outline-none focus:ring-2 focus:ring-ring/20"
+            />
+            <div className="mt-1.5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="rounded-md border border-border px-3 py-1 text-xs transition-colors hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => onSaveEdit(message)}
+                className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Save &amp; resend
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="flex justify-end">
+      <div className="group flex flex-col items-end gap-1">
         <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm">
           {message.content}
+        </div>
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <IconButton title="Copy" onClick={() => onCopy(message.content)}>
+            <Copy size={14} />
+          </IconButton>
+          <IconButton title="Edit" onClick={() => onStartEdit(message)}>
+            <PencilSimple size={14} />
+          </IconButton>
         </div>
       </div>
     );
@@ -444,7 +651,7 @@ function MessageRow({
 
   const color = agent ? `var(--agent-${agent.color})` : "var(--muted-foreground)";
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="group flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-xs font-medium" style={{ color }}>
@@ -465,11 +672,7 @@ function MessageRow({
             onClick={onToggleThinking}
             className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            <CaretRight
-              size={12}
-              weight="bold"
-              className={collapseThinking ? "" : "rotate-90"}
-            />
+            <CaretRight size={12} weight="bold" className={collapseThinking ? "" : "rotate-90"} />
             Thinking
           </button>
           {!collapseThinking ? (
@@ -483,6 +686,17 @@ function MessageRow({
       {message.content ? (
         <div className="text-sm">
           <Markdown>{message.content}</Markdown>
+        </div>
+      ) : null}
+
+      {message.status !== "streaming" && message.content ? (
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <IconButton title="Copy" onClick={() => onCopy(message.content)}>
+            <Copy size={14} />
+          </IconButton>
+          <IconButton title="Regenerate" onClick={() => onRegenerate(message)} disabled={busy}>
+            <ArrowClockwise size={14} />
+          </IconButton>
         </div>
       ) : null}
     </div>

@@ -100,3 +100,103 @@ export async function setProjectMode(
     .eq("id", projectId);
   return { ok: !error };
 }
+
+// --- Chat management (user client; RLS scopes everything to the owner) -------
+
+function likePattern(q: string) {
+  return `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
+export async function renameProject(
+  projectId: string,
+  title: string,
+): Promise<{ ok: boolean }> {
+  const t = title.trim();
+  if (!t) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ title: t.slice(0, 80) })
+    .eq("id", projectId);
+  if (error) return { ok: false };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function deleteProject(
+  projectId: string,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("projects").delete().eq("id", projectId);
+  if (error) return { ok: false };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export type ProjectHit = {
+  id: string;
+  title: string;
+  last_message_at: string;
+};
+
+export async function searchProjects(query: string): Promise<ProjectHit[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const supabase = await createClient();
+  const pattern = likePattern(q);
+
+  const [titleRes, contentRes] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, title, last_message_at")
+      .ilike("title", pattern)
+      .order("last_message_at", { ascending: false })
+      .limit(20),
+    supabase.from("messages").select("project_id").ilike("content", pattern).limit(60),
+  ]);
+
+  const ids = [...new Set((contentRes.data ?? []).map((m) => m.project_id))];
+  let contentProjects: ProjectHit[] = [];
+  if (ids.length) {
+    const { data } = await supabase
+      .from("projects")
+      .select("id, title, last_message_at")
+      .in("id", ids);
+    contentProjects = (data ?? []) as ProjectHit[];
+  }
+
+  const merged = new Map<string, ProjectHit>();
+  for (const p of [...(titleRes.data ?? []), ...contentProjects]) {
+    merged.set(p.id, p as ProjectHit);
+  }
+  return [...merged.values()]
+    .sort((a, b) => (a.last_message_at < b.last_message_at ? 1 : -1))
+    .slice(0, 20);
+}
+
+export async function deleteMessage(
+  messageId: string,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("messages").delete().eq("id", messageId);
+  return { ok: !error };
+}
+
+/** Deletes a message and every message after it in the same chat. */
+export async function truncateFromMessage(
+  messageId: string,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("project_id, created_at")
+    .eq("id", messageId)
+    .single();
+  if (!msg) return { ok: false };
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("project_id", msg.project_id)
+    .gte("created_at", msg.created_at);
+  return { ok: !error };
+}
