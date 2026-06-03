@@ -56,6 +56,7 @@ export function ChatView({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const startedRef = useRef(false);
 
   const agentByKey = useMemo(
     () => Object.fromEntries(agents.map((a) => [a.key, a])) as Record<string, Agent>,
@@ -80,6 +81,39 @@ export function ChatView({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
+
+  // Auto-send the first message typed on the home screen.
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem(`onit:pending:${projectId}`);
+      if (raw) sessionStorage.removeItem(`onit:pending:${projectId}`);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw) as { content?: string; agentKey?: string };
+      const content = pending.content?.trim();
+      if (!content) return;
+      if (pending.agentKey) setAgentKey(pending.agentKey);
+      const mentioned = parseMentions(
+        content,
+        agents.map((a) => ({ key: a.key, handle: a.handle })),
+      );
+      const targets = mentioned.length
+        ? mentioned
+        : pending.agentKey
+          ? [pending.agentKey]
+          : undefined;
+      submit(content, targets);
+    } catch {
+      // ignore malformed pending payloads
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggleThinking() {
     setCollapseThinking((c) => {

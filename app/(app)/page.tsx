@@ -1,28 +1,24 @@
-import { createProject } from "./actions";
+import { getCurrentUser } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
+import { HomeComposer } from "@/components/chat/home-composer";
+import type { Agent } from "@/components/chat/chat-view";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: agents } = await supabase
+    .from("agent_configs")
+    .select("key, display_name, handle, color, description")
+    .eq("enabled", true)
+    .order("sort_order");
+
+  const agentList = (agents ?? []) as Agent[];
+
   return (
-    <div className="flex h-full items-center justify-center p-6">
-      <div className="max-w-md text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-lg font-semibold">
-          O
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight">
-          Start a conversation
-        </h1>
-        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">
-          Create a chat and bring in AI roles like @Analyst, @ProductManager,
-          @Developer, @QA — each with its own expertise.
-        </p>
-        <form action={createProject} className="mt-5">
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            New chat
-          </button>
-        </form>
-      </div>
-    </div>
+    <HomeComposer
+      userName={user?.name ?? null}
+      agents={agentList}
+      defaultAgentKey={agentList[0]?.key ?? "analyst"}
+    />
   );
 }

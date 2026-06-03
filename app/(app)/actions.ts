@@ -24,6 +24,23 @@ export async function createProject() {
   redirect(`/p/${data.id}`);
 }
 
+/** Creates a project and returns its id (no redirect) — used by the home composer. */
+export async function createProjectAndGetId(): Promise<{ id: string | null }> {
+  const user = await getCurrentUser();
+  if (!user) return { id: null };
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("projects")
+    .insert({ owner_id: user.id, title: "New chat" })
+    .select("id")
+    .single();
+
+  if (!data) return { id: null };
+  revalidatePath("/", "layout");
+  return { id: data.id };
+}
+
 /** Inserts a single user message (used once before fanning out to agents). */
 export async function sendUserMessage(
   projectId: string,
