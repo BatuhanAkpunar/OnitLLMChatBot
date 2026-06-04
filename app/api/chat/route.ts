@@ -43,13 +43,27 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  const { data: project } = await admin
+  const { data: project, error: projErr } = await admin
     .from("projects")
     .select("id, owner_id")
     .eq("id", projectId)
-    .single();
-  if (!project || project.owner_id !== user.id) {
-    return new Response("Chat not found.", { status: 404 });
+    .maybeSingle();
+
+  if (!project) {
+    // TEMP diagnostic: distinguish a broken service key from a missing project.
+    const { count, error: probeErr } = await admin
+      .from("agent_configs")
+      .select("key", { count: "exact", head: true });
+    const diag = probeErr
+      ? `admin-read-failed: ${probeErr.message}`
+      : `project-missing (admin read ${count ?? "?"} agents)${projErr ? `; ${projErr.message}` : ""}`;
+    return new Response(`Chat not found. [${diag}]`, { status: 404 });
+  }
+  if (project.owner_id !== user.id) {
+    return new Response(
+      `Chat not found. [owner ${String(project.owner_id).slice(0, 8)} != you ${user.id.slice(0, 8)}]`,
+      { status: 404 },
+    );
   }
 
   const { data: agentRows } = await admin
