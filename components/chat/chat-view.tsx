@@ -208,10 +208,14 @@ export function ChatView({
         signal: ac.signal,
       });
       if (!res.ok || !res.body) {
+        let detail = "";
+        try {
+          detail = (await res.text()).slice(0, 160).trim();
+        } catch {}
         const msg =
           res.status === 401
             ? "Your session expired. Please sign in again."
-            : "Something went wrong. Please try again.";
+            : `Couldn't reach the model (HTTP ${res.status})${detail ? ` — ${detail}` : ""}. Please try again.`;
         setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: msg, status: "error" } : x)));
         return;
       }
