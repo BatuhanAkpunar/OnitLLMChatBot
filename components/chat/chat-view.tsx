@@ -9,15 +9,18 @@ import {
   ArrowClockwise,
   PencilSimple,
   ArrowDown,
+  Lightning,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
+import { RoutingControl } from "./routing-control";
 import { parseMentions } from "@/lib/mentions";
 import {
   sendUserMessage,
   setProjectMode,
   deleteMessage,
   truncateFromMessage,
+  routeToAgents,
 } from "@/app/(app)/actions";
 
 export type Agent = {
@@ -63,7 +66,8 @@ export function ChatView({
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
-  const [selected, setSelected] = useState<string[]>([defaultAgentKey]);
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [routing, setRouting] = useState(false);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -151,7 +155,7 @@ export function ChatView({
       };
       const content = pending.content?.trim();
       if (!content) return;
-      if (pending.agents?.length) setSelected(pending.agents);
+      if (pending.agents?.length) setPinned(pending.agents);
       if (pending.agentKey) setAgentKey(pending.agentKey);
       if (
         pending.mode === "plan" ||
@@ -195,10 +199,6 @@ export function ChatView({
       localStorage.setItem(THINKING_PREF_KEY, next ? "1" : "0");
       return next;
     });
-  }
-
-  function toggleRole(key: string) {
-    setSelected((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
   }
 
   async function pickMode(next: Mode) {
@@ -322,20 +322,38 @@ export function ChatView({
     setMention({ open: false, query: "", start: -1 });
 
     const inline = parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
-    const targets =
-      forcedAgents ??
-      (() => {
-        const set = [...new Set([...selected, ...inline])];
-        return set.length ? set : [agentKey];
-      })();
 
     setMessages((m) => [
       ...m,
       { id: `tmp-u-${Date.now()}`, role: "user", agent_key: null, content: text, status: "complete" },
     ]);
     setAtBottom(true);
-
     await sendUserMessage(projectId, text);
+
+    let targets: string[];
+    if (forcedAgents) {
+      targets = forcedAgents;
+    } else if (pinned.length) {
+      targets = [...new Set([...pinned, ...inline])];
+    } else if (inline.length) {
+      targets = inline;
+    } else {
+      // Auto: let the orchestrator pick the right role(s) for this request.
+      setRouting(true);
+      try {
+        const { keys } = await routeToAgents(text);
+        targets = keys.length ? keys : [agentKey];
+        const handles = agents
+          .filter((a) => targets.includes(a.key))
+          .map((a) => a.handle)
+          .join(", ");
+        if (handles) toast(`Routed to ${handles}`);
+      } catch {
+        targets = [agentKey];
+      } finally {
+        setRouting(false);
+      }
+    }
     setAgentKey(targets[targets.length - 1]);
 
     for (const key of targets) {
@@ -436,24 +454,8 @@ export function ChatView({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4">
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-white/10 px-4">
         <h2 className="truncate text-sm font-medium">{title}</h2>
-        <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-white/5 p-0.5 text-xs">
-          {(["build", "plan", "discuss"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => pickMode(m)}
-              className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
-                mode === m
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Messages */}
@@ -462,8 +464,8 @@ export function ChatView({
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Choose who&apos;s <span className="text-foreground">on it</span>{" "}
-                below, then brief them — or @mention a role inline.
+                Describe what you need — Onit routes it to the right roles. Pin
+                roles or @mention to choose yourself.
               </p>
             ) : null}
             {messages.map((m) => (
@@ -484,6 +486,12 @@ export function ChatView({
                 onCancelEdit={() => setEditingId(null)}
               />
             ))}
+            {routing ? (
+              <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
+                <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
+                Onit is routing your request…
+              </div>
+            ) : null}
             {showPlanActions ? (
               <div className="flex gap-2 pl-0.5">
                 <button
@@ -520,39 +528,6 @@ export function ChatView({
       {/* Composer */}
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-3xl px-4 py-3">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              On it
-            </span>
-            {agents.map((a) => {
-              const on = selected.includes(a.key);
-              return (
-                <button
-                  key={a.key}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleRole(a.key)}
-                  title={on ? `Remove ${a.handle}` : `Put ${a.handle} on it`}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                    on
-                      ? "bg-white/10 text-foreground"
-                      : "border-white/10 text-muted-foreground hover:bg-white/5"
-                  }`}
-                  style={on ? { borderColor: `var(--agent-${a.color})` } : undefined}
-                >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{
-                      backgroundColor: `var(--agent-${a.color})`,
-                      opacity: on ? 1 : 0.45,
-                    }}
-                  />
-                  {a.handle}
-                </button>
-              );
-            })}
-          </div>
-
           <div className="relative">
             {mention.open && filtered.length ? (
               <div className="glass-strong absolute bottom-full mb-2 w-64 overflow-hidden rounded-xl shadow-lg">
@@ -579,36 +554,57 @@ export function ChatView({
               </div>
             ) : null}
 
-            <div className="glass-strong glass-edge flex items-end gap-2 rounded-2xl p-2">
+            <div className="glass-strong glass-edge rounded-2xl p-2">
               <textarea
                 ref={taRef}
                 value={input}
                 onChange={onChange}
                 onKeyDown={onKeyDown}
                 rows={1}
-                placeholder="Message agents… use @ to mention"
-                className="max-h-48 min-h-[24px] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
+                placeholder="Describe what you need — Onit routes it, or @mention a role…"
+                className="max-h-48 min-h-[28px] w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
-              {busy ? (
-                <button
-                  type="button"
-                  onClick={stop}
-                  aria-label="Stop"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity hover:opacity-90"
-                >
-                  <Stop size={14} weight="fill" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={send}
-                  disabled={!input.trim()}
-                  aria-label="Send"
-                  className="send-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-                >
-                  <PaperPlaneRight size={16} weight="fill" />
-                </button>
-              )}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
+                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-0.5">
+                    {(["build", "plan", "discuss"] as Mode[]).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => pickMode(m)}
+                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                          mode === m
+                            ? "bg-foreground text-background"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {MODE_LABELS[m]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {busy ? (
+                  <button
+                    type="button"
+                    onClick={stop}
+                    aria-label="Stop"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity hover:opacity-90"
+                  >
+                    <Stop size={14} weight="fill" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={!input.trim()}
+                    aria-label="Send"
+                    className="send-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                  >
+                    <PaperPlaneRight size={16} weight="fill" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -5,6 +5,50 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/user";
+import { generateText } from "ai";
+import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+
+/**
+ * Orchestrator router: analyzes a request and returns the role key(s) best
+ * suited to handle it (most relevant first). Falls back to the first role.
+ */
+export async function routeToAgents(text: string): Promise<{ keys: string[] }> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("agent_configs")
+    .select("key, display_name, description")
+    .eq("enabled", true)
+    .order("sort_order");
+  const list = data ?? [];
+  const fallback = list[0] ? [list[0].key] : [];
+  if (!list.length || !text.trim()) return { keys: fallback };
+
+  const roster = list
+    .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
+    .join("\n");
+  try {
+    const { text: out } = await generateText({
+      model: openrouter(SUMMARY_MODEL),
+      system:
+        "You route a software-team request to the right role(s). Pick the 1-3 most relevant roles for the request. Reply with ONLY their keys, comma-separated, most relevant first - no other text.",
+      prompt: `Roles:\n${roster}\n\nRequest: ${text}\n\nKeys:`,
+      maxOutputTokens: 24,
+    });
+    const valid = new Set(list.map((a) => a.key));
+    const keys = [
+      ...new Set(
+        out
+          .toLowerCase()
+          .split(/[^a-z0-9_]+/)
+          .map((s) => s.trim())
+          .filter((k) => valid.has(k)),
+      ),
+    ].slice(0, 3);
+    return { keys: keys.length ? keys : fallback };
+  } catch {
+    return { keys: fallback };
+  }
+}
 
 export async function createProject() {
   const user = await getCurrentUser();
