@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PaperPlaneRight, Plus, Sparkle } from "@phosphor-icons/react";
+import {
+  PaperPlaneRight,
+  CheckCircle,
+  Circle,
+  X,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { TeamConstellation } from "@/components/hero/team-constellation";
@@ -12,9 +18,9 @@ import type { Agent } from "./chat-view";
 type Mode = "build" | "plan" | "discuss";
 
 const MODES: { key: Mode; label: string; tip: string }[] = [
-  { key: "build", label: "Build", tip: "Roles deliver the result directly." },
-  { key: "plan", label: "Plan", tip: "Roles outline the approach and check in first." },
-  { key: "discuss", label: "Discuss", tip: "Roles weigh the options and trade-offs together." },
+  { key: "build", label: "Build", tip: "The team delivers the result directly." },
+  { key: "plan", label: "Plan", tip: "The team outlines the approach and checks in first." },
+  { key: "discuss", label: "Discuss", tip: "The team weighs the options and trade-offs together." },
 ];
 
 export function HomeComposer({
@@ -33,29 +39,38 @@ export function HomeComposer({
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<Mode>("build");
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<string[]>([defaultAgentKey]);
 
   const firstName = userName?.trim().split(/\s+/)[0] || null;
+  const mentionList = useMemo(
+    () => agents.map((a) => ({ key: a.key, handle: a.handle })),
+    [agents],
+  );
 
-  // Build a concrete example from the real roster (first two roles).
+  const mentions = useMemo(
+    () => parseMentions(input, mentionList),
+    [input, mentionList],
+  );
+
+  // Who's "on it": the roles the user put on the task, plus anyone @mentioned.
+  const targets = useMemo(() => {
+    const set = [...new Set([...selected, ...mentions])];
+    return set.length ? set : agents[0] ? [agents[0].key] : [];
+  }, [selected, mentions, agents]);
+
+  const selectedAgents = agents.filter((a) => selected.includes(a.key));
+  const activeMode = MODES.find((m) => m.key === mode) ?? MODES[0];
+
   const example = useMemo(() => {
-    const a = agents[0]?.handle ?? "@Analyst";
-    const b = agents[2]?.handle ?? "@Developer";
-    return `${a} turn this idea into user stories, then ${b} build a first version.`;
+    const a = agents[2]?.handle ?? "@Developer";
+    const b = agents[5]?.handle ?? "@QA";
+    return `Build a password-less login: ${a} implement it and ${b} cover the edge cases.`;
   }, [agents]);
 
-  const activeKeys = useMemo(() => {
-    const mentioned = parseMentions(
-      input,
-      agents.map((a) => ({ key: a.key, handle: a.handle })),
-    );
-    return mentioned.length ? mentioned : [defaultAgentKey];
-  }, [input, agents, defaultAgentKey]);
-
-  const activeMode = MODES.find((m) => m.key === mode) ?? MODES[0];
-  const hasMention = parseMentions(
-    input,
-    agents.map((a) => ({ key: a.key, handle: a.handle })),
-  ).length > 0;
+  function toggleRole(key: string) {
+    setSelected((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
+    requestAnimationFrame(() => taRef.current?.focus());
+  }
 
   function autosize() {
     const ta = taRef.current;
@@ -64,7 +79,7 @@ export function HomeComposer({
     ta.style.height = `${Math.min(ta.scrollHeight, 220)}px`;
   }
 
-  async function openChat(text: string, modeArg: Mode) {
+  async function openChat(text: string, modeArg: Mode, agentKeys: string[]) {
     setBusy(true);
     const { id } = await createProjectAndGetId();
     if (!id) {
@@ -74,7 +89,12 @@ export function HomeComposer({
     try {
       sessionStorage.setItem(
         `onit:pending:${id}`,
-        JSON.stringify({ content: text, agentKey: defaultAgentKey, mode: modeArg }),
+        JSON.stringify({
+          content: text,
+          agents: agentKeys,
+          agentKey: agentKeys[0] ?? defaultAgentKey,
+          mode: modeArg,
+        }),
       );
     } catch {
       // ignore storage failures; the chat will just open empty
@@ -84,22 +104,22 @@ export function HomeComposer({
 
   async function start() {
     const text = input.trim();
-    if (!text || busy) return;
+    if (!text || busy || targets.length === 0) return;
     if (!authed) {
       try {
         localStorage.setItem(
           "onit:anonPending",
-          JSON.stringify({ content: text, mode }),
+          JSON.stringify({ content: text, mode, agents: targets }),
         );
       } catch {}
       setBusy(true);
       await signInWithGoogle();
       return;
     }
-    openChat(text, mode);
+    openChat(text, mode, targets);
   }
 
-  // After an anonymous visitor signs in, replay the prompt they had typed.
+  // After an anonymous visitor signs in, replay the brief they had typed.
   useEffect(() => {
     if (!authed) return;
     let raw: string | null = null;
@@ -111,22 +131,19 @@ export function HomeComposer({
     }
     if (!raw) return;
     try {
-      const p = JSON.parse(raw) as { content?: string; mode?: string };
+      const p = JSON.parse(raw) as {
+        content?: string;
+        mode?: string;
+        agents?: string[];
+      };
       const text = p.content?.trim();
       if (!text) return;
       const m: Mode = p.mode === "plan" || p.mode === "discuss" ? p.mode : "build";
-      openChat(text, m);
+      const ks = p.agents?.length ? p.agents : [defaultAgentKey];
+      openChat(text, m, ks);
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
-
-  function insertHandle(handle: string) {
-    setInput((v) => (v.trim() ? `${v.trimEnd()} ${handle} ` : `${handle} `));
-    requestAnimationFrame(() => {
-      taRef.current?.focus();
-      autosize();
-    });
-  }
 
   function fillExample() {
     setInput(example);
@@ -145,7 +162,7 @@ export function HomeComposer({
 
   return (
     <div className="relative flex min-h-full items-center justify-center overflow-hidden px-6 py-12">
-      <TeamConstellation activeKeys={activeKeys} className="opacity-90" />
+      <TeamConstellation activeKeys={targets} className="opacity-90" />
 
       <div className="relative z-10 w-full max-w-2xl">
         <div className="mb-5">
@@ -157,13 +174,42 @@ export function HomeComposer({
             <span className="text-muted-foreground"> — on it.</span>
           </h1>
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            Describe a task and <span className="text-foreground">@mention</span>{" "}
-            the roles who should handle it — pick from the team below. Combine
-            several in one prompt and each replies in its lane.
+            Put the right roles{" "}
+            <span className="text-foreground">on the task</span> — tap them in the
+            team below — then brief them. Mix several and each works in its lane.
           </p>
         </div>
 
         <div className="glass-strong glass-edge rounded-2xl p-2.5 shadow-sm">
+          {/* On it — who will act on this brief */}
+          <div className="flex flex-wrap items-center gap-1.5 px-1.5 pb-2 pt-1">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              On&nbsp;it
+            </span>
+            {selectedAgents.length ? (
+              selectedAgents.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => toggleRole(a.key)}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 py-0.5 pl-2 pr-1 text-xs transition-colors hover:bg-white/10"
+                  title={`Remove ${a.handle}`}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: `var(--agent-${a.color})` }}
+                  />
+                  {a.handle}
+                  <X size={11} className="text-muted-foreground group-hover:text-foreground" />
+                </button>
+              ))
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                tap a role below to put it on the task
+              </span>
+            )}
+          </div>
+
           <textarea
             ref={taRef}
             value={input}
@@ -174,10 +220,10 @@ export function HomeComposer({
             onKeyDown={onKeyDown}
             rows={2}
             autoFocus
-            placeholder={`Describe a task… e.g. “${agents[2]?.handle ?? "@Developer"} build a login form, ${agents[5]?.handle ?? "@QA"} add tests”`}
-            className="max-h-56 min-h-[56px] w-full resize-none bg-transparent px-3 py-2 text-[15px] outline-none"
+            placeholder="Brief your team… what should they build, plan or weigh in on?"
+            className="max-h-56 min-h-[52px] w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none"
           />
-          <div className="flex items-center justify-between gap-2 px-1 pb-1">
+          <div className="flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
             <div className="inline-flex items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-0.5">
               {MODES.map((m) => (
                 <button
@@ -197,11 +243,9 @@ export function HomeComposer({
             <button
               type="button"
               onClick={start}
-              disabled={busy || !input.trim()}
+              disabled={busy || !input.trim() || targets.length === 0}
               aria-label="Send"
-              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 ${
-                input.trim() && !busy ? "btn-glow" : ""
-              }`}
+              className="send-btn flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
             >
               <PaperPlaneRight size={16} weight="fill" />
             </button>
@@ -223,31 +267,28 @@ export function HomeComposer({
           </button>
         </div>
 
-        {/* The team — the core mechanic, made obvious for first-timers. */}
+        {/* The team — clearly selectable, with what each role does. */}
         <div className="mt-7">
           <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Your team · tap a role to add it to your prompt
+            Your team · tap to put a role on the task
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {agents.map((a) => {
-              const on = activeKeys.includes(a.key) && hasMention;
+              const on = selected.includes(a.key);
               return (
                 <button
                   key={a.key}
                   type="button"
-                  onClick={() => insertHandle(a.handle)}
-                  className={`group flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors ${
-                    on
-                      ? "border-foreground/30 bg-white/10"
-                      : "border-white/10 bg-white/5 hover:bg-white/10"
+                  aria-pressed={on}
+                  onClick={() => toggleRole(a.key)}
+                  className={`group flex items-center gap-2.5 rounded-xl border-2 p-2.5 text-left transition-all ${
+                    on ? "bg-white/10" : "border-white/10 bg-white/5 hover:bg-white/[0.08]"
                   }`}
+                  style={on ? { borderColor: `var(--agent-${a.color})` } : undefined}
                 >
                   <span
-                    className="h-2 w-2 shrink-0 rounded-full transition-transform"
-                    style={{
-                      backgroundColor: `var(--agent-${a.color})`,
-                      transform: on ? "scale(1.6)" : "scale(1)",
-                    }}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: `var(--agent-${a.color})` }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium">{a.handle}</div>
@@ -257,10 +298,19 @@ export function HomeComposer({
                       </div>
                     ) : null}
                   </div>
-                  <Plus
-                    size={14}
-                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
-                  />
+                  {on ? (
+                    <CheckCircle
+                      size={18}
+                      weight="fill"
+                      className="shrink-0"
+                      style={{ color: `var(--agent-${a.color})` }}
+                    />
+                  ) : (
+                    <Circle
+                      size={18}
+                      className="shrink-0 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground"
+                    />
+                  )}
                 </button>
               );
             })}

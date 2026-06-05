@@ -63,6 +63,7 @@ export function ChatView({
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
+  const [selected, setSelected] = useState<string[]>([defaultAgentKey]);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -145,10 +146,12 @@ export function ChatView({
       const pending = JSON.parse(raw) as {
         content?: string;
         agentKey?: string;
+        agents?: string[];
         mode?: string;
       };
       const content = pending.content?.trim();
       if (!content) return;
+      if (pending.agents?.length) setSelected(pending.agents);
       if (pending.agentKey) setAgentKey(pending.agentKey);
       if (
         pending.mode === "plan" ||
@@ -166,12 +169,8 @@ export function ChatView({
         content,
         agents.map((a) => ({ key: a.key, handle: a.handle })),
       );
-      const targets = mentioned.length
-        ? mentioned
-        : pending.agentKey
-          ? [pending.agentKey]
-          : undefined;
-      submit(content, targets);
+      const merged = [...new Set([...(pending.agents ?? []), ...mentioned])];
+      submit(content, merged.length ? merged : undefined);
     } catch {
       // ignore malformed pending payloads
     }
@@ -196,6 +195,10 @@ export function ChatView({
       localStorage.setItem(THINKING_PREF_KEY, next ? "1" : "0");
       return next;
     });
+  }
+
+  function toggleRole(key: string) {
+    setSelected((s) => (s.includes(key) ? s.filter((k) => k !== key) : [...s, key]));
   }
 
   async function pickMode(next: Mode) {
@@ -318,9 +321,13 @@ export function ChatView({
     stoppedRef.current = false;
     setMention({ open: false, query: "", start: -1 });
 
-    const mentioned =
-      forcedAgents ?? parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
-    const targets = mentioned.length ? mentioned : [agentKey];
+    const inline = parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
+    const targets =
+      forcedAgents ??
+      (() => {
+        const set = [...new Set([...selected, ...inline])];
+        return set.length ? set : [agentKey];
+      })();
 
     setMessages((m) => [
       ...m,
@@ -455,8 +462,8 @@ export function ChatView({
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Mention an agent with @ (e.g. {activeAgent?.handle ?? "@Analyst"}) or just type to
-                message {activeAgent?.display_name ?? "an agent"}.
+                Choose who&apos;s <span className="text-foreground">on it</span>{" "}
+                below, then brief them — or @mention a role inline.
               </p>
             ) : null}
             {messages.map((m) => (
@@ -513,20 +520,37 @@ export function ChatView({
       {/* Composer */}
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-3xl px-4 py-3">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Default agent</span>
-            <select
-              value={agentKey}
-              onChange={(e) => setAgentKey(e.target.value)}
-              className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs outline-none"
-            >
-              {agents.map((a) => (
-                <option key={a.key} value={a.key}>
-                  {a.display_name}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-muted-foreground">· @ to mention others</span>
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              On it
+            </span>
+            {agents.map((a) => {
+              const on = selected.includes(a.key);
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleRole(a.key)}
+                  title={on ? `Remove ${a.handle}` : `Put ${a.handle} on it`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                    on
+                      ? "bg-white/10 text-foreground"
+                      : "border-white/10 text-muted-foreground hover:bg-white/5"
+                  }`}
+                  style={on ? { borderColor: `var(--agent-${a.color})` } : undefined}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor: `var(--agent-${a.color})`,
+                      opacity: on ? 1 : 0.45,
+                    }}
+                  />
+                  {a.handle}
+                </button>
+              );
+            })}
           </div>
 
           <div className="relative">
@@ -580,9 +604,7 @@ export function ChatView({
                   onClick={send}
                   disabled={!input.trim()}
                   aria-label="Send"
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 ${
-                    input.trim() ? "btn-glow" : ""
-                  }`}
+                  className="send-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
                 >
                   <PaperPlaneRight size={16} weight="fill" />
                 </button>
