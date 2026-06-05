@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { List } from "@phosphor-icons/react";
+import { List, X } from "@phosphor-icons/react";
 import { AppSidebar } from "./app-sidebar";
 import type { CurrentUser } from "@/lib/auth/user";
 
@@ -19,35 +19,51 @@ export function AppShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex h-dvh overflow-hidden">
-      <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar md:block">
-        <AppSidebar user={user} projects={projects} />
+    <div className="relative flex h-dvh overflow-hidden">
+      <div className="onit-ambient" aria-hidden />
+
+      {/* desktop: floating glass sidebar */}
+      <aside className="relative z-10 hidden w-72 shrink-0 p-3 md:block">
+        <div className="glass glass-edge h-full overflow-hidden rounded-3xl">
+          <AppSidebar user={user} projects={projects} />
+        </div>
       </aside>
 
+      {/* mobile drawer */}
       {open ? (
         <div className="fixed inset-0 z-40 md:hidden">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <aside className="absolute left-0 top-0 h-full w-64 bg-sidebar shadow-xl">
-            <AppSidebar
-              user={user}
-              projects={projects}
-              onNavigate={() => setOpen(false)}
-            />
+          <aside className="absolute left-0 top-0 h-full w-72 p-3">
+            <div className="glass glass-edge relative h-full overflow-hidden rounded-3xl">
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setOpen(false)}
+                className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              >
+                <X size={18} />
+              </button>
+              <AppSidebar
+                user={user}
+                projects={projects}
+                onNavigate={() => setOpen(false)}
+              />
+            </div>
           </aside>
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4 md:hidden">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 shrink-0 items-center gap-3 px-4 md:hidden">
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setOpen(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="glass inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:text-foreground"
           >
             <List size={20} />
           </button>

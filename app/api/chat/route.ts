@@ -36,7 +36,12 @@ export async function POST(req: Request) {
 
   const projectId = body.projectId?.trim();
   const agentKey = body.agentKey?.trim();
-  const mode = body.mode === "plan" ? "plan" : "build";
+  const mode =
+    body.mode === "plan"
+      ? "plan"
+      : body.mode === "discuss"
+        ? "discuss"
+        : "build";
   if (!projectId || !agentKey) {
     return new Response("Missing required fields.", { status: 400 });
   }
@@ -153,7 +158,9 @@ export async function POST(req: Request) {
         const planNote =
           mode === "plan"
             ? 'End your reply with a brief "Shall I continue?" and state the next step.'
-            : "Provide the result directly.";
+            : mode === "discuss"
+              ? "Explore the trade-offs: give a clear recommendation, but surface 2–3 options with pros/cons and the key risks. If other roles have left notes, build on or respectfully challenge them."
+              : "Provide the result directly.";
         const answerStream = streamText({
           model: openrouter(DEFAULT_MODEL),
           system: `${buildSystemPrompt(agent.system_prompt)}${injection ? INJECTION_HARDENING : ""}\n\nCurrent mode: ${mode}. ${planNote}`,

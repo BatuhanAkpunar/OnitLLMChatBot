@@ -81,7 +81,7 @@ export async function sendUserMessage(
 /** Persists the Plan/Build mode toggle for a project. */
 export async function setProjectMode(
   projectId: string,
-  mode: "plan" | "build",
+  mode: "plan" | "build" | "discuss",
 ): Promise<{ ok: boolean }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false };
@@ -180,6 +180,28 @@ export async function deleteMessage(
   const supabase = await createClient();
   const { error } = await supabase.from("messages").delete().eq("id", messageId);
   return { ok: !error };
+}
+
+export async function getUserStats(): Promise<{
+  chats: number;
+  messages: number;
+  tokens: number;
+}> {
+  const supabase = await createClient();
+  const [proj, msg, usage] = await Promise.all([
+    supabase.from("projects").select("id", { count: "exact", head: true }),
+    supabase.from("messages").select("id", { count: "exact", head: true }),
+    supabase.from("usage_logs").select("total_tokens"),
+  ]);
+  const tokens = (usage.data ?? []).reduce(
+    (s, r) => s + (r.total_tokens ?? 0),
+    0,
+  );
+  return {
+    chats: proj.count ?? 0,
+    messages: msg.count ?? 0,
+    tokens,
+  };
 }
 
 /** Deletes a message and every message after it in the same chat. */

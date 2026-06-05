@@ -14,8 +14,9 @@ export default async function AdminLayout({
   if (!user.isAdmin) redirect("/");
 
   return (
-    <div className="min-h-dvh bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
+    <div className="relative min-h-dvh">
+      <div className="onit-ambient" aria-hidden />
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-background/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-3">
           <Link href="/admin" className="shrink-0 text-sm font-semibold">
             Onit AI <span className="text-muted-foreground">· Admin</span>
@@ -32,7 +33,7 @@ export default async function AdminLayout({
           <ThemeToggle />
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      <main className="relative z-10 mx-auto max-w-5xl px-6 py-8">{children}</main>
     </div>
   );
 }

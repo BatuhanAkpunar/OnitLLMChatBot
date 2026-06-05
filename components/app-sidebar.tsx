@@ -5,8 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Plus,
-  ShieldStar,
-  SignOut as SignOutIcon,
   ChatCircleDots,
   MagnifyingGlass,
   DotsThree,
@@ -14,8 +12,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { ThemeToggle } from "./theme-toggle";
-import { signOut } from "@/lib/auth/actions";
+import { ProfilePanel } from "@/components/profile/profile-panel";
 import {
   createProject,
   renameProject,
@@ -60,8 +57,6 @@ export function AppSidebar({
   const [renameValue, setRenameValue] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
   const renameRef = useRef<HTMLInputElement>(null);
-
-  const initial = (user?.name ?? user?.email ?? "?").trim().charAt(0).toUpperCase();
 
   useEffect(() => {
     const q = query.trim();
@@ -154,7 +149,7 @@ export function AppSidebar({
               if (e.key === "Enter") commitRename(p.id);
               if (e.key === "Escape") setRenamingId(null);
             }}
-            className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring/20"
+            className="w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring/20"
           />
         </li>
       );
@@ -164,13 +159,13 @@ export function AppSidebar({
         <Link
           href={`/p/${p.id}`}
           onClick={onNavigate}
-          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+          className={`flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors ${
             active
-              ? "bg-accent text-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              ? "bg-white/15 font-medium text-foreground"
+              : "text-muted-foreground hover:bg-white/10 hover:text-foreground"
           }`}
         >
-          <ChatCircleDots size={15} className="shrink-0" />
+          <ChatCircleDots size={15} className="shrink-0 opacity-70" />
           <span className="flex-1 truncate">{p.title}</span>
         </Link>
         <button
@@ -181,7 +176,7 @@ export function AppSidebar({
             e.stopPropagation();
             setMenuId(menuId === p.id ? null : p.id);
           }}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover/row:opacity-100 ${
+          className={`absolute right-1 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-white/15 hover:text-foreground group-hover/row:opacity-100 ${
             menuId === p.id ? "opacity-100" : ""
           }`}
         >
@@ -189,13 +184,13 @@ export function AppSidebar({
         </button>
         {menuId === p.id ? (
           <div
-            className="absolute right-1 top-9 z-20 w-36 overflow-hidden rounded-lg border border-border bg-popover py-1 shadow-lg"
+            className="glass-strong absolute right-1 top-9 z-20 w-36 overflow-hidden rounded-xl py-1"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => startRename(p)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-white/10"
             >
               <PencilSimple size={14} />
               Rename
@@ -203,7 +198,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => confirmDelete(p)}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-destructive hover:bg-accent"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-destructive hover:bg-destructive/10"
             >
               <Trash size={14} />
               Delete
@@ -216,8 +211,8 @@ export function AppSidebar({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+      <div className="flex h-16 items-center gap-2.5 px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-sm font-semibold text-background">
           O
         </div>
         <span className="font-semibold tracking-tight">Onit AI</span>
@@ -228,7 +223,7 @@ export function AppSidebar({
           <button
             type="submit"
             onClick={onNavigate}
-            className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground px-3 py-2.5 text-sm font-medium text-background shadow-sm transition-opacity hover:opacity-90"
           >
             <Plus size={16} weight="bold" />
             New chat
@@ -240,18 +235,18 @@ export function AppSidebar({
         <div className="relative">
           <MagnifyingGlass
             size={15}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search chats…"
-            className="w-full rounded-lg border border-border bg-card py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:ring-2 focus:ring-ring/20"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 py-2 pl-9 pr-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:bg-white/10"
           />
         </div>
       </div>
 
-      <div className="mt-3 flex-1 overflow-y-auto px-3 pb-2">
+      <div className="mt-4 flex-1 overflow-y-auto px-3 pb-2">
         {filtered.length === 0 ? (
           <p className="px-1 py-2 text-sm text-muted-foreground">
             {q ? "No chats found." : "No chats yet."}
@@ -267,8 +262,8 @@ export function AppSidebar({
             const items = projects.filter((p) => groupOf(p.last_message_at) === g);
             if (items.length === 0) return null;
             return (
-              <div key={g} className="mb-3">
-                <div className="px-1 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <div key={g} className="mb-4">
+                <div className="px-2 pb-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   {g}
                 </div>
                 <ul className="space-y-0.5">
@@ -282,42 +277,8 @@ export function AppSidebar({
         )}
       </div>
 
-      <div className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground">
-            {initial}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium">
-              {user?.name ?? user?.email ?? "Not signed in"}
-            </div>
-            {user?.email ? (
-              <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-            ) : null}
-          </div>
-          <ThemeToggle />
-        </div>
-
-        <div className="mt-2 flex items-center gap-2">
-          {user?.isAdmin ? (
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <ShieldStar size={15} weight="bold" />
-              Admin
-            </Link>
-          ) : null}
-          <form action={signOut} className="ml-auto">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <SignOutIcon size={15} weight="bold" />
-              Sign out
-            </button>
-          </form>
-        </div>
+      <div className="border-t border-white/10 p-3">
+        <ProfilePanel user={user} />
       </div>
     </div>
   );

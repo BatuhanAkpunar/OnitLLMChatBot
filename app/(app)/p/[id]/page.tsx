@@ -37,7 +37,13 @@ export default async function ProjectPage(props: {
       agents={agentList}
       initialMessages={(messages ?? []) as Message[]}
       defaultAgentKey={project.last_agent_key ?? agentList[0]?.key ?? "analyst"}
-      initialMode={project.mode === "plan" ? "plan" : "build"}
+      initialMode={
+        project.mode === "plan"
+          ? "plan"
+          : project.mode === "discuss"
+            ? "discuss"
+            : "build"
+      }
     />
   );
 }

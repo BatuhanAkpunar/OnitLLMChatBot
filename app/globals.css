@@ -350,3 +350,103 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Glass design system + ambient background
+--------------------------------------------------------------------------- */
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.5);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 10px 36px rgba(15, 23, 42, 0.1);
+}
+
+.dark {
+  --glass-bg: rgba(22, 22, 26, 0.5);
+  --glass-bg-strong: rgba(26, 26, 31, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
+}
+
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-strong {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* a hairline top highlight that sells the "glass" edge */
+.glass-edge {
+  position: relative;
+}
+.glass-edge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0) 40%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+.dark .glass-edge::before {
+  opacity: 0.25;
+}
+
+/* ambient: a soft, slowly drifting field of role-colored light behind glass */
+.onit-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--background);
+}
+.onit-ambient::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  background-image:
+    radial-gradient(38% 48% at 14% 18%, rgba(59, 130, 246, 0.1), transparent 70%),
+    radial-gradient(34% 44% at 86% 14%, rgba(139, 92, 246, 0.09), transparent 70%),
+    radial-gradient(44% 50% at 82% 86%, rgba(20, 184, 166, 0.1), transparent 70%),
+    radial-gradient(40% 46% at 10% 90%, rgba(249, 115, 22, 0.07), transparent 70%);
+  filter: blur(24px);
+}
+.dark .onit-ambient::before {
+  background-image:
+    radial-gradient(38% 48% at 14% 18%, rgba(96, 165, 250, 0.16), transparent 70%),
+    radial-gradient(34% 44% at 86% 14%, rgba(167, 139, 250, 0.15), transparent 70%),
+    radial-gradient(44% 50% at 82% 86%, rgba(45, 212, 191, 0.15), transparent 70%),
+    radial-gradient(40% 46% at 10% 90%, rgba(251, 146, 60, 0.12), transparent 70%);
+}
+@keyframes onit-ambient-drift {
+  from {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, -3%, 0) scale(1.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onit-ambient::before {
+    animation: none;
+  }
+}
+

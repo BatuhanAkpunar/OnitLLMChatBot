@@ -48,8 +48,12 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  // The landing ("/") is public: anyone can compose a prompt; sign-in is only
+  // required to actually get a result.
   const isPublic =
-    pathname.startsWith("/login") || pathname.startsWith("/auth");
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth");
   // API routes authenticate themselves and return proper status codes. They must
   // NOT be redirected: a 307 on a streaming fetch POST gets followed to an HTML
   // page (405) and surfaces as a generic "something went wrong" in the client.
@@ -57,7 +61,7 @@ export async function proxy(request: NextRequest) {
 
   if (!isAuthed && !isPublic && !isApi) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

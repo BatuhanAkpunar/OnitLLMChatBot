@@ -40,6 +40,13 @@ export type Message = {
 
 const THINKING_PREF_KEY = "onit:thinking-collapsed";
 
+type Mode = "build" | "plan" | "discuss";
+const MODE_LABELS: Record<Mode, string> = {
+  build: "Build",
+  plan: "Plan",
+  discuss: "Discuss",
+};
+
 export function ChatView({
   projectId,
   title,
@@ -53,11 +60,11 @@ export function ChatView({
   agents: Agent[];
   initialMessages: Message[];
   defaultAgentKey: string;
-  initialMode: "plan" | "build";
+  initialMode: Mode;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
-  const [mode, setMode] = useState<"plan" | "build">(initialMode);
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [collapseThinking, setCollapseThinking] = useState(false);
@@ -77,6 +84,7 @@ export function ChatView({
   const startedRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const stoppedRef = useRef(false);
+  const modeRef = useRef<Mode>(initialMode);
 
   const agentByKey = useMemo(
     () => Object.fromEntries(agents.map((a) => [a.key, a])) as Record<string, Agent>,
@@ -124,10 +132,23 @@ export function ChatView({
     }
     if (!raw) return;
     try {
-      const pending = JSON.parse(raw) as { content?: string; agentKey?: string };
+      const pending = JSON.parse(raw) as {
+        content?: string;
+        agentKey?: string;
+        mode?: string;
+      };
       const content = pending.content?.trim();
       if (!content) return;
       if (pending.agentKey) setAgentKey(pending.agentKey);
+      if (
+        pending.mode === "plan" ||
+        pending.mode === "build" ||
+        pending.mode === "discuss"
+      ) {
+        setMode(pending.mode);
+        modeRef.current = pending.mode;
+        setProjectMode(projectId, pending.mode);
+      }
       const mentioned = parseMentions(
         content,
         agents.map((a) => ({ key: a.key, handle: a.handle })),
@@ -164,9 +185,10 @@ export function ChatView({
     });
   }
 
-  async function toggleMode() {
-    const next = mode === "plan" ? "build" : "plan";
+  async function pickMode(next: Mode) {
+    if (next === mode) return;
     setMode(next);
+    modeRef.current = next;
     await setProjectMode(projectId, next);
   }
 
@@ -204,7 +226,7 @@ export function ChatView({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, agentKey: key, mode }),
+        body: JSON.stringify({ projectId, agentKey: key, mode: modeRef.current }),
         signal: ac.signal,
       });
       if (!res.ok || !res.body) {
@@ -391,19 +413,24 @@ export function ChatView({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4">
         <h2 className="truncate text-sm font-medium">{title}</h2>
-        <button
-          type="button"
-          onClick={toggleMode}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
-          title="Toggle Plan / Build mode"
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${mode === "plan" ? "bg-amber-500" : "bg-emerald-500"}`}
-          />
-          {mode === "plan" ? "Plan mode" : "Build mode"}
-        </button>
+        <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-white/5 p-0.5 text-xs">
+          {(["build", "plan", "discuss"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => pickMode(m)}
+              className={`rounded-full px-2.5 py-1 font-medium transition-colors ${
+                mode === m
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {MODE_LABELS[m]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Messages */}
@@ -460,7 +487,7 @@ export function ChatView({
             type="button"
             onClick={scrollToBottom}
             aria-label="Scroll to bottom"
-            className="absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
+            className="glass absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-muted-foreground shadow-md transition-colors hover:text-foreground"
           >
             <ArrowDown size={16} />
           </button>
@@ -468,14 +495,14 @@ export function ChatView({
       </div>
 
       {/* Composer */}
-      <div className="border-t border-border">
+      <div className="border-t border-white/10">
         <div className="mx-auto max-w-3xl px-4 py-3">
           <div className="mb-2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Default agent</span>
             <select
               value={agentKey}
               onChange={(e) => setAgentKey(e.target.value)}
-              className="rounded-md border border-border bg-card px-2 py-1 text-xs outline-none"
+              className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs outline-none"
             >
               {agents.map((a) => (
                 <option key={a.key} value={a.key}>
@@ -488,7 +515,7 @@ export function ChatView({
 
           <div className="relative">
             {mention.open && filtered.length ? (
-              <div className="absolute bottom-full mb-2 w-64 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+              <div className="glass-strong absolute bottom-full mb-2 w-64 overflow-hidden rounded-xl shadow-lg">
                 {filtered.map((a, i) => (
                   <button
                     key={a.key}
