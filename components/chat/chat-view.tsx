@@ -12,7 +12,6 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
-import { BorderGlow } from "@/components/ui/border-glow";
 import { parseMentions } from "@/lib/mentions";
 import {
   sendUserMessage,
@@ -105,6 +104,17 @@ export function ChatView({
     setCollapseThinking(localStorage.getItem(THINKING_PREF_KEY) === "1");
   }, []);
 
+  // Restore the per-chat mode (covers "discuss", which isn't persisted server-side).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`onit:mode:${projectId}`);
+      if (saved === "plan" || saved === "build" || saved === "discuss") {
+        setMode(saved);
+        modeRef.current = saved;
+      }
+    } catch {}
+  }, [projectId]);
+
   useEffect(() => {
     if (atBottom) {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -147,7 +157,10 @@ export function ChatView({
       ) {
         setMode(pending.mode);
         modeRef.current = pending.mode;
-        setProjectMode(projectId, pending.mode);
+        try {
+          localStorage.setItem(`onit:mode:${projectId}`, pending.mode);
+        } catch {}
+        if (pending.mode !== "discuss") setProjectMode(projectId, pending.mode);
       }
       const mentioned = parseMentions(
         content,
@@ -189,7 +202,10 @@ export function ChatView({
     if (next === mode) return;
     setMode(next);
     modeRef.current = next;
-    await setProjectMode(projectId, next);
+    try {
+      localStorage.setItem(`onit:mode:${projectId}`, next);
+    } catch {}
+    if (next !== "discuss") await setProjectMode(projectId, next);
   }
 
   function onChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -539,7 +555,7 @@ export function ChatView({
               </div>
             ) : null}
 
-            <BorderGlow radius={14} innerClassName="flex items-end gap-2 p-2">
+            <div className="glass-strong glass-edge flex items-end gap-2 rounded-2xl p-2">
               <textarea
                 ref={taRef}
                 value={input}
@@ -564,12 +580,14 @@ export function ChatView({
                   onClick={send}
                   disabled={!input.trim()}
                   aria-label="Send"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 ${
+                    input.trim() ? "btn-glow" : ""
+                  }`}
                 >
                   <PaperPlaneRight size={16} weight="fill" />
                 </button>
               )}
-            </BorderGlow>
+            </div>
           </div>
         </div>
       </div>
