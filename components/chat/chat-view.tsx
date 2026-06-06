@@ -20,7 +20,8 @@ import {
   setProjectMode,
   deleteMessage,
   truncateFromMessage,
-  routeToAgents,
+  orchestrate,
+  saveCoordinatorMessage,
 } from "@/app/(app)/actions";
 
 export type Agent = {
@@ -338,20 +339,42 @@ export function ChatView({
     } else if (inline.length) {
       targets = inline;
     } else {
-      // Auto: let the orchestrator pick the right role(s) for this request.
+      // Auto: Onit reads the request, asks one question if it's unclear, or
+      // routes to the right role(s).
       setRouting(true);
+      let decision:
+        | { action: "clarify"; question: string }
+        | { action: "route"; roles: string[]; rationale: string };
       try {
-        const { keys } = await routeToAgents(text);
-        targets = keys.length ? keys : [agentKey];
-        const handles = agents
-          .filter((a) => targets.includes(a.key))
-          .map((a) => a.handle)
-          .join(", ");
-        if (handles) toast(`Routed to ${handles}`);
+        decision = await orchestrate(projectId, text);
       } catch {
-        targets = [agentKey];
-      } finally {
-        setRouting(false);
+        decision = { action: "route" as const, roles: [agentKey], rationale: "" };
+      }
+      setRouting(false);
+
+      if (decision.action === "clarify") {
+        const { id } = await saveCoordinatorMessage(projectId, decision.question);
+        setMessages((m) => [
+          ...m,
+          {
+            id: id ?? `tmp-c-${Date.now()}`,
+            role: "agent",
+            agent_key: "coordinator",
+            content: decision.question,
+            status: "complete",
+          },
+        ]);
+        setBusy(false);
+        return;
+      }
+
+      targets = decision.roles.length ? decision.roles : [agentKey];
+      const handles = agents
+        .filter((a) => targets.includes(a.key))
+        .map((a) => a.handle)
+        .join(", ");
+      if (handles) {
+        toast(decision.rationale ? `${handles} · ${decision.rationale}` : `Routed to ${handles}`);
       }
     }
     setAgentKey(targets[targets.length - 1]);
@@ -716,13 +739,19 @@ function MessageRow({
     );
   }
 
-  const color = agent ? `var(--agent-${agent.color})` : "var(--muted-foreground)";
+  const isCoordinator = message.agent_key === "coordinator";
+  const color = isCoordinator
+    ? "var(--foreground)"
+    : agent
+      ? `var(--agent-${agent.color})`
+      : "var(--muted-foreground)";
+  const name = isCoordinator ? "Onit" : agent?.display_name ?? "Agent";
   return (
     <div className="group flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-xs font-medium" style={{ color }}>
-          {agent?.display_name ?? "Agent"}
+          {name}
         </span>
         {message.status === "error" ? (
           <span className="text-xs text-destructive">· error</span>

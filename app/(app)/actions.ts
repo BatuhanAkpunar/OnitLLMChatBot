@@ -50,6 +50,123 @@ export async function routeToAgents(text: string): Promise<{ keys: string[] }> {
   }
 }
 
+export type OrchestrateResult =
+  | { action: "clarify"; question: string }
+  | { action: "route"; roles: string[]; rationale: string };
+
+/**
+ * Smart orchestrator: reads the request (with recent context) and either asks
+ * one clarifying question (if it's too vague to act on well) or routes to the
+ * best role(s) with a short rationale.
+ */
+export async function orchestrate(
+  projectId: string,
+  text: string,
+): Promise<OrchestrateResult> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("agent_configs")
+    .select("key, display_name, description")
+    .eq("enabled", true)
+    .order("sort_order");
+  const list = data ?? [];
+  const fallback: OrchestrateResult = {
+    action: "route",
+    roles: list[0] ? [list[0].key] : [],
+    rationale: "",
+  };
+  if (!list.length || !text.trim()) return fallback;
+
+  const { data: recent } = await admin
+    .from("messages")
+    .select("role, agent_key, content")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(6);
+  const ctx = (recent ?? [])
+    .reverse()
+    .map(
+      (m) =>
+        `${m.role === "user" ? "User" : m.agent_key ?? "agent"}: ${(m.content || "").slice(0, 240)}`,
+    )
+    .join("\n");
+
+  const roster = list
+    .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
+    .join("\n");
+
+  try {
+    const { text: out } = await generateText({
+      model: openrouter(SUMMARY_MODEL),
+      system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request, choose ONE:
+1. CLARIFY — if the request is too vague or missing a key detail you'd need to do good work, ask ONE short, specific question.
+2. ROUTE — otherwise route to the 1-3 most relevant roles.
+Reply with ONLY compact JSON, no prose:
+{"action":"clarify","question":"..."} OR {"action":"route","roles":["key"],"rationale":"one short sentence why"}
+Prefer ROUTE; only CLARIFY when genuinely necessary.
+Roles:
+${roster}`,
+      prompt: `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`,
+      maxOutputTokens: 140,
+    });
+    const json = JSON.parse(
+      out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1),
+    );
+    if (
+      json.action === "clarify" &&
+      typeof json.question === "string" &&
+      json.question.trim()
+    ) {
+      return { action: "clarify", question: json.question.trim() };
+    }
+    const valid = new Set(list.map((a) => a.key));
+    const rawRoles: unknown[] = Array.isArray(json.roles) ? json.roles : [];
+    const roles = [
+      ...new Set(
+        rawRoles
+          .map((s) => String(s).toLowerCase().trim())
+          .filter((k) => valid.has(k)),
+      ),
+    ].slice(0, 3);
+    return {
+      action: "route",
+      roles: roles.length ? roles : fallback.roles,
+      rationale: typeof json.rationale === "string" ? json.rationale : "",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/** Persists a coordinator (Onit) message — e.g. a clarifying question. */
+export async function saveCoordinatorMessage(
+  projectId: string,
+  content: string,
+): Promise<{ id: string | null }> {
+  const user = await getCurrentUser();
+  if (!user) return { id: null };
+  const admin = createAdminClient();
+  const { data: project } = await admin
+    .from("projects")
+    .select("owner_id")
+    .eq("id", projectId)
+    .single();
+  if (!project || project.owner_id !== user.id) return { id: null };
+  const { data } = await admin
+    .from("messages")
+    .insert({
+      project_id: projectId,
+      owner_id: user.id,
+      role: "agent",
+      agent_key: "coordinator",
+      content,
+      status: "complete",
+    })
+    .select("id")
+    .single();
+  return { id: data?.id ?? null };
+}
+
 export async function createProject() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

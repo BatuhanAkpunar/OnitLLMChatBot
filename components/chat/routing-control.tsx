@@ -70,7 +70,7 @@ export function RoutingControl({
 
       {open ? (
         <div
-          className={`glass-strong absolute left-0 z-30 w-72 overflow-hidden rounded-xl p-1 shadow-xl ${
+          className={`absolute left-0 z-30 w-72 overflow-hidden rounded-xl border border-white/10 bg-popover/95 p-1 shadow-xl backdrop-blur-xl ${
             up ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >
@@ -84,7 +84,10 @@ export function RoutingControl({
             <Lightning size={14} weight="fill" className="shrink-0 text-amber-400" />
             <span className="flex-1">
               <span className="font-medium">Auto</span>
-              <span className="text-muted-foreground"> · Onit picks the right roles</span>
+              <span className="text-muted-foreground">
+                {" "}
+                · Onit reads it, asks if unclear, then routes
+              </span>
             </span>
             {pinned.length === 0 ? <Check size={13} className="shrink-0" /> : null}
           </button>

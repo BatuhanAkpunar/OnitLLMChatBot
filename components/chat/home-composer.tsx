@@ -11,7 +11,6 @@ import {
 } from "@phosphor-icons/react";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
-import { TeamConstellation } from "@/components/hero/team-constellation";
 import { RoutingControl } from "./routing-control";
 import { guessRoles } from "@/lib/route-heuristic";
 import type { Agent } from "./chat-view";
@@ -46,7 +45,6 @@ export function HomeComposer({
   const firstName = userName?.trim().split(/\s+/)[0] || null;
   const agentKeys = useMemo(() => agents.map((a) => a.key), [agents]);
   const guessed = useMemo(() => guessRoles(input, agentKeys), [input, agentKeys]);
-  const activeKeys = pinned.length ? pinned : guessed;
   const activeMode = MODES.find((m) => m.key === mode) ?? MODES[0];
   const handlesOf = (keys: string[]) =>
     agents
@@ -145,7 +143,7 @@ export function HomeComposer({
 
   return (
     <div className="relative flex min-h-full items-center justify-center overflow-hidden px-6 py-12">
-      <TeamConstellation activeKeys={activeKeys} className="opacity-90" />
+      <div className="onit-aurora" aria-hidden />
 
       <div className="relative z-10 w-full max-w-2xl">
         <div className="mb-5">
