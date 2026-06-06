@@ -13,8 +13,25 @@ function fmt(n: number) {
   return n.toLocaleString("en-US");
 }
 
+// Compute time-dependent values outside the component render to keep it pure.
+function sevenDayWindow() {
+  const now = Date.now();
+  return {
+    since: new Date(now - 7 * 86_400_000).toISOString(),
+    days: Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now - (6 - i) * 86_400_000);
+      return {
+        key: d.toISOString().slice(0, 10),
+        label: d.toLocaleDateString("en-US", { weekday: "short" }),
+        count: 0,
+      };
+    }),
+  };
+}
+
 export default async function AdminDashboard() {
   const admin = createAdminClient();
+  const win = sevenDayWindow();
 
   const [users, projects, usage, recentMsgs] = await Promise.all([
     admin.from("profiles").select("id", { count: "exact", head: true }),
@@ -23,10 +40,7 @@ export default async function AdminDashboard() {
       .from("usage_logs")
       .select("prompt_tokens, completion_tokens")
       .gte("created_at", startOfMonthISO()),
-    admin
-      .from("messages")
-      .select("created_at")
-      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString()),
+    admin.from("messages").select("created_at").gte("created_at", win.since),
   ]);
 
   const promptTokens = (usage.data ?? []).reduce((s, u) => s + (u.prompt_tokens ?? 0), 0);
@@ -34,14 +48,7 @@ export default async function AdminDashboard() {
   const totalTokens = promptTokens + completionTokens;
   const estCost = (promptTokens / 1e6) * PRICE_IN + (completionTokens / 1e6) * PRICE_OUT;
 
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86_400_000);
-    return {
-      key: d.toISOString().slice(0, 10),
-      label: d.toLocaleDateString("en-US", { weekday: "short" }),
-      count: 0,
-    };
-  });
+  const days = win.days;
   for (const m of recentMsgs.data ?? []) {
     const day = days.find((d) => d.key === (m.created_at as string).slice(0, 10));
     if (day) day.count += 1;

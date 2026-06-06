@@ -98,7 +98,6 @@ export function ChatView({
     () => Object.fromEntries(agents.map((a) => [a.key, a])) as Record<string, Agent>,
     [agents],
   );
-  const activeAgent = agentByKey[agentKey];
 
   const filtered = useMemo(() => {
     if (!mention.open) return [];

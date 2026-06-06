@@ -8,45 +8,28 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
 
-/**
- * Orchestrator router: analyzes a request and returns the role key(s) best
- * suited to handle it (most relevant first). Falls back to the first role.
- */
-export async function routeToAgents(text: string): Promise<{ keys: string[] }> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("agent_configs")
-    .select("key, display_name, description")
-    .eq("enabled", true)
-    .order("sort_order");
-  const list = data ?? [];
-  const fallback = list[0] ? [list[0].key] : [];
-  if (!list.length || !text.trim()) return { keys: fallback };
-
-  const roster = list
-    .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
-    .join("\n");
+/** Best-effort logging of an auxiliary (orchestrator/synthesis) LLM call. */
+async function logUsage(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string | null | undefined,
+  projectId: string | null,
+  inTok: number,
+  outTok: number,
+) {
+  if (!userId) return;
   try {
-    const { text: out } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
-      system:
-        "You route a software-team request to the right role(s). Pick the 1-3 most relevant roles for the request. Reply with ONLY their keys, comma-separated, most relevant first - no other text.",
-      prompt: `Roles:\n${roster}\n\nRequest: ${text}\n\nKeys:`,
-      maxOutputTokens: 24,
+    await admin.from("usage_logs").insert({
+      user_id: userId,
+      project_id: projectId,
+      model: SUMMARY_MODEL,
+      kind: "summary",
+      prompt_tokens: inTok,
+      completion_tokens: outTok,
+      total_tokens: inTok + outTok,
+      cost: 0,
     });
-    const valid = new Set(list.map((a) => a.key));
-    const keys = [
-      ...new Set(
-        out
-          .toLowerCase()
-          .split(/[^a-z0-9_]+/)
-          .map((s) => s.trim())
-          .filter((k) => valid.has(k)),
-      ),
-    ].slice(0, 3);
-    return { keys: keys.length ? keys : fallback };
   } catch {
-    return { keys: fallback };
+    // usage logging is best-effort
   }
 }
 
@@ -126,6 +109,7 @@ export async function orchestrate(
       .from("routing_memory")
       .select("summary, roles")
       .eq("user_id", user.id)
+      .eq("source", "manual")
       .order("created_at", { ascending: false })
       .limit(8);
     const examples = (mem ?? [])
@@ -134,7 +118,7 @@ export async function orchestrate(
       .map((m) => `- "${m.summary}" -> ${(m.roles as string[]).join(", ")}`)
       .join("\n");
     if (examples) {
-      learned = `\nThis user's recent routing choices (learn their style, don't copy blindly):\n${examples}`;
+      learned = `\nThis user's explicit role choices for past requests (a learned hint):\n${examples}`;
     }
   }
 
@@ -143,7 +127,7 @@ export async function orchestrate(
     .join("\n");
 
   try {
-    const { text: out } = await generateText({
+    const { text: out, usage } = await generateText({
       model: openrouter(SUMMARY_MODEL),
       system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
 1. CLARIFY — if it's too vague or missing a key detail, ask ONE short, specific question.
@@ -158,6 +142,13 @@ ${roster}${memory}${learned}`,
       prompt: `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`,
       maxOutputTokens: 260,
     });
+    await logUsage(
+      admin,
+      user?.id,
+      projectId,
+      usage?.inputTokens ?? 0,
+      usage?.outputTokens ?? 0,
+    );
     const json = JSON.parse(
       out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1),
     );
@@ -244,6 +235,7 @@ export async function synthesize(
   projectId: string,
   request: string,
 ): Promise<{ text: string }> {
+  const user = await getCurrentUser();
   const admin = createAdminClient();
   const { data: msgs } = await admin
     .from("messages")
@@ -259,13 +251,20 @@ export async function synthesize(
     .join("\n\n");
   if (!outputs) return { text: "" };
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: openrouter(SUMMARY_MODEL),
       system:
         "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings or lists.",
       prompt: `User's request: ${request}\n\nTeam outputs:\n${outputs}\n\nWrap-up:`,
       maxOutputTokens: 220,
     });
+    await logUsage(
+      admin,
+      user?.id,
+      projectId,
+      usage?.inputTokens ?? 0,
+      usage?.outputTokens ?? 0,
+    );
     return { text: text.trim() };
   } catch {
     return { text: "" };
