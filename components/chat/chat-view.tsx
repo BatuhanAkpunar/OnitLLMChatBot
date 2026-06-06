@@ -11,6 +11,7 @@ import {
   ArrowDown,
   Lightning,
   Play,
+  DownloadSimple,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
@@ -487,6 +488,28 @@ export function ChatView({
     submit(text);
   }
 
+  function exportChat() {
+    const lines = [`# ${title}`, "", "> Exported from Onit AI", ""];
+    for (const m of messages) {
+      if (!m.content) continue;
+      const who =
+        m.role === "user"
+          ? "You"
+          : m.agent_key === "coordinator"
+            ? "Onit"
+            : (agentByKey[m.agent_key ?? ""]?.display_name ?? "Agent");
+      lines.push(`## ${who}`, "", m.content, "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.slice(0, 40).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "onit-chat"}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Chat exported");
+  }
+
   function stop() {
     stoppedRef.current = true;
     abortRef.current?.abort();
@@ -573,6 +596,15 @@ export function ChatView({
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-white/10 px-4">
         <h2 className="truncate text-sm font-medium">{title}</h2>
+        <button
+          type="button"
+          onClick={exportChat}
+          title="Export chat as Markdown"
+          aria-label="Export chat"
+          className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+        >
+          <DownloadSimple size={16} />
+        </button>
       </div>
 
       {/* Messages */}
