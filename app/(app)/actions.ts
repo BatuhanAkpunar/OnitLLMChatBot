@@ -191,14 +191,14 @@ export async function saveCoordinatorMessage(
 ): Promise<{ id: string | null }> {
   const user = await getCurrentUser();
   if (!user) return { id: null };
-  const admin = createAdminClient();
-  const { data: project } = await admin
+  const supabase = await createClient();
+  const { data: project } = await supabase
     .from("projects")
-    .select("owner_id")
+    .select("id")
     .eq("id", projectId)
-    .single();
-  if (!project || project.owner_id !== user.id) return { id: null };
-  const { data } = await admin
+    .maybeSingle();
+  if (!project) return { id: null };
+  const { data } = await supabase
     .from("messages")
     .insert({
       project_id: projectId,
@@ -316,15 +316,15 @@ export async function sendUserMessage(
   const text = content.trim();
   if (!text) return { ok: false };
 
-  const admin = createAdminClient();
-  const { data: project } = await admin
+  const supabase = await createClient();
+  const { data: project } = await supabase
     .from("projects")
-    .select("id, owner_id, title")
+    .select("id, title")
     .eq("id", projectId)
-    .single();
-  if (!project || project.owner_id !== user.id) return { ok: false };
+    .maybeSingle();
+  if (!project) return { ok: false };
 
-  const { error } = await admin.from("messages").insert({
+  const { error } = await supabase.from("messages").insert({
     project_id: projectId,
     owner_id: user.id,
     role: "user",
@@ -334,7 +334,7 @@ export async function sendUserMessage(
   if (error) return { ok: false };
 
   if (project.title === "New chat") {
-    await admin
+    await supabase
       .from("projects")
       .update({ title: text.slice(0, 60) })
       .eq("id", projectId);

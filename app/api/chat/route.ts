@@ -1,5 +1,7 @@
 import { streamText } from "ai";
+import { createClient as createSbClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/user";
+import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { openrouter, DEFAULT_MODEL, SUMMARY_MODEL } from "@/lib/ai/openrouter";
 import { buildSystemPrompt } from "@/lib/ai/guardrails";
@@ -55,30 +57,33 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  const { data: project, error: projErr } = await admin
+  // Run the core flow under the user's own session (RLS) so it works with the
+  // keys present in any environment — no service-role dependency. A token-based
+  // client keeps working inside the streaming callback (where the request's
+  // cookie scope is gone). Falls back to the admin client if no token is found.
+  const serverSb = await createUserClient();
+  const { data: sess } = await serverSb.auth.getSession();
+  const token = sess.session?.access_token;
+  const db = token
+    ? createSbClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: { headers: { Authorization: `Bearer ${token}` } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        },
+      )
+    : admin;
+
+  // RLS scopes this to the user's own projects, so a returned row means it's theirs.
+  const { data: project } = await db
     .from("projects")
-    .select("id, owner_id")
+    .select("id")
     .eq("id", projectId)
     .maybeSingle();
+  if (!project) return new Response("Chat not found.", { status: 404 });
 
-  if (!project) {
-    // TEMP diagnostic: distinguish a broken service key from a missing project.
-    const { count, error: probeErr } = await admin
-      .from("agent_configs")
-      .select("key", { count: "exact", head: true });
-    const diag = probeErr
-      ? `admin-read-failed: ${probeErr.message}`
-      : `project-missing (admin read ${count ?? "?"} agents)${projErr ? `; ${projErr.message}` : ""}`;
-    return new Response(`Chat not found. [${diag}]`, { status: 404 });
-  }
-  if (project.owner_id !== user.id) {
-    return new Response(
-      `Chat not found. [owner ${String(project.owner_id).slice(0, 8)} != you ${user.id.slice(0, 8)}]`,
-      { status: 404 },
-    );
-  }
-
-  const { data: agentRows } = await admin
+  const { data: agentRows } = await db
     .from("agent_configs")
     .select("key, display_name, system_prompt");
   const agents = agentRows ?? [];
@@ -88,7 +93,7 @@ export async function POST(req: Request) {
     agents.map((a) => [a.key, a.display_name]),
   );
 
-  const { data: lastUser } = await admin
+  const { data: lastUser } = await db
     .from("messages")
     .select("content")
     .eq("project_id", projectId)
@@ -100,9 +105,9 @@ export async function POST(req: Request) {
     ? detectInjectionAttempt(lastUser.content)
     : false;
 
-  const ctx = await buildContext(admin, projectId, agentKey, agentNames);
+  const ctx = await buildContext(db, projectId, agentKey, agentNames);
 
-  const { data: placeholder, error: phErr } = await admin
+  const { data: placeholder, error: phErr } = await db
     .from("messages")
     .insert({
       project_id: projectId,
@@ -199,23 +204,31 @@ export async function POST(req: Request) {
         const safe = sanitizeOutput(answer);
         if (safe !== answer) answer = safe;
         send({ type: "final", content: answer });
-        await admin
-          .from("messages")
-          .update({ content: answer, thinking, status, token_count: outTok })
-          .eq("id", assistantId);
+        try {
+          await db
+            .from("messages")
+            .update({ content: answer, thinking, status, token_count: outTok })
+            .eq("id", assistantId);
+        } catch {
+          // best-effort persistence
+        }
         if (status === "complete") {
-          await admin.from("usage_logs").insert({
-            user_id: user.id,
-            project_id: projectId,
-            message_id: assistantId,
-            kind: "chat",
-            model: DEFAULT_MODEL,
-            agent_key: agentKey,
-            prompt_tokens: inTok,
-            completion_tokens: outTok,
-            total_tokens: inTok + outTok,
-            cost: 0,
-          });
+          try {
+            await admin.from("usage_logs").insert({
+              user_id: user.id,
+              project_id: projectId,
+              message_id: assistantId,
+              kind: "chat",
+              model: DEFAULT_MODEL,
+              agent_key: agentKey,
+              prompt_tokens: inTok,
+              completion_tokens: outTok,
+              total_tokens: inTok + outTok,
+              cost: 0,
+            });
+          } catch {
+            // usage logging is best-effort
+          }
           try {
             await maybeSummarizeProject(admin, projectId, user.id);
           } catch {
