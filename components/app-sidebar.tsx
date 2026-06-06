@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { ProfilePanel } from "@/components/profile/profile-panel";
+import { Logo } from "@/components/brand/logo";
 import {
   createProject,
   renameProject,
@@ -212,9 +213,7 @@ export function AppSidebar({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-2.5 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-sm font-semibold text-background">
-          O
-        </div>
+        <Logo size={28} />
         <span className="font-semibold tracking-tight">Onit AI</span>
       </div>
 

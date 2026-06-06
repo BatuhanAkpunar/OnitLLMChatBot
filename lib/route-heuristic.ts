@@ -1,4 +1,4 @@
-// Instant, client-side guess of which role(s) a request is about — used only
+// Instant, client-side guess of which role(s) a request is about, used only
 // for live UI hints (the constellation + the "Auto" preview). The actual
 // routing decision is made server-side by the orchestrator (an LLM).
 const RULES: Record<string, RegExp> = {

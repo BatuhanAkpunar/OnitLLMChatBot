@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Onit AI — AI roles for software teams",
+  title: "Onit AI · AI roles for software teams",
   description:
     "Work with AI roles (Analyst, Product Manager, Developer, and more) across project-based conversations.",
 };

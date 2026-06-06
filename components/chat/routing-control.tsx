@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Lightning, CaretDown, Check } from "@phosphor-icons/react";
+import { roleIcon, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
 /**
@@ -99,24 +100,29 @@ export function RoutingControl({
 
           {agents.map((a) => {
             const on = pinned.includes(a.key);
+            const Icon = roleIcon(a.key);
             return (
               <button
                 key={a.key}
                 type="button"
                 onClick={() => toggle(a.key)}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
                   on ? "bg-white/10" : "hover:bg-white/5"
                 }`}
               >
                 <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: `var(--agent-${a.color})` }}
-                />
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium">{a.handle}</span>
-                  {a.description ? (
-                    <span className="text-muted-foreground"> · {a.description}</span>
-                  ) : null}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/10"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--agent-${a.color}) 16%, transparent)`,
+                  }}
+                >
+                  <Icon size={14} weight="bold" style={{ color: `var(--agent-${a.color})` }} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">{a.handle}</span>
+                  <span className="block truncate text-muted-foreground">
+                    {rolePersona(a.key, a.description)}
+                  </span>
                 </span>
                 {on ? <Check size={13} className="shrink-0" /> : null}
               </button>

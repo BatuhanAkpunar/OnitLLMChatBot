@@ -184,9 +184,9 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
             {/* usage */}
             <Section label="Usage">
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Chats" value={stats ? fmt(stats.chats) : "—"} />
-                <Stat label="Messages" value={stats ? fmt(stats.messages) : "—"} />
-                <Stat label="Tokens" value={stats ? fmt(stats.tokens) : "—"} />
+                <Stat label="Chats" value={stats ? fmt(stats.chats) : "·"} />
+                <Stat label="Messages" value={stats ? fmt(stats.messages) : "·"} />
+                <Stat label="Tokens" value={stats ? fmt(stats.tokens) : "·"} />
               </div>
             </Section>
 

@@ -265,7 +265,7 @@ export function ChatView({
         const msg =
           res.status === 401
             ? "Your session expired. Please sign in again."
-            : `Couldn't reach the model (HTTP ${res.status})${detail ? ` — ${detail}` : ""}. Please try again.`;
+            : `Couldn't reach the model (HTTP ${res.status})${detail ? `: ${detail}` : ""}. Please try again.`;
         setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: msg, status: "error" } : x)));
         return;
       }
@@ -398,7 +398,7 @@ export function ChatView({
         const planText =
           "Here's the plan:\n" +
           decision.tasks
-            .map((t) => `- **${handleOf(t.role)}** — ${t.task}`)
+            .map((t) => `- **${handleOf(t.role)}**: ${t.task}`)
             .join("\n");
         const { id } = await saveCoordinatorMessage(projectId, planText);
         setMessages((m) => [
@@ -613,7 +613,7 @@ export function ChatView({
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Describe what you need — Onit routes it to the right roles. Pin
+                Describe what you need. Onit routes it to the right roles. Pin
                 roles or @mention to choose yourself.
               </p>
             ) : null}
@@ -650,7 +650,7 @@ export function ChatView({
             {pendingPlan && !busy ? (
               <div className="flex flex-wrap items-center gap-2 pl-0.5">
                 <span className="text-xs text-muted-foreground">
-                  Onit drafted a {pendingPlan.tasks.length}-step plan —
+                  Onit drafted a {pendingPlan.tasks.length}-step plan.
                 </span>
                 <button
                   type="button"
@@ -673,7 +673,7 @@ export function ChatView({
               <div className="flex gap-2 pl-0.5">
                 <button
                   type="button"
-                  onClick={() => submit("Approved — please continue.", [lastMessage.agent_key!])}
+                  onClick={() => submit("Approved, please continue.", [lastMessage.agent_key!])}
                   className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                 >
                   Approve
@@ -738,7 +738,7 @@ export function ChatView({
                 onChange={onChange}
                 onKeyDown={onKeyDown}
                 rows={1}
-                placeholder="Describe what you need — Onit routes it, or @mention a role…"
+                placeholder="Describe what you need. Onit routes it, or @mention a role…"
                 className="max-h-48 min-h-[28px] w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
               <div className="flex items-center justify-between gap-2 pt-1">

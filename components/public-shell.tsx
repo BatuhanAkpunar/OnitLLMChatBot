@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/brand/logo";
 import { signInWithGoogle } from "@/app/login/actions";
 
 /**
@@ -12,9 +13,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
       <header className="relative z-10 flex h-16 items-center justify-between px-5">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-sm font-semibold text-background">
-            O
-          </div>
+          <Logo size={28} />
           <span className="font-semibold tracking-tight">Onit AI</span>
         </div>
         <div className="flex items-center gap-2">

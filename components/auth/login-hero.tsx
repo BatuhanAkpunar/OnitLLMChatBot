@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { BorderGlow } from "@/components/ui/border-glow";
+import { Logo } from "@/components/brand/logo";
 import { signInWithGoogle, signInWithDevPassword } from "@/app/login/actions";
 
 const ROLES: { handle: string; color: string }[] = [
@@ -52,12 +53,12 @@ export function LoginHero({
   return (
     <div className="w-full max-w-xl">
       <div className="mb-7 text-center">
-        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-          O
+        <div className="mx-auto mb-4 w-fit">
+          <Logo size={44} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Welcome to Onit AI</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Bring in AI roles for your software team — Analyst, PM, Developer, QA and more. Sign in to
+          Bring in AI roles for your software team: Analyst, PM, Developer, QA and more. Sign in to
           start.
         </p>
       </div>
@@ -68,7 +69,7 @@ export function LoginHero({
         </div>
       ) : null}
 
-      {/* Chat-style preview — using it signs you in */}
+      {/* Chat-style preview: using it signs you in */}
       <form action={signInWithGoogle}>
         <BorderGlow radius={16} innerClassName="p-2">
           <textarea

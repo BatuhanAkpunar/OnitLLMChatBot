@@ -98,7 +98,7 @@ export async function orchestrate(
       .slice(0, 3)
       .map(([k]) => k);
     if (top.length) {
-      memory = `\nThis user most often works with: ${top.join(", ")} (a weak hint — the request content matters most).`;
+      memory = `\nThis user most often works with: ${top.join(", ")} (a weak hint; the request content matters most).`;
     }
   }
 
@@ -123,15 +123,15 @@ export async function orchestrate(
   }
 
   const roster = list
-    .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
+    .map((a) => `${a.key}: ${a.display_name}: ${a.description ?? ""}`)
     .join("\n");
 
   try {
     const { text: out, usage } = await generateText({
       model: openrouter(SUMMARY_MODEL),
       system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
-1. CLARIFY — if it's too vague or missing a key detail, ask ONE short, specific question.
-2. WORK — break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence.
+1. CLARIFY: if it's too vague or missing a key detail, ask ONE short, specific question.
+2. WORK: break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence.
 Reply with ONLY compact JSON, no prose:
 {"action":"clarify","question":"..."}
 OR
@@ -184,7 +184,7 @@ ${roster}${memory}${learned}`,
   }
 }
 
-/** Persists a coordinator (Onit) message — e.g. a clarifying question. */
+/** Persists a coordinator (Onit) message, e.g. a clarifying question. */
 export async function saveCoordinatorMessage(
   projectId: string,
   content: string,
@@ -289,7 +289,7 @@ export async function createProject() {
   redirect(`/p/${data.id}`);
 }
 
-/** Creates a project and returns its id (no redirect) — used by the home composer. */
+/** Creates a project and returns its id (no redirect); used by the home composer. */
 export async function createProjectAndGetId(): Promise<{ id: string | null }> {
   const user = await getCurrentUser();
   if (!user) return { id: null };

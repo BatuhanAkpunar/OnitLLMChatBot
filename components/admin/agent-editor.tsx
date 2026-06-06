@@ -79,7 +79,7 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
             : a,
         ),
       );
-      toast.success("Saved — new conversations use the updated prompt.");
+      toast.success("Saved. New conversations use the updated prompt.");
     } else {
       toast.error(res.error ?? "Could not save.");
     }

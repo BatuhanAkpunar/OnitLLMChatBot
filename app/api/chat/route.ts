@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
 
   // Run the core flow under the user's own session (RLS) so it works with the
-  // keys present in any environment — no service-role dependency. A token-based
+  // keys present in any environment, no service-role dependency. A token-based
   // client keeps working inside the streaming callback (where the request's
   // cookie scope is gone). Falls back to the admin client if no token is found.
   const serverSb = await createUserClient();
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
         try {
           controller.enqueue(line(o));
         } catch {
-          // client disconnected — keep generating, just stop enqueueing
+          // client disconnected: keep generating, just stop enqueueing
         }
       };
 
@@ -195,7 +195,7 @@ export async function POST(req: Request) {
           status = "error";
           if (!answer) {
             answer =
-              "Sorry — I couldn't complete that response (the model timed out or failed). Please try again.";
+              "Sorry, I couldn't complete that response (the model timed out or failed). Please try again.";
             send({ type: "answer", delta: answer });
           }
         }
