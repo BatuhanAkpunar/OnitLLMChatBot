@@ -50,9 +50,10 @@ export async function routeToAgents(text: string): Promise<{ keys: string[] }> {
   }
 }
 
+export type OrchestrateTask = { role: string; task: string };
 export type OrchestrateResult =
   | { action: "clarify"; question: string }
-  | { action: "route"; roles: string[]; rationale: string };
+  | { action: "work"; rationale: string; tasks: OrchestrateTask[] };
 
 /**
  * Smart orchestrator: reads the request (with recent context) and either asks
@@ -63,6 +64,7 @@ export async function orchestrate(
   projectId: string,
   text: string,
 ): Promise<OrchestrateResult> {
+  const user = await getCurrentUser();
   const admin = createAdminClient();
   const { data } = await admin
     .from("agent_configs")
@@ -70,10 +72,11 @@ export async function orchestrate(
     .eq("enabled", true)
     .order("sort_order");
   const list = data ?? [];
+  const fallbackRole = list[0]?.key ?? "";
   const fallback: OrchestrateResult = {
-    action: "route",
-    roles: list[0] ? [list[0].key] : [],
+    action: "work",
     rationale: "",
+    tasks: fallbackRole ? [{ role: fallbackRole, task: text }] : [],
   };
   if (!list.length || !text.trim()) return fallback;
 
@@ -91,6 +94,31 @@ export async function orchestrate(
     )
     .join("\n");
 
+  // Memory: which roles this user works with most (a weak personalization prior).
+  let memory = "";
+  if (user) {
+    const { data: hist } = await admin
+      .from("messages")
+      .select("agent_key")
+      .eq("owner_id", user.id)
+      .eq("role", "agent")
+      .not("agent_key", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(60);
+    const counts: Record<string, number> = {};
+    for (const m of hist ?? []) {
+      const k = m.agent_key as string | null;
+      if (k && k !== "coordinator") counts[k] = (counts[k] ?? 0) + 1;
+    }
+    const top = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([k]) => k);
+    if (top.length) {
+      memory = `\nThis user most often works with: ${top.join(", ")} (a weak hint — the request content matters most).`;
+    }
+  }
+
   const roster = list
     .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
     .join("\n");
@@ -98,16 +126,18 @@ export async function orchestrate(
   try {
     const { text: out } = await generateText({
       model: openrouter(SUMMARY_MODEL),
-      system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request, choose ONE:
-1. CLARIFY — if the request is too vague or missing a key detail you'd need to do good work, ask ONE short, specific question.
-2. ROUTE — otherwise route to the 1-3 most relevant roles.
+      system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
+1. CLARIFY — if it's too vague or missing a key detail, ask ONE short, specific question.
+2. WORK — break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence.
 Reply with ONLY compact JSON, no prose:
-{"action":"clarify","question":"..."} OR {"action":"route","roles":["key"],"rationale":"one short sentence why"}
-Prefer ROUTE; only CLARIFY when genuinely necessary.
+{"action":"clarify","question":"..."}
+OR
+{"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do"}]}
+Prefer WORK; only CLARIFY when genuinely necessary.
 Roles:
-${roster}`,
+${roster}${memory}`,
       prompt: `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`,
-      maxOutputTokens: 140,
+      maxOutputTokens: 260,
     });
     const json = JSON.parse(
       out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1),
@@ -120,18 +150,24 @@ ${roster}`,
       return { action: "clarify", question: json.question.trim() };
     }
     const valid = new Set(list.map((a) => a.key));
-    const rawRoles: unknown[] = Array.isArray(json.roles) ? json.roles : [];
-    const roles = [
-      ...new Set(
-        rawRoles
-          .map((s) => String(s).toLowerCase().trim())
-          .filter((k) => valid.has(k)),
-      ),
-    ].slice(0, 3);
+    const rawTasks: unknown[] = Array.isArray(json.tasks) ? json.tasks : [];
+    const tasks: OrchestrateTask[] = [];
+    const seen = new Set<string>();
+    for (const t of rawTasks) {
+      const o = t as { role?: unknown; task?: unknown };
+      const role = String(o.role ?? "").toLowerCase().trim();
+      const task = String(o.task ?? "").trim();
+      if (valid.has(role) && !seen.has(role)) {
+        seen.add(role);
+        tasks.push({ role, task: task || text });
+      }
+      if (tasks.length >= 3) break;
+    }
+    if (!tasks.length) return fallback;
     return {
-      action: "route",
-      roles: roles.length ? roles : fallback.roles,
+      action: "work",
       rationale: typeof json.rationale === "string" ? json.rationale : "",
+      tasks,
     };
   } catch {
     return fallback;

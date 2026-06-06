@@ -234,7 +234,7 @@ export function ChatView({
     requestAnimationFrame(() => ta?.focus());
   }
 
-  async function runAgent(key: string) {
+  async function runAgent(key: string, task?: string) {
     const aid = `tmp-a-${Date.now()}-${key}`;
     setMessages((m) => [
       ...m,
@@ -246,7 +246,7 @@ export function ChatView({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, agentKey: key, mode: modeRef.current }),
+        body: JSON.stringify({ projectId, agentKey: key, mode: modeRef.current, task }),
         signal: ac.signal,
       });
       if (!res.ok || !res.body) {
@@ -331,24 +331,34 @@ export function ChatView({
     setAtBottom(true);
     await sendUserMessage(projectId, text);
 
-    let targets: string[];
+    const handleOf = (key: string) =>
+      agents.find((a) => a.key === key)?.handle ?? key;
+    let plan: { role: string; task?: string }[];
+
     if (forcedAgents) {
-      targets = forcedAgents;
+      plan = forcedAgents.map((r) => ({ role: r }));
     } else if (pinned.length) {
-      targets = [...new Set([...pinned, ...inline])];
+      plan = [...new Set([...pinned, ...inline])].map((r) => ({ role: r }));
     } else if (inline.length) {
-      targets = inline;
+      plan = inline.map((r) => ({ role: r }));
     } else {
-      // Auto: Onit reads the request, asks one question if it's unclear, or
-      // routes to the right role(s).
+      // Auto: Onit reads the request, asks if unclear, or plans the work across roles.
       setRouting(true);
       let decision:
         | { action: "clarify"; question: string }
-        | { action: "route"; roles: string[]; rationale: string };
+        | {
+            action: "work";
+            rationale: string;
+            tasks: { role: string; task: string }[];
+          };
       try {
         decision = await orchestrate(projectId, text);
       } catch {
-        decision = { action: "route" as const, roles: [agentKey], rationale: "" };
+        decision = {
+          action: "work",
+          rationale: "",
+          tasks: [{ role: agentKey, task: text }],
+        };
       }
       setRouting(false);
 
@@ -368,19 +378,36 @@ export function ChatView({
         return;
       }
 
-      targets = decision.roles.length ? decision.roles : [agentKey];
-      const handles = agents
-        .filter((a) => targets.includes(a.key))
-        .map((a) => a.handle)
-        .join(", ");
-      if (handles) {
-        toast(decision.rationale ? `${handles} · ${decision.rationale}` : `Routed to ${handles}`);
+      plan = decision.tasks.length
+        ? decision.tasks.map((t) => ({ role: t.role, task: t.task }))
+        : [{ role: agentKey }];
+
+      if (plan.length > 1) {
+        const planText =
+          "Here's the plan:\n" +
+          decision.tasks
+            .map((t) => `- **${handleOf(t.role)}** — ${t.task}`)
+            .join("\n");
+        const { id } = await saveCoordinatorMessage(projectId, planText);
+        setMessages((m) => [
+          ...m,
+          {
+            id: id ?? `tmp-c-${Date.now()}`,
+            role: "agent",
+            agent_key: "coordinator",
+            content: planText,
+            status: "complete",
+          },
+        ]);
+      } else {
+        const h = handleOf(plan[0]?.role ?? agentKey);
+        toast(decision.rationale ? `${h} · ${decision.rationale}` : `Routed to ${h}`);
       }
     }
-    setAgentKey(targets[targets.length - 1]);
 
-    for (const key of targets) {
-      await runAgent(key);
+    setAgentKey(plan[plan.length - 1]?.role ?? agentKey);
+    for (const p of plan) {
+      await runAgent(p.role, p.task);
       if (stoppedRef.current) break;
     }
     setBusy(false);

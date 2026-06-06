@@ -27,7 +27,12 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
-  let body: { projectId?: string; agentKey?: string; mode?: string };
+  let body: {
+    projectId?: string;
+    agentKey?: string;
+    mode?: string;
+    task?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -42,6 +47,8 @@ export async function POST(req: Request) {
       : body.mode === "discuss"
         ? "discuss"
         : "build";
+  const task =
+    typeof body.task === "string" ? body.task.slice(0, 600).trim() : "";
   if (!projectId || !agentKey) {
     return new Response("Missing required fields.", { status: 400 });
   }
@@ -163,7 +170,7 @@ export async function POST(req: Request) {
               : "Provide the result directly.";
         const answerStream = streamText({
           model: openrouter(DEFAULT_MODEL),
-          system: `${buildSystemPrompt(agent.system_prompt)}${injection ? INJECTION_HARDENING : ""}\n\nCurrent mode: ${mode}. ${planNote}`,
+          system: `${buildSystemPrompt(agent.system_prompt)}${injection ? INJECTION_HARDENING : ""}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`,
           messages: ctx,
           abortSignal: timeout.signal,
         });
