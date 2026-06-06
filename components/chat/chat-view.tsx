@@ -10,6 +10,7 @@ import {
   PencilSimple,
   ArrowDown,
   Lightning,
+  Play,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
@@ -72,6 +73,10 @@ export function ChatView({
   const [pinned, setPinned] = useState<string[]>([]);
   const [routing, setRouting] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<{
+    tasks: { role: string; task: string }[];
+    text: string;
+  } | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -411,10 +416,28 @@ export function ChatView({
       }
     }
 
+    // Multi-role auto plans wait for the user's approval before the team runs.
+    if (recordAs === "auto" && plan.length > 1) {
+      setPendingPlan({
+        tasks: plan.map((p) => ({ role: p.role, task: p.task ?? "" })),
+        text,
+      });
+      setBusy(false);
+      return;
+    }
+
     if (recordAs) {
       recordRouting(plan.map((p) => p.role), text, recordAs).catch(() => {});
     }
+    await runTasks(plan, text);
+  }
 
+  async function runTasks(
+    plan: { role: string; task?: string }[],
+    text: string,
+  ) {
+    setBusy(true);
+    stoppedRef.current = false;
     setAgentKey(plan[plan.length - 1]?.role ?? agentKey);
     for (const p of plan) {
       await runAgent(p.role, p.task);
@@ -443,6 +466,18 @@ export function ChatView({
     }
 
     setBusy(false);
+  }
+
+  async function approvePlan() {
+    const p = pendingPlan;
+    if (!p) return;
+    setPendingPlan(null);
+    recordRouting(p.tasks.map((t) => t.role), p.text, "auto").catch(() => {});
+    await runTasks(p.tasks, p.text);
+  }
+
+  function cancelPlan() {
+    setPendingPlan(null);
   }
 
   function send() {
@@ -578,6 +613,28 @@ export function ChatView({
               <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
                 <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
                 Onit is wrapping up the team&apos;s work…
+              </div>
+            ) : null}
+            {pendingPlan && !busy ? (
+              <div className="flex flex-wrap items-center gap-2 pl-0.5">
+                <span className="text-xs text-muted-foreground">
+                  Onit drafted a {pendingPlan.tasks.length}-step plan —
+                </span>
+                <button
+                  type="button"
+                  onClick={approvePlan}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  <Play size={12} weight="fill" />
+                  Run the plan
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelPlan}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+                >
+                  Cancel
+                </button>
               </div>
             ) : null}
             {showPlanActions ? (
