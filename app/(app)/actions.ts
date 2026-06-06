@@ -119,6 +119,25 @@ export async function orchestrate(
     }
   }
 
+  // Learned preferences: recent explicit routing choices, used as few-shot.
+  let learned = "";
+  if (user) {
+    const { data: mem } = await admin
+      .from("routing_memory")
+      .select("summary, roles")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    const examples = (mem ?? [])
+      .filter((m) => m.summary && Array.isArray(m.roles) && m.roles.length)
+      .slice(0, 5)
+      .map((m) => `- "${m.summary}" -> ${(m.roles as string[]).join(", ")}`)
+      .join("\n");
+    if (examples) {
+      learned = `\nThis user's recent routing choices (learn their style, don't copy blindly):\n${examples}`;
+    }
+  }
+
   const roster = list
     .map((a) => `${a.key}: ${a.display_name} — ${a.description ?? ""}`)
     .join("\n");
@@ -135,7 +154,7 @@ OR
 {"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do"}]}
 Prefer WORK; only CLARIFY when genuinely necessary.
 Roles:
-${roster}${memory}`,
+${roster}${memory}${learned}`,
       prompt: `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`,
       maxOutputTokens: 260,
     });
@@ -201,6 +220,56 @@ export async function saveCoordinatorMessage(
     .select("id")
     .single();
   return { id: data?.id ?? null };
+}
+
+/** Remembers which roles the user assigned for a request (for learned routing). */
+export async function recordRouting(
+  roles: string[],
+  summary: string,
+  source: "manual" | "auto" = "manual",
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || !roles.length || !summary.trim()) return;
+  const admin = createAdminClient();
+  await admin.from("routing_memory").insert({
+    user_id: user.id,
+    summary: summary.slice(0, 160),
+    roles,
+    source,
+  });
+}
+
+/** Onit synthesizes the team's outputs into a short, cohesive wrap-up. */
+export async function synthesize(
+  projectId: string,
+  request: string,
+): Promise<{ text: string }> {
+  const admin = createAdminClient();
+  const { data: msgs } = await admin
+    .from("messages")
+    .select("agent_key, content")
+    .eq("project_id", projectId)
+    .eq("role", "agent")
+    .order("created_at", { ascending: false })
+    .limit(6);
+  const outputs = (msgs ?? [])
+    .filter((m) => m.agent_key && m.agent_key !== "coordinator" && m.content)
+    .reverse()
+    .map((m) => `${m.agent_key}:\n${(m.content || "").slice(0, 1100)}`)
+    .join("\n\n");
+  if (!outputs) return { text: "" };
+  try {
+    const { text } = await generateText({
+      model: openrouter(SUMMARY_MODEL),
+      system:
+        "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings or lists.",
+      prompt: `User's request: ${request}\n\nTeam outputs:\n${outputs}\n\nWrap-up:`,
+      maxOutputTokens: 220,
+    });
+    return { text: text.trim() };
+  } catch {
+    return { text: "" };
+  }
 }
 
 export async function createProject() {

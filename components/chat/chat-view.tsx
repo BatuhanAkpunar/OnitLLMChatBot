@@ -22,6 +22,8 @@ import {
   truncateFromMessage,
   orchestrate,
   saveCoordinatorMessage,
+  recordRouting,
+  synthesize,
 } from "@/app/(app)/actions";
 
 export type Agent = {
@@ -69,6 +71,7 @@ export function ChatView({
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
   const [pinned, setPinned] = useState<string[]>([]);
   const [routing, setRouting] = useState(false);
+  const [synthesizing, setSynthesizing] = useState(false);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -334,13 +337,16 @@ export function ChatView({
     const handleOf = (key: string) =>
       agents.find((a) => a.key === key)?.handle ?? key;
     let plan: { role: string; task?: string }[];
+    let recordAs: "manual" | "auto" | null = null;
 
     if (forcedAgents) {
       plan = forcedAgents.map((r) => ({ role: r }));
     } else if (pinned.length) {
       plan = [...new Set([...pinned, ...inline])].map((r) => ({ role: r }));
+      recordAs = "manual";
     } else if (inline.length) {
       plan = inline.map((r) => ({ role: r }));
+      recordAs = "manual";
     } else {
       // Auto: Onit reads the request, asks if unclear, or plans the work across roles.
       setRouting(true);
@@ -381,6 +387,7 @@ export function ChatView({
       plan = decision.tasks.length
         ? decision.tasks.map((t) => ({ role: t.role, task: t.task }))
         : [{ role: agentKey }];
+      recordAs = "auto";
 
       if (plan.length > 1) {
         const planText =
@@ -405,11 +412,37 @@ export function ChatView({
       }
     }
 
+    if (recordAs) {
+      recordRouting(plan.map((p) => p.role), text, recordAs).catch(() => {});
+    }
+
     setAgentKey(plan[plan.length - 1]?.role ?? agentKey);
     for (const p of plan) {
       await runAgent(p.role, p.task);
       if (stoppedRef.current) break;
     }
+
+    if (plan.length > 1 && !stoppedRef.current) {
+      setSynthesizing(true);
+      try {
+        const { text: wrap } = await synthesize(projectId, text);
+        if (wrap) {
+          const { id } = await saveCoordinatorMessage(projectId, wrap);
+          setMessages((m) => [
+            ...m,
+            {
+              id: id ?? `tmp-s-${Date.now()}`,
+              role: "agent",
+              agent_key: "coordinator",
+              content: wrap,
+              status: "complete",
+            },
+          ]);
+        }
+      } catch {}
+      setSynthesizing(false);
+    }
+
     setBusy(false);
   }
 
@@ -540,6 +573,12 @@ export function ChatView({
               <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
                 <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
                 Onit is routing your request…
+              </div>
+            ) : null}
+            {synthesizing ? (
+              <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
+                <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
+                Onit is wrapping up the team&apos;s work…
               </div>
             ) : null}
             {showPlanActions ? (
