@@ -251,63 +251,71 @@ export function HomeComposer({
         </div>
 
         <div className="mt-9">
-          <div className="mb-3.5 text-center">
+          <div className="mb-4 text-center">
             <div className="text-sm font-medium">Your team is standing by</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
               Tap a specialist to put them on it, or let Onit decide.
             </div>
           </div>
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {agents.map((a) => {
-              const on = pinned.includes(a.key);
-              const Icon = roleIcon(a.key);
-              return (
-                <button
-                  key={a.key}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => pinForKey(a.key)}
-                  className={`group flex items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
-                    on
-                      ? "border-transparent bg-white/[0.09]"
-                      : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]"
-                  }`}
-                  style={
-                    on
-                      ? { boxShadow: `inset 0 0 0 1.5px var(--agent-${a.color})` }
-                      : undefined
-                  }
-                >
-                  <span
-                    className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/10"
-                    style={{
-                      backgroundColor: `color-mix(in srgb, var(--agent-${a.color}) 16%, transparent)`,
-                    }}
-                  >
-                    <Icon
-                      size={20}
-                      weight="bold"
-                      style={{ color: `var(--agent-${a.color})` }}
-                    />
-                    {on ? (
-                      <span className="absolute -bottom-1 -right-1 grid place-items-center rounded-full bg-background">
-                        <CheckCircle
-                          size={16}
-                          weight="fill"
+
+          <div className="group relative overflow-hidden py-1">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent" />
+
+            <div className="onit-marquee">
+              {[0, 1].map((dup) =>
+                agents.map((a) => {
+                  const on = pinned.includes(a.key);
+                  const Icon = roleIcon(a.key);
+                  return (
+                    <button
+                      key={`${a.key}-${dup}`}
+                      type="button"
+                      aria-pressed={on}
+                      aria-hidden={dup === 1}
+                      tabIndex={dup === 1 ? -1 : 0}
+                      onClick={() => pinForKey(a.key)}
+                      className={`mr-3 flex w-[168px] shrink-0 flex-col items-center gap-2.5 rounded-2xl border p-4 text-center transition-all ${
+                        on
+                          ? "border-transparent bg-white/[0.09]"
+                          : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]"
+                      }`}
+                      style={
+                        on
+                          ? { boxShadow: `inset 0 0 0 1.5px var(--agent-${a.color})` }
+                          : undefined
+                      }
+                    >
+                      <span
+                        className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/10"
+                        style={{
+                          backgroundColor: `color-mix(in srgb, var(--agent-${a.color}) 16%, transparent)`,
+                        }}
+                      >
+                        <Icon
+                          size={24}
+                          weight="bold"
                           style={{ color: `var(--agent-${a.color})` }}
                         />
+                        {on ? (
+                          <span className="absolute -bottom-1 -right-1 grid place-items-center rounded-full bg-background">
+                            <CheckCircle
+                              size={17}
+                              weight="fill"
+                              style={{ color: `var(--agent-${a.color})` }}
+                            />
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold">{a.handle}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {rolePersona(a.key, a.description)}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                      <span className="text-sm font-semibold">{a.handle}</span>
+                      <span className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                        {rolePersona(a.key, a.description)}
+                      </span>
+                    </button>
+                  );
+                }),
+              )}
+            </div>
           </div>
         </div>
       </div>

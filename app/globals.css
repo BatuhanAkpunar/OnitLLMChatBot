@@ -488,7 +488,7 @@
   z-index: 1;
 }
 
-/* hero aurora — a soft, static field of role-colored light (no spinning dots) */
+/* hero aurora: a soft, static field of role-colored light (no spinning dots) */
 .onit-aurora {
   position: absolute;
   inset: 0;
@@ -510,6 +510,29 @@
 }
 .dark .onit-aurora::before {
   opacity: 0.95;
+}
+
+/* team marquee: avatar cards slide horizontally to signal they are selectable */
+@keyframes onit-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.onit-marquee {
+  display: flex;
+  width: max-content;
+  animation: onit-marquee 42s linear infinite;
+}
+.onit-marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .onit-marquee {
+    animation: none;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 
