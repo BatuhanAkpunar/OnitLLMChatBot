@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { PaperPlaneRight, Sparkle, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
+import { STARTERS } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { Aurora } from "@/components/hero/aurora";
@@ -291,6 +292,15 @@ export function HomeComposer({
     });
   }
 
+  function pickStarter(prompt: string) {
+    closePanel();
+    setInput(prompt);
+    requestAnimationFrame(() => {
+      taRef.current?.focus();
+      autosize();
+    });
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (panel && items > 0) {
       if (e.key === "ArrowDown") {
@@ -510,6 +520,20 @@ export function HomeComposer({
               )}
             </div>
           ) : null}
+        </div>
+
+        {/* Quick starts: show what the team can do, one tap to begin. */}
+        <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+          {STARTERS.map((s) => (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => pickStarter(s.prompt)}
+              className="rounded-xl border border-border bg-card/60 px-3 py-1.5 text-[13px] text-foreground/75 backdrop-blur transition-colors hover:border-violet-500/40 hover:bg-violet-500/[0.06] hover:text-foreground"
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
 
         <div className="mt-14">

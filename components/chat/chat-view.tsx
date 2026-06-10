@@ -16,6 +16,8 @@ import {
   Scroll,
   Gavel,
   Check,
+  Plus,
+  ListNumbers,
   ThumbsUp,
   ThumbsDown,
   Globe,
@@ -25,6 +27,7 @@ import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
+import { STARTERS } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
 import type { ProjectListItem } from "@/components/nav/history-button";
@@ -119,6 +122,13 @@ export function ChatView({
   const [pendingPlan, setPendingPlan] = useState<{
     tasks: { role: string; task: string; done: string; skill: string }[];
     text: string;
+  } | null>(null);
+  // Step-by-step runs pause here between tasks so the user stays in control.
+  const [pendingNext, setPendingNext] = useState<{
+    tasks: { role: string; task?: string; done?: string; skill?: string }[];
+    text: string;
+    ids?: string[];
+    index: number;
   } | null>(null);
   const [rules, setRules] = useState(initialRules);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -552,98 +562,196 @@ export function ChatView({
     await runTasks(plan, text);
   }
 
+  /** Marks a persisted backlog task as doing/done (both UI and DB). */
+  function markBacklogTask(
+    persistedIds: string[] | undefined,
+    i: number,
+    status: "doing" | "done",
+  ) {
+    const id = persistedIds?.[i];
+    if (!id) return;
+    setTasks((t) => t.map((x) => (x.id === id ? { ...x, status } : x)));
+    setTaskStatus(id, status).catch(() => {});
+  }
+
+  /** Closes a team run: Onit synthesizes the work and proposes decisions. */
+  async function wrapUp(
+    plan: { role: string; done?: string }[],
+    text: string,
+  ) {
+    setSynthesizing(true);
+    try {
+      const { text: wrap } = await synthesize(
+        projectId,
+        text,
+        plan
+          .filter((p) => p.done)
+          .map((p) => ({ role: p.role, done: p.done! })),
+      );
+      if (wrap) {
+        const { id } = await saveCoordinatorMessage(projectId, wrap);
+        setMessages((m) => [
+          ...m,
+          {
+            id: id ?? `tmp-s-${Date.now()}`,
+            role: "agent",
+            agent_key: "coordinator",
+            content: wrap,
+            status: "complete",
+          },
+        ]);
+      }
+    } catch {}
+    setSynthesizing(false);
+
+    // Decision memory: Onit proposes anything the team just settled; the
+    // user adopts or dismisses it from the Decisions panel.
+    try {
+      const proposed = await captureDecisions(projectId, text);
+      if (proposed.length) {
+        setDecisions((d) => [...proposed, ...d]);
+        toast(
+          proposed.length === 1
+            ? "Onit captured a decision for your review"
+            : `Onit captured ${proposed.length} decisions for your review`,
+          {
+            action: {
+              label: "Review",
+              onClick: () => setDecisionsOpen(true),
+            },
+          },
+        );
+      }
+    } catch {}
+  }
+
   async function runTasks(
     plan: { role: string; task?: string; done?: string; skill?: string }[],
     text: string,
     persistedIds?: string[],
+    stepwise = false,
   ) {
     setBusy(true);
     stoppedRef.current = false;
     setAgentKey(plan[plan.length - 1]?.role ?? agentKey);
 
-    const markTask = (i: number, status: "doing" | "done") => {
-      const id = persistedIds?.[i];
-      if (!id) return;
-      setTasks((t) => t.map((x) => (x.id === id ? { ...x, status } : x)));
-      setTaskStatus(id, status).catch(() => {});
-    };
+    if (stepwise && plan.length > 1) {
+      await runStep(plan, text, persistedIds, 0);
+      return;
+    }
 
     for (let i = 0; i < plan.length; i++) {
-      markTask(i, "doing");
+      markBacklogTask(persistedIds, i, "doing");
       await runAgent(plan[i].role, plan[i].task, plan[i].skill);
       if (stoppedRef.current) break;
-      markTask(i, "done");
+      markBacklogTask(persistedIds, i, "done");
     }
 
     if (plan.length > 1 && !stoppedRef.current) {
-      setSynthesizing(true);
-      try {
-        const { text: wrap } = await synthesize(
-          projectId,
-          text,
-          plan
-            .filter((p) => p.done)
-            .map((p) => ({ role: p.role, done: p.done! })),
-        );
-        if (wrap) {
-          const { id } = await saveCoordinatorMessage(projectId, wrap);
-          setMessages((m) => [
-            ...m,
-            {
-              id: id ?? `tmp-s-${Date.now()}`,
-              role: "agent",
-              agent_key: "coordinator",
-              content: wrap,
-              status: "complete",
-            },
-          ]);
-        }
-      } catch {}
-      setSynthesizing(false);
-
-      // Decision memory: Onit proposes anything the team just settled; the
-      // user adopts or dismisses it from the Decisions panel.
-      try {
-        const proposed = await captureDecisions(projectId, text);
-        if (proposed.length) {
-          setDecisions((d) => [...proposed, ...d]);
-          toast(
-            proposed.length === 1
-              ? "Onit captured a decision for your review"
-              : `Onit captured ${proposed.length} decisions for your review`,
-            {
-              action: {
-                label: "Review",
-                onClick: () => setDecisionsOpen(true),
-              },
-            },
-          );
-        }
-      } catch {}
+      await wrapUp(plan, text);
     }
 
     setBusy(false);
   }
 
-  async function approvePlan() {
+  /** Step-by-step run: one task, then pause for the user's go-ahead. */
+  async function runStep(
+    plan: { role: string; task?: string; done?: string; skill?: string }[],
+    text: string,
+    ids: string[] | undefined,
+    i: number,
+  ) {
+    setBusy(true);
+    setPendingNext(null);
+    markBacklogTask(ids, i, "doing");
+    await runAgent(plan[i].role, plan[i].task, plan[i].skill);
+    if (!stoppedRef.current) markBacklogTask(ids, i, "done");
+
+    const next = i + 1;
+    if (stoppedRef.current || next >= plan.length) {
+      if (next >= plan.length && plan.length > 1 && !stoppedRef.current) {
+        await wrapUp(plan, text);
+      }
+      setBusy(false);
+      return;
+    }
+    setPendingNext({ tasks: plan, text, ids, index: next });
+    setBusy(false);
+  }
+
+  /** "Finish here" on a paused step-by-step run: wrap up what's done. */
+  async function finishStepRun() {
+    const p = pendingNext;
+    if (!p) return;
+    setPendingNext(null);
+    if (p.index > 1) {
+      setBusy(true);
+      await wrapUp(p.tasks.slice(0, p.index), p.text);
+      setBusy(false);
+    }
+  }
+
+  async function approvePlan(stepwise = false) {
     const p = pendingPlan;
     if (!p) return;
+    // The user may have edited the plan: drop rows left without a task.
+    const tasks = p.tasks
+      .map((t) => ({ ...t, task: t.task.trim(), done: t.done.trim() }))
+      .filter((t) => t.task && agentByKey[t.role]);
+    if (!tasks.length) {
+      setPendingPlan(null);
+      return;
+    }
     setPendingPlan(null);
-    recordRouting(p.tasks.map((t) => t.role), p.text, "auto").catch(() => {});
+    recordRouting(tasks.map((t) => t.role), p.text, "auto").catch(() => {});
     // Approved plans become persistent backlog tasks for this project.
     let ids: string[] | undefined;
     try {
-      const created = await addProjectTasks(projectId, p.tasks);
-      if (created.length === p.tasks.length) {
+      const created = await addProjectTasks(projectId, tasks);
+      if (created.length === tasks.length) {
         ids = created.map((t) => t.id);
         setTasks((t) => [...t, ...created]);
       }
     } catch {}
-    await runTasks(p.tasks, p.text, ids);
+    await runTasks(tasks, p.text, ids, stepwise);
   }
 
   function cancelPlan() {
     setPendingPlan(null);
+  }
+
+  function updatePlanTask(
+    i: number,
+    patch: Partial<{ role: string; task: string; done: string }>,
+  ) {
+    setPendingPlan((p) =>
+      p
+        ? {
+            ...p,
+            tasks: p.tasks.map((t, j) => (j === i ? { ...t, ...patch } : t)),
+          }
+        : p,
+    );
+  }
+
+  function removePlanTask(i: number) {
+    setPendingPlan((p) =>
+      p ? { ...p, tasks: p.tasks.filter((_, j) => j !== i) } : p,
+    );
+  }
+
+  function addPlanTask() {
+    setPendingPlan((p) =>
+      p
+        ? {
+            ...p,
+            tasks: [
+              ...p.tasks,
+              { role: agents[0]?.key ?? "", task: "", done: "", skill: "" },
+            ],
+          }
+        : p,
+    );
   }
 
   async function saveRules() {
@@ -1149,6 +1257,21 @@ export function ChatView({
                     specialists, or @mention a role to pick yourself.
                   </p>
                 </div>
+                <div className="flex max-w-md flex-wrap justify-center gap-1.5">
+                  {STARTERS.map((s) => (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => {
+                        setInput(s.prompt);
+                        taRef.current?.focus();
+                      }}
+                      className="rounded-xl border border-border bg-card px-3 py-1.5 text-[13px] text-foreground/80 transition-colors hover:border-violet-500/40 hover:bg-violet-500/[0.06] hover:text-foreground"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
             {messages.map((m) => (
@@ -1192,17 +1315,138 @@ export function ChatView({
             ) : null}
             {pendingPlan && !busy ? (
               <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">
-                <div className="flex items-center gap-2.5 px-4 pt-3.5">
+                <div className="flex items-baseline gap-2.5 px-4 pt-3.5">
                   <OrbMark size={20} />
                   <span className="text-sm font-semibold">
                     Onit drafted a {pendingPlan.tasks.length}-step plan
                   </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Edit anything before the team runs.
+                  </span>
                 </div>
-                <ul className="space-y-2.5 px-4 py-3.5">
+                <ul className="space-y-2 px-4 py-3.5">
                   {pendingPlan.tasks.map((t, i) => {
                     const a = agentByKey[t.role];
                     return (
-                      <li key={i} className="flex items-start gap-3">
+                      <li
+                        key={i}
+                        className="group/task rounded-xl border border-violet-500/15 bg-background/50 p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          {a ? (
+                            <RoleAvatar
+                              roleKey={a.key}
+                              color={a.color}
+                              size={26}
+                              rounded="rounded-lg"
+                            />
+                          ) : (
+                            <span className="h-[26px] w-[26px] rounded-lg bg-muted" />
+                          )}
+                          <select
+                            value={t.role}
+                            onChange={(e) =>
+                              updatePlanTask(i, { role: e.target.value })
+                            }
+                            aria-label="Assigned role"
+                            className="cursor-pointer appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pl-1 pr-5 text-[13px] font-semibold outline-none transition-colors hover:border-border focus:border-border"
+                            style={
+                              a ? { color: `var(--agent-${a.color})` } : undefined
+                            }
+                          >
+                            {agents.map((ag) => (
+                              <option key={ag.key} value={ag.key}>
+                                {ag.handle}
+                              </option>
+                            ))}
+                          </select>
+                          {pendingPlan.tasks.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removePlanTask(i)}
+                              aria-label="Remove step"
+                              title="Remove step"
+                              className="ml-auto rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/task:opacity-100"
+                            >
+                              <X size={14} />
+                            </button>
+                          ) : null}
+                        </div>
+                        <textarea
+                          value={t.task}
+                          onChange={(e) =>
+                            updatePlanTask(i, { task: e.target.value })
+                          }
+                          rows={2}
+                          placeholder="What should this role do?"
+                          className="mt-1.5 w-full resize-none rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-sm leading-snug outline-none transition-colors focus:border-border"
+                        />
+                        <input
+                          value={t.done}
+                          onChange={(e) =>
+                            updatePlanTask(i, { done: e.target.value })
+                          }
+                          placeholder="Done when ... (optional)"
+                          className="w-full rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-xs italic text-muted-foreground outline-none transition-colors focus:border-border"
+                        />
+                      </li>
+                    );
+                  })}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={addPlanTask}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    >
+                      <Plus size={13} weight="bold" />
+                      Add a step
+                    </button>
+                  </li>
+                </ul>
+                <div className="flex flex-wrap gap-2 border-t border-violet-500/15 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => approvePlan(false)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    <Play size={12} weight="fill" />
+                    Run the plan
+                  </button>
+                  {pendingPlan.tasks.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => approvePlan(true)}
+                      title="Run one step at a time; you approve each next step"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-accent"
+                    >
+                      <ListNumbers size={13} weight="bold" />
+                      Run step by step
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={cancelPlan}
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs transition-colors hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {pendingNext && !busy ? (
+              <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">
+                <div className="flex items-center gap-2.5 px-4 pt-3.5">
+                  <OrbMark size={20} />
+                  <span className="text-sm font-semibold">
+                    Step {pendingNext.index} of {pendingNext.tasks.length} done
+                  </span>
+                </div>
+                <div className="flex items-start gap-3 px-4 py-3.5">
+                  {(() => {
+                    const t = pendingNext.tasks[pendingNext.index];
+                    const a = agentByKey[t.role];
+                    return (
+                      <>
                         {a ? (
                           <RoleAvatar
                             roleKey={a.key}
@@ -1212,38 +1456,49 @@ export function ChatView({
                           />
                         ) : null}
                         <span className="min-w-0 flex-1 text-sm leading-snug">
-                          <span
-                            className="font-semibold"
-                            style={a ? { color: `var(--agent-${a.color})` } : undefined}
-                          >
-                            {a?.handle ?? t.role}
-                          </span>{" "}
-                          {t.task}
-                          {t.done ? (
-                            <span className="mt-0.5 block text-xs italic text-muted-foreground">
-                              {t.done}
-                            </span>
-                          ) : null}
+                          <span className="text-xs text-muted-foreground">
+                            Next up
+                          </span>
+                          <span className="block">
+                            <span
+                              className="font-semibold"
+                              style={
+                                a
+                                  ? { color: `var(--agent-${a.color})` }
+                                  : undefined
+                              }
+                            >
+                              {a?.handle ?? t.role}
+                            </span>{" "}
+                            {t.task}
+                          </span>
                         </span>
-                      </li>
+                      </>
                     );
-                  })}
-                </ul>
+                  })()}
+                </div>
                 <div className="flex gap-2 border-t border-violet-500/15 px-4 py-3">
                   <button
                     type="button"
-                    onClick={approvePlan}
+                    onClick={() =>
+                      runStep(
+                        pendingNext.tasks,
+                        pendingNext.text,
+                        pendingNext.ids,
+                        pendingNext.index,
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     <Play size={12} weight="fill" />
-                    Run the plan
+                    Run next step
                   </button>
                   <button
                     type="button"
-                    onClick={cancelPlan}
+                    onClick={finishStepRun}
                     className="rounded-lg border border-border px-3.5 py-2 text-xs transition-colors hover:bg-accent"
                   >
-                    Cancel
+                    Finish here
                   </button>
                 </div>
               </div>
