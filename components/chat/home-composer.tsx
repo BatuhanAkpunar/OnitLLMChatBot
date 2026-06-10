@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PaperPlaneRight, Sparkle, Check, CheckCircle } from "@phosphor-icons/react";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
-import { FluidOrb } from "@/components/hero/fluid-orb";
+import { Aurora } from "@/components/hero/aurora";
 import { RoleAvatar, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
@@ -314,6 +314,8 @@ export function HomeComposer({
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden px-6 py-12">
+      <Aurora className="absolute inset-x-0 top-0 z-0 h-[52%]" />
+
       <div className="relative z-10 w-full max-w-2xl">
         <div className="mb-7 flex flex-col items-center text-center">
           {firstName ? (
@@ -334,10 +336,6 @@ export function HomeComposer({
         </div>
 
         <div ref={composerRef} className="relative">
-          <FluidOrb
-            size={520}
-            className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2"
-          />
           <div className="rounded-2xl border border-border bg-card/85 p-2.5 shadow-xl backdrop-blur-xl">
             <textarea
               ref={taRef}

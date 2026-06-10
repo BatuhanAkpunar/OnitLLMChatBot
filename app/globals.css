@@ -517,9 +517,13 @@
   overflow-x: auto;
   touch-action: pan-x;
   scrollbar-width: none;
+  user-select: none;
 }
 .onit-carousel::-webkit-scrollbar {
   display: none;
+}
+.onit-carousel img {
+  -webkit-user-drag: none;
 }
 
 

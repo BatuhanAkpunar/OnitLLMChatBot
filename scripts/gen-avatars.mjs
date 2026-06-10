@@ -1,10 +1,13 @@
-// Generates the 6 pixel-art role portraits via the Gemini API (Nano Banana)
-// and writes them to public/avatars/<key>.png.
+// Generates the 6 pixel-art role portraits (plus 2 animation frames each)
+// via the Gemini API and writes them to public/avatars/.
 //
-// Usage: node --env-file=.env.local scripts/gen-avatars.mjs
-// Requires GEMINI_API_KEY in .env.local (never committed; .env.local is gitignored).
+//   node --env-file=.env.local scripts/gen-avatars.mjs            # all roles
+//   node --env-file=.env.local scripts/gen-avatars.mjs qa analyst # only these
+//
+// Files per role: <key>.png (base), <key>_blink.png, <key>_alt.png.
+// Requires GEMINI_API_KEY in .env.local (gitignored, never committed).
 
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const KEY = process.env.GEMINI_API_KEY;
@@ -16,79 +19,174 @@ if (!KEY) {
 const MODEL = "gemini-2.5-flash-image";
 const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${KEY}`;
 
-// Street Fighter 2 character-select portrait AESTHETIC (pixel craft only, the
-// subjects are modern software professionals, never fighters), with one rigid
-// framing spec so all six portraits crop identically.
+// Street Fighter 2 pixel CRAFT, but warm modern people, with one rigid
+// rectangular full-bleed framing spec so all six portraits crop identically.
 const STYLE =
-  "Pixel art portrait in the exact visual style of a Street Fighter 2 arcade character select screen: " +
+  "Pixel art portrait in the visual craft of a Street Fighter 2 arcade character select screen: " +
   "bold 16-bit pixel art, confident dark pixel outlines, chunky cel shading with subtle dithering, " +
-  "saturated colors, limited 16 color palette, crisp hard pixels, no anti-aliasing, no text, no frame. " +
-  "The subject is a modern software professional in contemporary casual clothes; " +
-  "absolutely no fighting gear, no headbands, no scars, no martial arts costume. " +
-  "STANDARD FRAMING, IDENTICAL FOR EVERY PORTRAIT: bust crop; the top of the hair sits 8 percent below " +
-  "the top edge; the bottom edge cuts at mid chest just below the collarbone; both shoulders fully " +
-  "visible with about 10 percent margin to the left and right edges; head centered horizontally; " +
-  "eyes sit on the upper third line; three quarter view facing slightly left; same camera distance in every image. " +
+  "warm saturated colors, limited 16 color palette, crisp hard pixels, no anti-aliasing, no text. " +
+  "The subject is a friendly modern software professional in contemporary casual clothes; " +
+  "soft warm facial features, kind approachable eyes, absolutely no fighting gear, no scars. " +
+  "FRAMING, IDENTICAL FOR EVERY PORTRAIT, RECTANGULAR FULL BLEED: the artwork fills the whole square " +
+  "edge to edge; top of the hair sits 8 percent below the top edge; the bottom edge of the image cuts " +
+  "the torso at mid chest; the shoulders and upper arms run off the left and right edges at the bottom " +
+  "corners, cropped by the frame itself. STRICTLY FORBIDDEN: circular crop, rounded vignette, arc or " +
+  "curve cutting the torso, badge shape, border, frame line, floating bust on empty background. " +
+  "The chest and shoulders must be cut only by the straight edges of the image, exactly like a " +
+  "fighting game select screen portrait. Three quarter view facing slightly left. " +
   "Background: completely flat dark navy, exact hex #0d0f14, no gradient, no props.";
 
+// Six Turkish characters, each worked out individually: warm, soft features,
+// distinct (but always friendly) expressions, role-colored rim light.
 const CHARACTERS = [
   {
     key: "analyst",
-    desc: "A 26 year old East Asian man, neat side-parted black hair, thin round glasses, plain navy shirt. Expression: deep focused concentration, eyebrows slightly knitted, lips pressed together. Soft blue rim light (#60a5fa) on hair and shoulder.",
+    desc:
+      "A 26 year old Turkish man from Istanbul with soft Mediterranean features: olive skin, " +
+      "warm dark brown eyes, neat short dark brown hair, clean shaven, thin round glasses, plain navy shirt. " +
+      "Expression: gentle attentive smile, calm bright eyes, the friend who really listens. " +
+      "Soft blue rim light (#60a5fa) on hair and shoulder.",
   },
   {
     key: "product_manager",
-    desc: "A 28 year old Black woman, short natural curly hair, small gold hoop earrings, violet blazer over a dark tee. Expression: confident wide smile showing teeth, chin slightly up, leader energy. Soft violet rim light (#a78bfa) on hair and shoulder.",
+    desc:
+      "A 28 year old Turkish woman with soft Mediterranean features: olive skin, warm brown eyes, " +
+      "dark brown wavy hair falling to her shoulders, small gold earrings, violet blazer over a dark tee. " +
+      "Expression: warm confident smile with gently raised cheeks, welcoming leader energy. " +
+      "Soft violet rim light (#a78bfa) on hair and shoulder.",
   },
   {
     key: "developer",
-    desc: "A 25 year old man with light stubble, messy brown hair, orange hoodie, black headphones resting around his neck. Expression: smug lopsided grin, one corner of the mouth raised, relaxed eyes. Soft orange rim light (#fb923c) on hair and shoulder.",
+    desc:
+      "A 25 year old Turkish man with soft features: light olive skin, tousled dark hair, short well " +
+      "groomed beard, warm hazel eyes, orange hoodie, black headphones resting around his neck. " +
+      "Expression: cheerful open grin, kind and energetic, the teammate who loves to build. " +
+      "Soft orange rim light (#fb923c) on hair and shoulder.",
   },
   {
     key: "project_manager",
-    desc: "A 28 year old man, tidy dark undercut haircut, clean shaven, light blue oxford shirt with the top button open. Expression: composed neutral face, steady calm gaze straight ahead, no smile. Soft green rim light (#4ade80) on hair and shoulder.",
+    desc:
+      "A 28 year old Turkish man with soft features: olive skin, short neatly combed black hair, " +
+      "trimmed dark beard, warm brown eyes, light blue oxford shirt with open collar. " +
+      "Expression: serene reassuring small smile, steady calm warmth, quietly dependable. " +
+      "Soft green rim light (#4ade80) on hair and shoulder.",
   },
   {
     key: "product_designer",
-    desc: "A 24 year old Latina woman, asymmetrical dark bob with a pink streak, small silver earrings, black turtleneck, yellow pencil tucked behind her ear. Expression: curious and inspired, eyebrows raised, bright wide eyes, soft open smile. Soft pink rim light (#f472b6) on hair and shoulder.",
+    desc:
+      "A 24 year old Turkish woman with soft features: light olive skin, long dark brown hair with " +
+      "soft bangs and a small pink hair clip, silver earrings, black turtleneck, yellow pencil behind her ear. " +
+      "Expression: joyful bright smile, sparkling curious eyes, playful creative warmth. " +
+      "Soft pink rim light (#f472b6) on hair and shoulder.",
   },
   {
     key: "qa",
-    desc: "A 27 year old man, dark beanie, rectangular glasses, teal jacket over a graphite tee. Expression: skeptical squint, one eyebrow sharply raised, wry half smile on one side. Soft teal rim light (#2dd4bf) on hair and shoulder.",
+    desc:
+      "A 27 year old Turkish man with soft features: olive skin, dark wavy hair, light stubble, " +
+      "rectangular glasses, teal jacket over a graphite tee. " +
+      "Expression: gentle curious half smile with one softly raised eyebrow, kind detective energy. " +
+      "Soft teal rim light (#2dd4bf) on hair and shoulder. " +
+      "CRITICAL: his jacket, chest and shoulders are WIDE and fill the entire bottom edge of the image " +
+      "from the bottom left corner to the bottom right corner; zero background pixels are visible along " +
+      "the bottom edge or in the bottom corners; the torso is cut off only by the straight bottom border.",
   },
 ];
+
+const BLINK_EDIT =
+  "Edit this pixel art portrait: the character's eyes are now fully closed in a natural relaxed blink. " +
+  "Keep EVERYTHING else pixel-identical: same pose, same framing, same colors, same clothes, same " +
+  "background, same pixel grid. Only the eyes and eyebrows change.";
+
+const ALT_EDIT =
+  "Edit this pixel art portrait: the character's smile widens warmly and the head tilts a tiny bit " +
+  "(two or three pixels), eyes slightly happier. Keep EVERYTHING else pixel-identical: same framing, " +
+  "same colors, same clothes, same background, same pixel grid.";
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function generate(prompt, refBuffer) {
+  const parts = [];
+  if (refBuffer) {
+    parts.push({
+      inline_data: { mime_type: "image/png", data: refBuffer.toString("base64") },
+    });
+  }
+  parts.push({ text: prompt });
+  const body = JSON.stringify({
+    contents: [{ parts }],
+    generationConfig: {
+      responseModalities: ["IMAGE"],
+      imageConfig: { aspectRatio: "1:1" },
+    },
+  });
+
+  // The model 503s under load spikes; retry with exponential backoff.
+  let lastErr;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (attempt > 0) await sleep(5000 * 2 ** (attempt - 1) + Math.random() * 2000);
+    try {
+      const res = await fetch(URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (res.status === 503 || res.status === 429) {
+        lastErr = new Error(`HTTP ${res.status} (retrying)`);
+        continue;
+      }
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      }
+      const json = await res.json();
+      const part = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+      if (!part) {
+        lastErr = new Error("no image in response (retrying)");
+        continue;
+      }
+      return Buffer.from(part.inlineData.data, "base64");
+    } catch (err) {
+      lastErr = err; // network hiccups included
+    }
+  }
+  throw lastErr ?? new Error("generation failed");
+}
 
 const outDir = path.join(import.meta.dirname, "..", "public", "avatars");
 await mkdir(outDir, { recursive: true });
 
+const only = process.argv.slice(2);
+const todo = only.length
+  ? CHARACTERS.filter((c) => only.includes(c.key))
+  : CHARACTERS;
+
 let failures = 0;
-for (const { key, desc } of CHARACTERS) {
-  process.stdout.write(`generating ${key}... `);
+for (const { key, desc } of todo) {
+  // Base frame
+  let base;
+  process.stdout.write(`${key}: base... `);
   try {
-    const res = await fetch(URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${STYLE} Subject: ${desc}` }] }],
-        generationConfig: {
-          responseModalities: ["IMAGE"],
-          imageConfig: { aspectRatio: "1:1" },
-        },
-      }),
-    });
-    if (!res.ok) {
-      const body = (await res.text()).slice(0, 300);
-      throw new Error(`HTTP ${res.status}: ${body}`);
-    }
-    const json = await res.json();
-    const part = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
-    if (!part) throw new Error("no image in response");
-    const buf = Buffer.from(part.inlineData.data, "base64");
-    await writeFile(path.join(outDir, `${key}.png`), buf);
-    console.log(`ok (${Math.round(buf.length / 1024)} KB)`);
+    base = await generate(`${STYLE} Subject: ${desc}`);
+    await writeFile(path.join(outDir, `${key}.png`), base);
+    console.log(`ok (${Math.round(base.length / 1024)} KB)`);
   } catch (err) {
     failures++;
     console.log(`FAILED: ${err.message}`);
+    continue;
+  }
+  // Animation frames, edited from the base for consistency
+  for (const [suffix, prompt] of [
+    ["_blink", BLINK_EDIT],
+    ["_alt", ALT_EDIT],
+  ]) {
+    process.stdout.write(`${key}: ${suffix.slice(1)}... `);
+    try {
+      const buf = await generate(prompt, base);
+      await writeFile(path.join(outDir, `${key}${suffix}.png`), buf);
+      console.log(`ok (${Math.round(buf.length / 1024)} KB)`);
+    } catch (err) {
+      failures++;
+      console.log(`FAILED: ${err.message}`);
+    }
   }
 }
 
