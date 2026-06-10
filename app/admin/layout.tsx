@@ -15,7 +15,6 @@ export default async function AdminLayout({
 
   return (
     <div className="relative min-h-dvh">
-      <div className="onit-ambient" aria-hidden />
       <header className="sticky top-0 z-10 border-b border-white/10 bg-background/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-3">
           <Link href="/admin" className="shrink-0 text-sm font-semibold">

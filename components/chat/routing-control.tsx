@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Lightning, CaretDown, Check } from "@phosphor-icons/react";
-import { roleIcon, rolePersona } from "./role-visual";
+import { RoleAvatar, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
 /**
@@ -100,7 +100,6 @@ export function RoutingControl({
 
           {agents.map((a) => {
             const on = pinned.includes(a.key);
-            const Icon = roleIcon(a.key);
             return (
               <button
                 key={a.key}
@@ -110,14 +109,7 @@ export function RoutingControl({
                   on ? "bg-white/10" : "hover:bg-white/5"
                 }`}
               >
-                <span
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full ring-1 ring-inset ring-white/10"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, var(--agent-${a.color}) 16%, transparent)`,
-                  }}
-                >
-                  <Icon size={14} weight="bold" style={{ color: `var(--agent-${a.color})` }} />
-                </span>
+                <RoleAvatar roleKey={a.key} color={a.color} size={28} rounded="rounded-lg" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{a.handle}</span>
                   <span className="block truncate text-muted-foreground">

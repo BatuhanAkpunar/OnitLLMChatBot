@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { BorderGlow } from "@/components/ui/border-glow";
-import { Logo } from "@/components/brand/logo";
+import { OrbMark } from "@/components/brand/orb";
 import { signInWithGoogle, signInWithDevPassword } from "@/app/login/actions";
 
 const ROLES: { handle: string; color: string }[] = [
@@ -54,7 +54,7 @@ export function LoginHero({
     <div className="w-full max-w-xl">
       <div className="mb-7 text-center">
         <div className="mx-auto mb-4 w-fit">
-          <Logo size={44} />
+          <OrbMark size={44} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Welcome to Onit AI</h1>
         <p className="mt-2 text-sm text-muted-foreground">

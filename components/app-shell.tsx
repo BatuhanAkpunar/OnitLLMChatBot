@@ -20,8 +20,6 @@ export function AppShell({
 
   return (
     <div className="relative flex h-dvh overflow-hidden">
-      <div className="onit-ambient" aria-hidden />
-
       {/* desktop: floating glass sidebar */}
       <aside className="relative z-10 hidden w-72 shrink-0 p-3 md:block">
         <div className="glass glass-edge h-full overflow-hidden rounded-3xl">
@@ -67,7 +65,6 @@ export function AppShell({
           >
             <List size={20} />
           </button>
-          <span className="font-semibold tracking-tight">Onit AI</span>
         </header>
 
         <main className="min-h-0 flex-1 overflow-auto">{children}</main>

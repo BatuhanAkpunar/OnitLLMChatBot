@@ -512,27 +512,14 @@
   opacity: 0.95;
 }
 
-/* team marquee: avatar cards slide horizontally to signal they are selectable */
-@keyframes onit-marquee {
-  to {
-    transform: translateX(-50%);
-  }
+/* team carousel: drag or swipe horizontally, no visible scrollbar */
+.onit-carousel {
+  overflow-x: auto;
+  touch-action: pan-x;
+  scrollbar-width: none;
 }
-.onit-marquee {
-  display: flex;
-  width: max-content;
-  animation: onit-marquee 42s linear infinite;
-}
-.onit-marquee:hover {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .onit-marquee {
-    animation: none;
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
+.onit-carousel::-webkit-scrollbar {
+  display: none;
 }
 
 
