@@ -34,7 +34,13 @@ async function logUsage(
   }
 }
 
-export type OrchestrateTask = { role: string; task: string; done: string };
+export type OrchestrateTask = {
+  role: string;
+  task: string;
+  done: string;
+  /** Optional method-library key the role should apply for this task. */
+  skill: string;
+};
 export type OrchestrateResult =
   | { action: "clarify"; question: string }
   | { action: "work"; rationale: string; tasks: OrchestrateTask[] };
@@ -60,7 +66,9 @@ export async function orchestrate(
   const fallback: OrchestrateResult = {
     action: "work",
     rationale: "",
-    tasks: fallbackRole ? [{ role: fallbackRole, task: text, done: "" }] : [],
+    tasks: fallbackRole
+      ? [{ role: fallbackRole, task: text, done: "", skill: "" }]
+      : [],
   };
   if (!list.length || !text.trim()) return fallback;
 
@@ -80,6 +88,36 @@ export async function orchestrate(
     .limit(8);
   const backlog = (openTasks ?? [])
     .map((t) => `- [${t.status}] ${t.role_key}: ${t.task}`)
+    .join("\n");
+
+  // Adopted decisions act as standing constraints on all new work.
+  const { data: adoptedRows } = await admin
+    .from("project_decisions")
+    .select("title, constraints")
+    .eq("project_id", projectId)
+    .eq("status", "adopted")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  const decisionsCtx = (adoptedRows ?? [])
+    .map(
+      (d) =>
+        `- ${d.title}${(d.constraints ?? []).length ? `: ${(d.constraints as string[]).join("; ")}` : ""}`,
+    )
+    .join("\n");
+
+  // Method library catalog: frontmatter only; the chosen skill's body is
+  // loaded into the assigned role's prompt by /api/chat, not here.
+  const { data: skillRows } = await admin
+    .from("skills")
+    .select("key, title, description, role_keys")
+    .eq("enabled", true)
+    .order("sort_order");
+  const skills = skillRows ?? [];
+  const skillCatalog = skills
+    .map(
+      (s) =>
+        `${s.key} (${(s.role_keys as string[] | null)?.join("/") || "any"}): ${s.description}`,
+    )
     .join("\n");
 
   const { data: recent } = await admin
@@ -148,13 +186,14 @@ export async function orchestrate(
   const system = `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
 1. CLARIFY: if it's too vague or missing a key detail, ask ONE short, specific question.
 2. WORK: break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence. For every task also write "done": one short, checkable acceptance criterion ("done when ...").
+For each task, if one method from the library below clearly fits, set "skill" to its key; otherwise set "skill" to "". Never force a method onto a simple request.
 Reply with ONLY compact JSON, no prose:
 {"action":"clarify","question":"..."}
 OR
-{"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do","done":"done when ..."}]}
+{"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do","done":"done when ...","skill":"skillkey or empty"}]}
 Prefer WORK; only CLARIFY when genuinely necessary.
 Roles:
-${roster}${memory}${learned}${rules ? `\nProject team rules (always respect these):\n${rules.slice(0, 800)}` : ""}${backlog ? `\nOpen backlog for this project (relate new work to it when relevant):\n${backlog}` : ""}`;
+${roster}${skillCatalog ? `\nMethod library (optional, pick at most one per task):\n${skillCatalog}` : ""}${memory}${learned}${rules ? `\nProject team rules (always respect these):\n${rules.slice(0, 800)}` : ""}${decisionsCtx ? `\nAdopted team decisions (standing constraints; new work must not contradict them):\n${decisionsCtx}` : ""}${backlog ? `\nOpen backlog for this project (relate new work to it when relevant):\n${backlog}` : ""}`;
   const userPrompt = `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`;
 
   /** Parses and validates a decision; throws with a precise reason. */
@@ -173,20 +212,32 @@ ${roster}${memory}${learned}${rules ? `\nProject team rules (always respect thes
       throw new Error('"action" must be "clarify" or "work"');
     }
     const valid = new Set(list.map((a) => a.key));
+    const validSkills = new Set(skills.map((s) => s.key));
     if (!Array.isArray(json.tasks) || json.tasks.length === 0) {
       throw new Error('"tasks" must be a non-empty array');
     }
     const tasks: OrchestrateTask[] = [];
     const seen = new Set<string>();
     for (const t of json.tasks as unknown[]) {
-      const o = t as { role?: unknown; task?: unknown; done?: unknown };
+      const o = t as {
+        role?: unknown;
+        task?: unknown;
+        done?: unknown;
+        skill?: unknown;
+      };
       const role = String(o.role ?? "").toLowerCase().trim();
       const task = String(o.task ?? "").trim();
       const done = String(o.done ?? "").trim();
+      const skillKey = String(o.skill ?? "").toLowerCase().trim();
       if (!valid.has(role)) continue;
       if (seen.has(role)) continue;
       seen.add(role);
-      tasks.push({ role, task: task || text, done });
+      tasks.push({
+        role,
+        task: task || text,
+        done,
+        skill: validSkills.has(skillKey) ? skillKey : "",
+      });
       if (tasks.length >= 3) break;
     }
     if (!tasks.length) {
@@ -605,6 +656,151 @@ export async function setTaskStatus(
     .update({ status })
     .eq("id", taskId);
   return { ok: !error };
+}
+
+// --- Decision memory -------------------------------------------------------------
+// A decision is a constraint with a rationale. Adopted decisions are injected
+// into orchestration and every role's system prompt; superseding keeps history.
+
+export type ProjectDecision = {
+  id: string;
+  title: string;
+  status: "proposed" | "adopted" | "superseded" | "dismissed";
+  context: string | null;
+  because: string[];
+  despite: string[];
+  constraints: string[];
+  scope_roles: string[];
+  created_at: string;
+};
+
+const DECISION_COLS =
+  "id, title, status, context, because, despite, constraints, scope_roles, created_at";
+
+export async function listDecisions(
+  projectId: string,
+): Promise<ProjectDecision[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("project_decisions")
+    .select(DECISION_COLS)
+    .eq("project_id", projectId)
+    .neq("status", "dismissed")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return (data ?? []) as ProjectDecision[];
+}
+
+export async function setDecisionStatus(
+  decisionId: string,
+  status: "proposed" | "adopted" | "superseded" | "dismissed",
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_decisions")
+    .update({ status })
+    .eq("id", decisionId);
+  return { ok: !error };
+}
+
+/**
+ * After a team run, Onit checks whether the team settled anything worth
+ * remembering. Extracted decisions land as "proposed"; the user adopts or
+ * dismisses them from the Decisions panel (advisory before enforced).
+ */
+export async function captureDecisions(
+  projectId: string,
+  request: string,
+): Promise<ProjectDecision[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+  const admin = createAdminClient();
+  const { data: proj } = await admin
+    .from("projects")
+    .select("owner_id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!proj || proj.owner_id !== user.id) return [];
+
+  const { data: msgs } = await admin
+    .from("messages")
+    .select("agent_key, content")
+    .eq("project_id", projectId)
+    .eq("role", "agent")
+    .order("created_at", { ascending: false })
+    .limit(6);
+  const outputs = (msgs ?? [])
+    .filter((m) => m.agent_key && m.agent_key !== "coordinator" && m.content)
+    .reverse()
+    .map((m) => `${m.agent_key}:\n${(m.content || "").slice(0, 1200)}`)
+    .join("\n\n");
+  if (!outputs) return [];
+
+  // Don't re-propose what's already recorded.
+  const { data: existing } = await admin
+    .from("project_decisions")
+    .select("title")
+    .eq("project_id", projectId)
+    .neq("status", "dismissed")
+    .limit(30);
+  const known = (existing ?? []).map((d) => `- ${d.title}`).join("\n");
+
+  try {
+    const { text: out, usage } = await generateText({
+      model: openrouter(SUMMARY_MODEL),
+      system: `You extract DECISIONS from a software team's outputs: choices that constrain future work (stack picks, scope cuts, architectural or process commitments, prioritization verdicts). Not summaries, not tasks, not opinions.
+Reply with ONLY compact JSON: {"decisions":[{"title":"short imperative title","because":["concrete reason",...],"despite":["accepted downside",...],"constraints":["rule future work MUST follow",...]}]}
+Rules: 0-2 decisions max; every decision needs at least one "because" AND one "despite" (if you cannot name a downside, it is not a real decision; skip it); constraints are checkable one-liners; skip anything already in the known list. If nothing qualifies, reply {"decisions":[]}.`,
+      prompt: `User's request: ${request.slice(0, 400)}\n\nTeam outputs:\n${outputs}${known ? `\n\nAlready recorded (skip these):\n${known}` : ""}\n\nJSON:`,
+      maxOutputTokens: 400,
+    });
+    await logUsage(
+      admin,
+      user.id,
+      projectId,
+      usage?.inputTokens ?? 0,
+      usage?.outputTokens ?? 0,
+    );
+    const start = out.indexOf("{");
+    const end = out.lastIndexOf("}");
+    if (start < 0 || end <= start) return [];
+    const parsed = JSON.parse(out.slice(start, end + 1)) as {
+      decisions?: {
+        title?: unknown;
+        because?: unknown;
+        despite?: unknown;
+        constraints?: unknown;
+      }[];
+    };
+    const strList = (v: unknown) =>
+      Array.isArray(v)
+        ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 4)
+        : [];
+    const rows = (parsed.decisions ?? [])
+      .map((d) => ({
+        title: String(d.title ?? "").trim().slice(0, 160),
+        because: strList(d.because),
+        despite: strList(d.despite),
+        constraints: strList(d.constraints),
+      }))
+      .filter((d) => d.title && d.because.length && d.despite.length)
+      .slice(0, 2);
+    if (!rows.length) return [];
+    const { data } = await admin
+      .from("project_decisions")
+      .insert(
+        rows.map((r) => ({
+          project_id: projectId,
+          owner_id: user.id,
+          status: "proposed",
+          ...r,
+        })),
+      )
+      .select(DECISION_COLS);
+    return (data ?? []) as ProjectDecision[];
+  } catch {
+    return [];
+  }
 }
 
 // --- Message feedback (thumbs) -------------------------------------------------

@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     mode?: string;
     task?: string;
     web?: boolean;
+    skill?: string;
   };
   try {
     body = await req.json();
@@ -49,6 +50,8 @@ export async function POST(req: Request) {
 
   const projectId = body.projectId?.trim();
   const agentKey = body.agentKey?.trim();
+  const requestedSkill =
+    typeof body.skill === "string" ? body.skill.trim().toLowerCase() : "";
   const mode =
     body.mode === "plan"
       ? "plan"
@@ -135,6 +138,61 @@ export async function POST(req: Request) {
     ? detectInjectionAttempt(lastUser.content)
     : false;
 
+  // Adopted decisions are standing constraints every role must respect.
+  const { data: adopted } = await db
+    .from("project_decisions")
+    .select("title, constraints, scope_roles")
+    .eq("project_id", projectId)
+    .eq("status", "adopted")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  const decisionsBlock = (adopted ?? [])
+    .filter(
+      (d) =>
+        !(d.scope_roles as string[] | null)?.length ||
+        (d.scope_roles as string[]).includes(agentKey),
+    )
+    .map(
+      (d) =>
+        `- ${d.title}${(d.constraints ?? []).length ? `: ${(d.constraints as string[]).join("; ")}` : ""}`,
+    )
+    .join("\n");
+
+  // Method library: the orchestrator picks a skill per task; direct @mentions
+  // fall back to a cheap trigger-phrase match against the request text.
+  let skillBlock = "";
+  {
+    const { data: skillRows } = await db
+      .from("skills")
+      .select("key, title, skill_type, triggers, role_keys, body")
+      .eq("enabled", true)
+      .order("sort_order");
+    const skills = skillRows ?? [];
+    let chosen = requestedSkill
+      ? skills.find((s) => s.key === requestedSkill)
+      : undefined;
+    if (!chosen && !requestedSkill) {
+      const text = `${task} ${lastUser?.content ?? ""}`.toLowerCase();
+      let bestHits = 0;
+      for (const s of skills) {
+        const roleOk =
+          !(s.role_keys as string[] | null)?.length ||
+          (s.role_keys as string[]).includes(agentKey);
+        if (!roleOk) continue;
+        const hits = ((s.triggers as string[] | null) ?? []).filter((t) =>
+          text.includes(t.toLowerCase()),
+        ).length;
+        if (hits > bestHits) {
+          bestHits = hits;
+          chosen = s;
+        }
+      }
+    }
+    if (chosen) {
+      skillBlock = `\n\nApply this method from the team's library for the current assignment (adapt it to the request; skip it if the request turns out to be trivial):\n# ${chosen.title}\n${String(chosen.body).slice(0, 6000)}`;
+    }
+  }
+
   const ctx = await buildContext(db, projectId, agentKey, agentNames);
 
   const { data: placeholder, error: phErr } = await db
@@ -207,7 +265,7 @@ export async function POST(req: Request) {
             : mode === "discuss"
               ? "Explore the trade-offs: give a clear recommendation, but surface 2–3 options with pros/cons and the key risks. If other roles have left notes, build on or respectfully challenge them."
               : "Provide the result directly.";
-        const sysFull = `${buildSystemPrompt(systemPrompt)}${injection ? INJECTION_HARDENING : ""}${teamRules ? `\n\nProject team rules set by the user (follow them strictly):\n${teamRules.slice(0, 2000)}` : ""}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`;
+        const sysFull = `${buildSystemPrompt(systemPrompt)}${injection ? INJECTION_HARDENING : ""}${teamRules ? `\n\nProject team rules set by the user (follow them strictly):\n${teamRules.slice(0, 2000)}` : ""}${decisionsBlock ? `\n\nAdopted team decisions (standing constraints):\n${decisionsBlock}\nThese were settled by the team. Never silently contradict one. If the current request touches one, start by acknowledging the standing decision; if the user wants to change it, say explicitly that this would supersede the decision and what the switch would cost, then give your recommendation.` : ""}${skillBlock}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`;
 
         async function runAnswer(model: string) {
           const s = streamText({

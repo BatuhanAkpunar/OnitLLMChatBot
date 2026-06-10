@@ -14,6 +14,8 @@ import {
   DownloadSimple,
   ListChecks,
   Scroll,
+  Gavel,
+  Check,
   ThumbsUp,
   ThumbsDown,
   Globe,
@@ -42,7 +44,10 @@ import {
   setTaskStatus,
   setMessageFeedback,
   statusSummary,
+  captureDecisions,
+  setDecisionStatus,
   type ProjectTask,
+  type ProjectDecision,
 } from "@/app/(app)/actions";
 
 export type Agent = {
@@ -81,6 +86,7 @@ export function ChatView({
   initialMode,
   initialRules = "",
   initialTasks = [],
+  initialDecisions = [],
   user = null,
   projects = [],
 }: {
@@ -92,6 +98,7 @@ export function ChatView({
   initialMode: Mode;
   initialRules?: string;
   initialTasks?: ProjectTask[];
+  initialDecisions?: ProjectDecision[];
   user?: CurrentUser | null;
   projects?: ProjectListItem[];
 }) {
@@ -108,7 +115,7 @@ export function ChatView({
   const [routing, setRouting] = useState(false);
   const [synthesizing, setSynthesizing] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<{
-    tasks: { role: string; task: string; done: string }[];
+    tasks: { role: string; task: string; done: string; skill: string }[];
     text: string;
   } | null>(null);
   const [rules, setRules] = useState(initialRules);
@@ -116,6 +123,8 @@ export function ChatView({
   const [rulesDraft, setRulesDraft] = useState(initialRules);
   const [tasks, setTasks] = useState<ProjectTask[]>(initialTasks);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [decisions, setDecisions] = useState<ProjectDecision[]>(initialDecisions);
+  const [decisionsOpen, setDecisionsOpen] = useState(false);
   const [web, setWeb] = useState(false);
   const webRef = useRef(false);
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -282,7 +291,7 @@ export function ChatView({
     requestAnimationFrame(() => ta?.focus());
   }
 
-  async function runAgent(key: string, task?: string) {
+  async function runAgent(key: string, task?: string, skill?: string) {
     let aid = `tmp-a-${Date.now()}-${key}`;
     setMessages((m) => [
       ...m,
@@ -300,6 +309,7 @@ export function ChatView({
           mode: modeRef.current,
           task,
           web: webRef.current,
+          skill: skill || undefined,
         }),
         signal: ac.signal,
       });
@@ -435,7 +445,7 @@ export function ChatView({
 
     const handleOf = (key: string) =>
       agents.find((a) => a.key === key)?.handle ?? key;
-    let plan: { role: string; task?: string; done?: string }[];
+    let plan: { role: string; task?: string; done?: string; skill?: string }[];
     let recordAs: "manual" | "auto" | null = null;
 
     if (forcedAgents) {
@@ -454,7 +464,7 @@ export function ChatView({
         | {
             action: "work";
             rationale: string;
-            tasks: { role: string; task: string; done: string }[];
+            tasks: { role: string; task: string; done: string; skill: string }[];
           };
       try {
         decision = await orchestrate(projectId, text);
@@ -462,7 +472,7 @@ export function ChatView({
         decision = {
           action: "work",
           rationale: "",
-          tasks: [{ role: agentKey, task: text, done: "" }],
+          tasks: [{ role: agentKey, task: text, done: "", skill: "" }],
         };
       }
       setRouting(false);
@@ -484,7 +494,12 @@ export function ChatView({
       }
 
       plan = decision.tasks.length
-        ? decision.tasks.map((t) => ({ role: t.role, task: t.task, done: t.done }))
+        ? decision.tasks.map((t) => ({
+            role: t.role,
+            task: t.task,
+            done: t.done,
+            skill: t.skill,
+          }))
         : [{ role: agentKey }];
       recordAs = "auto";
 
@@ -517,7 +532,12 @@ export function ChatView({
     // Multi-role auto plans wait for the user's approval before the team runs.
     if (recordAs === "auto" && plan.length > 1) {
       setPendingPlan({
-        tasks: plan.map((p) => ({ role: p.role, task: p.task ?? "", done: p.done ?? "" })),
+        tasks: plan.map((p) => ({
+          role: p.role,
+          task: p.task ?? "",
+          done: p.done ?? "",
+          skill: p.skill ?? "",
+        })),
         text,
       });
       setBusy(false);
@@ -531,7 +551,7 @@ export function ChatView({
   }
 
   async function runTasks(
-    plan: { role: string; task?: string; done?: string }[],
+    plan: { role: string; task?: string; done?: string; skill?: string }[],
     text: string,
     persistedIds?: string[],
   ) {
@@ -548,7 +568,7 @@ export function ChatView({
 
     for (let i = 0; i < plan.length; i++) {
       markTask(i, "doing");
-      await runAgent(plan[i].role, plan[i].task);
+      await runAgent(plan[i].role, plan[i].task, plan[i].skill);
       if (stoppedRef.current) break;
       markTask(i, "done");
     }
@@ -578,6 +598,26 @@ export function ChatView({
         }
       } catch {}
       setSynthesizing(false);
+
+      // Decision memory: Onit proposes anything the team just settled; the
+      // user adopts or dismisses it from the Decisions panel.
+      try {
+        const proposed = await captureDecisions(projectId, text);
+        if (proposed.length) {
+          setDecisions((d) => [...proposed, ...d]);
+          toast(
+            proposed.length === 1
+              ? "Onit captured a decision for your review"
+              : `Onit captured ${proposed.length} decisions for your review`,
+            {
+              action: {
+                label: "Review",
+                onClick: () => setDecisionsOpen(true),
+              },
+            },
+          );
+        }
+      } catch {}
     }
 
     setBusy(false);
@@ -627,6 +667,19 @@ export function ChatView({
       webRef.current = !w;
       return !w;
     });
+  }
+
+  async function decideStatus(
+    d: ProjectDecision,
+    status: ProjectDecision["status"],
+  ) {
+    setDecisions((list) =>
+      list
+        .map((x) => (x.id === d.id ? { ...x, status } : x))
+        .filter((x) => x.status !== "dismissed"),
+    );
+    const { ok } = await setDecisionStatus(d.id, status);
+    if (!ok) toast.error("Could not update the decision.");
   }
 
   async function cycleTask(t: ProjectTask) {
@@ -759,6 +812,24 @@ export function ChatView({
         {tasks.some((t) => t.status !== "done") ? (
           <span className="grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
             {tasks.filter((t) => t.status !== "done").length}
+          </span>
+        ) : null}
+      </button>
+      <button
+        type="button"
+        onClick={() => setDecisionsOpen(true)}
+        title="Team decisions for this project"
+        className={`relative inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium transition-colors hover:bg-accent hover:text-foreground ${
+          decisions.some((d) => d.status === "adopted")
+            ? "text-violet-600 dark:text-violet-300"
+            : "text-muted-foreground"
+        }`}
+      >
+        <Gavel size={18} />
+        <span className="hidden lg:inline">Decisions</span>
+        {decisions.some((d) => d.status === "proposed") ? (
+          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-white">
+            {decisions.filter((d) => d.status === "proposed").length}
           </span>
         ) : null}
       </button>
@@ -920,6 +991,134 @@ export function ChatView({
           )
         : null}
 
+      {decisionsOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setDecisionsOpen(false)}
+                aria-hidden
+              />
+              <div className="relative flex max-h-[75vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-popover p-5 shadow-2xl">
+                <div className="mb-1 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Team decisions</h3>
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => setDecisionsOpen(false)}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Adopted decisions become standing constraints: every
+                  specialist respects them in future answers. Onit proposes new
+                  ones after team runs; you adopt or dismiss.
+                </p>
+                {decisions.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-muted-foreground">
+                    No decisions yet. When the team settles something worth
+                    remembering, it lands here for your review.
+                  </p>
+                ) : (
+                  <div className="min-h-0 space-y-2 overflow-y-auto pr-1">
+                    {decisions.map((d) => (
+                      <div
+                        key={d.id}
+                        className={`rounded-xl border px-3.5 py-3 ${
+                          d.status === "adopted"
+                            ? "border-violet-500/25 bg-violet-500/[0.04]"
+                            : d.status === "proposed"
+                              ? "border-amber-500/30 bg-amber-500/[0.04]"
+                              : "border-border opacity-60"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-[13px] font-semibold leading-snug">
+                            {d.title}
+                          </span>
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
+                              d.status === "adopted"
+                                ? "bg-violet-500/15 text-violet-600 dark:text-violet-300"
+                                : d.status === "proposed"
+                                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                                  : "bg-white/10 text-muted-foreground"
+                            }`}
+                          >
+                            {d.status}
+                          </span>
+                        </div>
+                        {d.because.length ? (
+                          <p className="mt-1.5 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">Why:</span>{" "}
+                            {d.because.join(" · ")}
+                          </p>
+                        ) : null}
+                        {d.despite.length ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">
+                              Trade-off accepted:
+                            </span>{" "}
+                            {d.despite.join(" · ")}
+                          </p>
+                        ) : null}
+                        {d.constraints.length ? (
+                          <ul className="mt-1.5 space-y-0.5">
+                            {d.constraints.map((c, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-1.5 text-xs"
+                              >
+                                <Check
+                                  size={12}
+                                  weight="bold"
+                                  className="mt-0.5 shrink-0 text-violet-500"
+                                />
+                                {c}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        <div className="mt-2.5 flex gap-2">
+                          {d.status === "proposed" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => decideStatus(d, "adopted")}
+                                className="rounded-lg bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                              >
+                                Adopt
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => decideStatus(d, "dismissed")}
+                                className="rounded-lg border border-border px-2.5 py-1 text-[11px] transition-colors hover:bg-accent"
+                              >
+                                Dismiss
+                              </button>
+                            </>
+                          ) : d.status === "adopted" ? (
+                            <button
+                              type="button"
+                              onClick={() => decideStatus(d, "superseded")}
+                              className="rounded-lg border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                            >
+                              Mark superseded
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
       {/* Messages */}
       <div className="relative min-h-0 flex-1">
         <div className="h-full overflow-y-auto" ref={scrollRef} onScroll={onScroll}>
@@ -967,6 +1166,20 @@ export function ChatView({
                 onSaveEdit={saveEdit}
                 onCancelEdit={() => setEditingId(null)}
                 onFeedback={giveFeedback}
+                canPickOption={
+                  m.id === lastMessage?.id &&
+                  m.role === "agent" &&
+                  m.status === "complete" &&
+                  !busy
+                }
+                onPickOption={(opt) =>
+                  submit(
+                    opt,
+                    m.agent_key && m.agent_key !== "coordinator"
+                      ? [m.agent_key]
+                      : undefined,
+                  )
+                }
               />
             ))}
             {routing ? (
@@ -1212,6 +1425,22 @@ function OnitWorking({ label }: { label: string }) {
   );
 }
 
+/**
+ * Interactive skills end a question with a fenced ```options block; the UI
+ * turns it into clickable quick-select chips (latest message only).
+ */
+function splitOptions(content: string): { body: string; options: string[] } {
+  const m = content.match(/```options\s*\n([\s\S]*?)\n?```\s*$/);
+  if (!m || m.index === undefined) return { body: content, options: [] };
+  const options = m[1]
+    .split("\n")
+    .map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  if (!options.length) return { body: content, options: [] };
+  return { body: content.slice(0, m.index).trimEnd(), options };
+}
+
 function MessageRow({
   message,
   agent,
@@ -1227,6 +1456,8 @@ function MessageRow({
   onSaveEdit,
   onCancelEdit,
   onFeedback,
+  canPickOption,
+  onPickOption,
 }: {
   message: Message;
   agent?: Agent;
@@ -1242,6 +1473,8 @@ function MessageRow({
   onSaveEdit: (m: Message) => void;
   onCancelEdit: () => void;
   onFeedback: (m: Message, value: 1 | -1) => void;
+  canPickOption: boolean;
+  onPickOption: (option: string) => void;
 }) {
   if (message.role === "user") {
     if (editing) {
@@ -1369,17 +1602,56 @@ function MessageRow({
           </span>
         ) : null}
 
-        {message.content ? (
-          <div
-            className={`w-fit max-w-full rounded-2xl rounded-tl-md border px-4 py-3 text-sm ${
-              isCoordinator
-                ? "border-violet-500/20 bg-violet-500/[0.04]"
-                : "border-border/70 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-            }`}
-          >
-            <Markdown>{message.content}</Markdown>
-          </div>
-        ) : null}
+        {message.content
+          ? (() => {
+              const { body, options } = splitOptions(message.content);
+              return (
+                <>
+                  {body ? (
+                    <div
+                      className={`w-fit max-w-full rounded-2xl rounded-tl-md border px-4 py-3 text-sm ${
+                        isCoordinator
+                          ? "border-violet-500/20 bg-violet-500/[0.04]"
+                          : "border-border/70 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                      }`}
+                    >
+                      <Markdown>{body}</Markdown>
+                    </div>
+                  ) : null}
+                  {options.length && message.status === "complete" ? (
+                    canPickOption ? (
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {options.map((opt, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => onPickOption(opt)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-left text-[13px] leading-snug transition-colors hover:border-violet-500/40 hover:bg-violet-500/[0.06]"
+                          >
+                            <span
+                              className="font-mono text-[11px] font-bold"
+                              style={{ color }}
+                            >
+                              {i + 1}
+                            </span>
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <ol className="mt-1 space-y-0.5 pl-0.5 text-xs text-muted-foreground">
+                        {options.map((opt, i) => (
+                          <li key={i}>
+                            {i + 1}. {opt}
+                          </li>
+                        ))}
+                      </ol>
+                    )
+                  ) : null}
+                </>
+              );
+            })()
+          : null}
 
         {message.status !== "streaming" && message.content ? (
           <div

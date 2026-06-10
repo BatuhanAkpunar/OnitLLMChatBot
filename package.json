@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "seed:agents": "node --env-file=.env.local scripts/seed-agents.mjs"
+    "seed:agents": "node --env-file=.env.local scripts/seed-agents.mjs",
+    "seed:skills": "node --env-file=.env.local scripts/seed-skills.mjs"
   },
   "dependencies": {
     "@openrouter/ai-sdk-provider": "^2.9.0",
