@@ -3,8 +3,9 @@
 //
 //   node --env-file=.env.local scripts/gen-avatars.mjs            # all roles
 //   node --env-file=.env.local scripts/gen-avatars.mjs qa analyst # only these
+//   node --env-file=.env.local scripts/gen-avatars.mjs --alt qa   # only _alt, from base on disk
 //
-// Files per role: <key>.png (base), <key>_blink.png, <key>_alt.png.
+// Files per role: <key>.png (base), <key>_blink.png, <key>_alt.png (gesture).
 // Requires GEMINI_API_KEY in .env.local (gitignored, never committed).
 
 import { writeFile, mkdir, readFile } from "node:fs/promises";
@@ -82,25 +83,46 @@ const CHARACTERS = [
   {
     key: "qa",
     desc:
-      "A 27 year old Turkish man with soft features: olive skin, dark wavy hair, light stubble, " +
-      "rectangular glasses, teal jacket over a graphite tee. " +
-      "Expression: gentle curious half smile with one softly raised eyebrow, kind detective energy. " +
+      "A 24 year old Turkish woman with soft Mediterranean features: olive skin, shoulder length " +
+      "dark brown hair in a loose low ponytail with strands framing her face, a few light freckles, " +
+      "round thin-frame glasses, teal cardigan over a white tee. " +
+      "Expression: big bright cheerful smile, warm sparkling eyes, the upbeat teammate who " +
+      "delights in finding what everyone else missed. " +
       "Soft teal rim light (#2dd4bf) on hair and shoulder. " +
-      "CRITICAL: his jacket, chest and shoulders are WIDE and fill the entire bottom edge of the image " +
+      "CRITICAL: her cardigan, chest and shoulders are WIDE and fill the entire bottom edge of the image " +
       "from the bottom left corner to the bottom right corner; zero background pixels are visible along " +
       "the bottom edge or in the bottom corners; the torso is cut off only by the straight bottom border.",
   },
 ];
+
+// Per-character gesture for the _alt frame: each teammate gets their own
+// signature move so the hover animation reads as personality, not a reskin.
+const GESTURES = {
+  analyst:
+    "he raises one hand and thoughtfully pushes his round glasses up his nose, smiling a bit wider",
+  product_manager:
+    "she raises one hand in a confident thumbs up next to her shoulder, smile widening proudly",
+  developer:
+    "he raises one hand in a cheerful open-palm wave next to his shoulder, grin widening",
+  project_manager:
+    "he raises one hand making a calm OK sign next to his shoulder, with a reassuring nod-like tilt",
+  product_designer:
+    "she holds the yellow pencil up next to her cheek in her OWN hand, her own arm clearly entering " +
+    "the frame from the bottom edge in her black turtleneck sleeve, winking one eye playfully",
+  qa: "she raises a small magnifying glass in front of one eye playfully, the eye behind the lens " +
+    "appearing slightly enlarged, smiling wide",
+};
 
 const BLINK_EDIT =
   "Edit this pixel art portrait: the character's eyes are now fully closed in a natural relaxed blink. " +
   "Keep EVERYTHING else pixel-identical: same pose, same framing, same colors, same clothes, same " +
   "background, same pixel grid. Only the eyes and eyebrows change.";
 
-const ALT_EDIT =
-  "Edit this pixel art portrait: the character's smile widens warmly and the head tilts a tiny bit " +
-  "(two or three pixels), eyes slightly happier. Keep EVERYTHING else pixel-identical: same framing, " +
-  "same colors, same clothes, same background, same pixel grid.";
+const altEdit = (gesture) =>
+  `Edit this pixel art portrait: ${gesture}. The hand (and any held object) enters the frame from ` +
+  "the bottom edge in the same 16-bit pixel art style with dark outlines and the same limited palette. " +
+  "Keep EVERYTHING else pixel-identical: same face position, same framing, same colors, same clothes, " +
+  "same background, same pixel grid.";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -154,30 +176,39 @@ async function generate(prompt, refBuffer) {
 const outDir = path.join(import.meta.dirname, "..", "public", "avatars");
 await mkdir(outDir, { recursive: true });
 
-const only = process.argv.slice(2);
+const args = process.argv.slice(2);
+const altOnly = args.includes("--alt");
+const only = args.filter((a) => a !== "--alt");
 const todo = only.length
   ? CHARACTERS.filter((c) => only.includes(c.key))
   : CHARACTERS;
 
 let failures = 0;
 for (const { key, desc } of todo) {
-  // Base frame
+  // Base frame (or reuse the one on disk in --alt mode)
   let base;
-  process.stdout.write(`${key}: base... `);
-  try {
-    base = await generate(`${STYLE} Subject: ${desc}`);
-    await writeFile(path.join(outDir, `${key}.png`), base);
-    console.log(`ok (${Math.round(base.length / 1024)} KB)`);
-  } catch (err) {
-    failures++;
-    console.log(`FAILED: ${err.message}`);
-    continue;
+  if (altOnly) {
+    base = await readFile(path.join(outDir, `${key}.png`));
+  } else {
+    process.stdout.write(`${key}: base... `);
+    try {
+      base = await generate(`${STYLE} Subject: ${desc}`);
+      await writeFile(path.join(outDir, `${key}.png`), base);
+      console.log(`ok (${Math.round(base.length / 1024)} KB)`);
+    } catch (err) {
+      failures++;
+      console.log(`FAILED: ${err.message}`);
+      continue;
+    }
   }
   // Animation frames, edited from the base for consistency
-  for (const [suffix, prompt] of [
-    ["_blink", BLINK_EDIT],
-    ["_alt", ALT_EDIT],
-  ]) {
+  const frames = altOnly
+    ? [["_alt", altEdit(GESTURES[key])]]
+    : [
+        ["_blink", BLINK_EDIT],
+        ["_alt", altEdit(GESTURES[key])],
+      ];
+  for (const [suffix, prompt] of frames) {
     process.stdout.write(`${key}: ${suffix.slice(1)}... `);
     try {
       const buf = await generate(prompt, base);

@@ -1,0 +1,74 @@
+"use client";
+
+import Link from "next/link";
+import { Plus } from "@phosphor-icons/react";
+import { OrbMark } from "@/components/brand/orb";
+import { ProfilePanel } from "@/components/profile/profile-panel";
+import { HistoryButton, type ProjectListItem } from "./history-button";
+import { createProject } from "@/app/(app)/actions";
+import type { CurrentUser } from "@/lib/auth/user";
+
+/**
+ * The single piece of chrome for signed-in users: brand on the left, the
+ * global actions (New chat, History popup, Profile popup) on the right.
+ * Pages can slot extra page-specific tools in via `tools`, and `overlay`
+ * floats the bar over hero content (home) instead of stacking above it.
+ */
+export function TopBar({
+  user,
+  projects,
+  title,
+  tools,
+  overlay = false,
+}: {
+  user: CurrentUser | null;
+  projects: ProjectListItem[];
+  title?: string;
+  tools?: React.ReactNode;
+  overlay?: boolean;
+}) {
+  return (
+    <header
+      className={`z-20 flex h-14 shrink-0 items-center gap-2 px-4 ${
+        overlay
+          ? "absolute inset-x-0 top-0"
+          : "border-b border-border/60 bg-background/80 backdrop-blur-xl"
+      }`}
+    >
+      <Link
+        href="/"
+        className="flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-opacity hover:opacity-80"
+      >
+        <OrbMark size={20} />
+        <span className="text-[15px] font-bold tracking-tight">onit</span>
+      </Link>
+
+      {title ? (
+        <>
+          <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
+          <h1 className="min-w-0 truncate text-sm font-medium text-foreground/85">
+            {title}
+          </h1>
+        </>
+      ) : null}
+
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        {tools}
+        <form action={createProject}>
+          <button
+            type="submit"
+            title="New chat"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">New chat</span>
+          </button>
+        </form>
+        <HistoryButton projects={projects} />
+        <span className="ml-1">
+          <ProfilePanel user={user} />
+        </span>
+      </div>
+    </header>
+  );
+}

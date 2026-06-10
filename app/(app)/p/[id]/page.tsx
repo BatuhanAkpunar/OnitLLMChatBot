@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { ChatView, type Message, type Agent } from "@/components/chat/chat-view";
 import type { ProjectTask } from "@/app/(app)/actions";
@@ -8,6 +9,7 @@ export default async function ProjectPage(props: {
 }) {
   const { id } = await props.params;
   const supabase = await createClient();
+  const user = await getCurrentUser();
 
   const { data: project } = await supabase
     .from("projects")
@@ -16,7 +18,7 @@ export default async function ProjectPage(props: {
     .single();
   if (!project) notFound();
 
-  const [{ data: messages }, { data: agents }, { data: tasks }] =
+  const [{ data: messages }, { data: agents }, { data: tasks }, { data: projects }] =
     await Promise.all([
       supabase
         .from("messages")
@@ -33,6 +35,10 @@ export default async function ProjectPage(props: {
         .select("id, role_key, task, done_criteria, status, sort")
         .eq("project_id", id)
         .order("sort"),
+      supabase
+        .from("projects")
+        .select("id, title, last_message_at")
+        .order("last_message_at", { ascending: false }),
     ]);
 
   const agentList = (agents ?? []) as Agent[];
@@ -53,6 +59,8 @@ export default async function ProjectPage(props: {
       }
       initialRules={project.rules ?? ""}
       initialTasks={(tasks ?? []) as ProjectTask[]}
+      user={user}
+      projects={projects ?? []}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { PaperPlaneRight, Sparkle, Check, CheckCircle } from "@phosphor-icons/react";
+import { PaperPlaneRight, Sparkle, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { Aurora } from "@/components/hero/aurora";
@@ -16,6 +16,13 @@ const MODES: { key: Mode; label: string; tip: string }[] = [
   { key: "build", label: "Build", tip: "The team delivers the result directly." },
   { key: "plan", label: "Plan", tip: "The team outlines the approach and checks in first." },
   { key: "discuss", label: "Discuss", tip: "The team weighs options and trade-offs together." },
+];
+
+// The promise of the product in three beats: brief, team works, you steer.
+const STEPS = [
+  "Write what you need",
+  "The team gets to work",
+  "You review and steer",
 ];
 
 const EXAMPLES = [
@@ -252,7 +259,8 @@ export function HomeComposer({
       scrollStart: el.scrollLeft,
       moved: 0,
     };
-    el.setPointerCapture(e.pointerId);
+    // No pointer capture yet: capturing here would swallow the click on the
+    // cards. We only capture once the pointer actually starts dragging.
   }
 
   function onTrackPointerMove(e: React.PointerEvent) {
@@ -261,6 +269,9 @@ export function HomeComposer({
     if (!el || !d.down) return;
     const dx = e.clientX - d.startX;
     d.moved = Math.max(d.moved, Math.abs(dx));
+    if (d.moved > 6 && !el.hasPointerCapture(e.pointerId)) {
+      el.setPointerCapture(e.pointerId);
+    }
     el.scrollLeft = d.scrollStart - dx;
   }
 
@@ -328,11 +339,25 @@ export function HomeComposer({
             <br />
             <span style={ACCENT_TITLE}>On it.</span>
           </h1>
-          <p className="mt-4 max-w-lg text-balance text-base font-medium leading-relaxed text-foreground/80 sm:text-[17px]">
-            One message in, a whole team on it. Onit picks the right
-            specialists, they build on each other&apos;s work, you call the
-            shots.
-          </p>
+          <div className="mt-5 flex flex-col items-center gap-1.5 sm:flex-row sm:gap-3">
+            {STEPS.map((step, i) => (
+              <span key={step} className="flex items-center gap-3">
+                <span className="flex items-center gap-2 text-[15px] font-medium text-foreground/80">
+                  <span className="font-mono text-xs font-semibold text-violet-600 dark:text-violet-300">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {step}
+                </span>
+                {i < STEPS.length - 1 ? (
+                  <CaretRight
+                    size={12}
+                    weight="bold"
+                    className="hidden text-foreground/30 sm:block"
+                  />
+                ) : null}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div ref={composerRef} className="relative">

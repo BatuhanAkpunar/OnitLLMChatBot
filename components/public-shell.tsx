@@ -2,13 +2,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { signInWithGoogle } from "@/app/login/actions";
 
 /**
- * Minimal chrome for signed-out visitors: ambient background + a top bar with
- * brand, theme toggle and a Google sign-in. No sidebar, no chat history.
+ * Minimal chrome for signed-out visitors: a floating top bar (theme toggle +
+ * Google sign-in) overlaid on the page so the hero aurora flows behind it.
  */
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <header className="relative z-10 flex h-16 items-center justify-end px-5">
+      <header className="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-end px-5">
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <form action={signInWithGoogle}>

@@ -45,8 +45,9 @@ export function rolePersona(key: string, fallback?: string | null): string {
 }
 
 // Idle animation: which frame to show at each ~250ms step (0 base, 1 blink,
-// 2 alt). Runs for at most 3 seconds per hover, then settles back to base.
-const FRAME_SEQ = [1, 0, 0, 2, 2, 0, 1, 0, 2, 0, 1, 0];
+// 2 gesture). The gesture holds for ~1s so each character's signature move
+// reads clearly. Runs at most 3 seconds per hover, then settles back to base.
+const FRAME_SEQ = [1, 0, 2, 2, 2, 2, 0, 0, 1, 0, 2, 2];
 const FRAME_MS = 250;
 const ANIM_MAX_MS = 3000;
 

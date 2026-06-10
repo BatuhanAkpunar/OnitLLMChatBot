@@ -10,7 +10,6 @@ import {
   ArrowClockwise,
   PencilSimple,
   ArrowDown,
-  Lightning,
   Play,
   DownloadSimple,
   ListChecks,
@@ -23,6 +22,11 @@ import {
 import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
+import { RoleAvatar } from "./role-visual";
+import { OrbMark } from "@/components/brand/orb";
+import { TopBar } from "@/components/nav/top-bar";
+import type { ProjectListItem } from "@/components/nav/history-button";
+import type { CurrentUser } from "@/lib/auth/user";
 import { parseMentions } from "@/lib/mentions";
 import {
   sendUserMessage,
@@ -77,6 +81,8 @@ export function ChatView({
   initialMode,
   initialRules = "",
   initialTasks = [],
+  user = null,
+  projects = [],
 }: {
   projectId: string;
   title: string;
@@ -86,8 +92,17 @@ export function ChatView({
   initialMode: Mode;
   initialRules?: string;
   initialTasks?: ProjectTask[];
+  user?: CurrentUser | null;
+  projects?: ProjectListItem[];
 }) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  // A persisted "streaming" status means the stream died mid-flight (tab
+  // closed, function killed): there is no live stream to attach to, so treat
+  // those as settled instead of showing an eternal "thinking…" label.
+  const [messages, setMessages] = useState<Message[]>(() =>
+    initialMessages.map((m) =>
+      m.status === "streaming" ? { ...m, status: "complete" } : m,
+    ),
+  );
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
   const [pinned, setPinned] = useState<string[]>([]);
   const [routing, setRouting] = useState(false);
@@ -328,8 +343,12 @@ export function ChatView({
           }
           if (evt.type === "meta" && evt.messageId) {
             // Swap the optimistic id for the real one so feedback works.
+            // Capture the CURRENT id in a const: the updater runs later, after
+            // `aid` has already been reassigned, so matching on `aid` directly
+            // would never hit the row (and the bubble would stay "thinking…").
             const real = evt.messageId;
-            setMessages((m) => m.map((x) => (x.id === aid ? { ...x, id: real } : x)));
+            const tmp = aid;
+            setMessages((m) => m.map((x) => (x.id === tmp ? { ...x, id: real } : x)));
             aid = real;
           } else if (evt.type === "thinking") {
             thinkingAcc += evt.delta ?? "";
@@ -363,6 +382,13 @@ export function ChatView({
       }
     } finally {
       abortRef.current = null;
+      // If the stream ended without a "done" event (proxy cut, failover edge
+      // case), never leave the row stuck in the streaming state.
+      setMessages((m) =>
+        m.map((x) =>
+          x.id === aid && x.status === "streaming" ? { ...x, status: "complete" } : x,
+        ),
+      );
     }
   }
 
@@ -720,49 +746,53 @@ export function ChatView({
   const showPlanActions =
     mode === "plan" && !busy && lastMessage?.role === "agent" && lastMessage.status === "complete";
 
+  const chatTools = (
+    <>
+      <button
+        type="button"
+        onClick={() => setTasksOpen(true)}
+        title="Project backlog"
+        className="relative inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <ListChecks size={18} />
+        <span className="hidden lg:inline">Backlog</span>
+        {tasks.some((t) => t.status !== "done") ? (
+          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+            {tasks.filter((t) => t.status !== "done").length}
+          </span>
+        ) : null}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setRulesDraft(rules);
+          setRulesOpen(true);
+        }}
+        title="Team rules for this project"
+        className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium transition-colors hover:bg-accent hover:text-foreground ${
+          rules ? "text-violet-600 dark:text-violet-300" : "text-muted-foreground"
+        }`}
+      >
+        <Scroll size={18} weight={rules ? "fill" : "regular"} />
+        <span className="hidden lg:inline">Rules</span>
+      </button>
+      <button
+        type="button"
+        onClick={exportChat}
+        title="Export chat as Markdown"
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <DownloadSimple size={18} />
+        <span className="hidden lg:inline">Export</span>
+      </button>
+      <span className="mx-1 hidden h-4 w-px bg-border sm:block" aria-hidden />
+    </>
+  );
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex h-12 shrink-0 items-center gap-1 border-b border-white/10 px-4">
-        <h2 className="mr-auto truncate text-sm font-medium">{title}</h2>
-        <button
-          type="button"
-          onClick={() => setTasksOpen(true)}
-          title="Project backlog"
-          aria-label="Project backlog"
-          className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        >
-          <ListChecks size={16} />
-          {tasks.some((t) => t.status !== "done") ? (
-            <span className="absolute right-1 top-1 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-primary px-0.5 text-[9px] font-bold leading-none text-primary-foreground">
-              {tasks.filter((t) => t.status !== "done").length}
-            </span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setRulesDraft(rules);
-            setRulesOpen(true);
-          }}
-          title="Team rules for this project"
-          aria-label="Team rules"
-          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-white/10 hover:text-foreground ${
-            rules ? "text-violet-500 dark:text-violet-300" : "text-muted-foreground"
-          }`}
-        >
-          <Scroll size={16} weight={rules ? "fill" : "regular"} />
-        </button>
-        <button
-          type="button"
-          onClick={exportChat}
-          title="Export chat as Markdown"
-          aria-label="Export chat"
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-        >
-          <DownloadSimple size={16} />
-        </button>
-      </div>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="onit-chat-glow" aria-hidden />
+      <TopBar user={user} projects={projects} title={title} tools={chatTools} />
 
       {rulesOpen
         ? createPortal(
@@ -895,10 +925,30 @@ export function ChatView({
         <div className="h-full overflow-y-auto" ref={scrollRef} onScroll={onScroll}>
           <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Describe what you need. Onit routes it to the right roles. Pin
-                roles or @mention to choose yourself.
-              </p>
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <div className="flex -space-x-2.5">
+                  {agents.slice(0, 6).map((a) => (
+                    <span
+                      key={a.key}
+                      className="rounded-full ring-[2.5px] ring-background"
+                    >
+                      <RoleAvatar
+                        roleKey={a.key}
+                        color={a.color}
+                        size={40}
+                        rounded="rounded-full"
+                      />
+                    </span>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold">Your team is ready.</p>
+                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                    Describe what you need and Onit hands it to the right
+                    specialists, or @mention a role to pick yourself.
+                  </p>
+                </div>
+              </div>
             ) : null}
             {messages.map((m) => (
               <MessageRow
@@ -920,37 +970,67 @@ export function ChatView({
               />
             ))}
             {routing ? (
-              <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
-                <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
-                Onit is routing your request…
-              </div>
+              <OnitWorking label="Onit is picking the right specialists" />
             ) : null}
             {synthesizing ? (
-              <div className="flex items-center gap-2 pl-0.5 text-xs text-muted-foreground">
-                <Lightning size={13} weight="fill" className="animate-pulse text-amber-400" />
-                Onit is wrapping up the team&apos;s work…
-              </div>
+              <OnitWorking label="Onit is wrapping up the team's work" />
             ) : null}
             {pendingPlan && !busy ? (
-              <div className="flex flex-wrap items-center gap-2 pl-0.5">
-                <span className="text-xs text-muted-foreground">
-                  Onit drafted a {pendingPlan.tasks.length}-step plan.
-                </span>
-                <button
-                  type="button"
-                  onClick={approvePlan}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
-                >
-                  <Play size={12} weight="fill" />
-                  Run the plan
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelPlan}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-accent"
-                >
-                  Cancel
-                </button>
+              <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">
+                <div className="flex items-center gap-2.5 px-4 pt-3.5">
+                  <OrbMark size={20} />
+                  <span className="text-sm font-semibold">
+                    Onit drafted a {pendingPlan.tasks.length}-step plan
+                  </span>
+                </div>
+                <ul className="space-y-2.5 px-4 py-3.5">
+                  {pendingPlan.tasks.map((t, i) => {
+                    const a = agentByKey[t.role];
+                    return (
+                      <li key={i} className="flex items-start gap-3">
+                        {a ? (
+                          <RoleAvatar
+                            roleKey={a.key}
+                            color={a.color}
+                            size={28}
+                            rounded="rounded-lg"
+                          />
+                        ) : null}
+                        <span className="min-w-0 flex-1 text-sm leading-snug">
+                          <span
+                            className="font-semibold"
+                            style={a ? { color: `var(--agent-${a.color})` } : undefined}
+                          >
+                            {a?.handle ?? t.role}
+                          </span>{" "}
+                          {t.task}
+                          {t.done ? (
+                            <span className="mt-0.5 block text-xs italic text-muted-foreground">
+                              {t.done}
+                            </span>
+                          ) : null}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="flex gap-2 border-t border-violet-500/15 px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={approvePlan}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    <Play size={12} weight="fill" />
+                    Run the plan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelPlan}
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs transition-colors hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             ) : null}
             {showPlanActions ? (
@@ -986,9 +1066,9 @@ export function ChatView({
         ) : null}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-white/10">
-        <div className="mx-auto max-w-3xl px-4 py-3">
+      {/* Composer: floats free of the thread, like the landing hero */}
+      <div className="shrink-0 px-4 pb-4">
+        <div className="mx-auto max-w-3xl">
           <div className="relative">
             {mention.open && filtered.length ? (
               <div className="glass-strong absolute bottom-full mb-2 w-64 overflow-hidden rounded-xl shadow-lg">
@@ -1015,7 +1095,7 @@ export function ChatView({
               </div>
             ) : null}
 
-            <div className="glass-strong glass-edge rounded-2xl p-2">
+            <div className="glass-strong glass-edge rounded-2xl p-2 shadow-2xl">
               <textarea
                 ref={taRef}
                 value={input}
@@ -1113,6 +1193,25 @@ function IconButton({
   );
 }
 
+/** Onit (the coordinator) shown as busy: orb avatar + label + typing dots. */
+function OnitWorking({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="grid h-[34px] w-[34px] shrink-0 place-items-center">
+        <OrbMark size={24} />
+      </span>
+      <span className="inline-flex items-center gap-2.5 rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground">
+        {label}
+        <span className="typing-dots" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function MessageRow({
   message,
   agent,
@@ -1178,7 +1277,7 @@ function MessageRow({
     }
     return (
       <div className="group flex flex-col items-end gap-1">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm">
+        <div className="max-w-[80%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-primary px-4.5 py-2.5 text-sm text-primary-foreground">
           {message.content}
         </div>
         <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -1195,82 +1294,130 @@ function MessageRow({
 
   const isCoordinator = message.agent_key === "coordinator";
   const color = isCoordinator
-    ? "var(--foreground)"
+    ? "var(--agent-indigo)"
     : agent
       ? `var(--agent-${agent.color})`
       : "var(--muted-foreground)";
-  const name = isCoordinator ? "Onit" : agent?.display_name ?? "Agent";
+  const name = isCoordinator ? "Onit" : (agent?.display_name ?? "Agent");
+  const waiting =
+    message.status === "streaming" && !message.content && !message.thinking;
+
   return (
-    <div className="group flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-xs font-medium" style={{ color }}>
-          {name}
-        </span>
-        {message.status === "error" ? (
-          <span className="text-xs text-destructive">· error</span>
+    <div className="group flex gap-3">
+      {/* The pixel-art teammate answering; Onit itself appears as the orb. */}
+      <span className="mt-1 shrink-0">
+        {isCoordinator ? (
+          <span className="grid h-[34px] w-[34px] place-items-center">
+            <OrbMark size={24} />
+          </span>
+        ) : agent ? (
+          <RoleAvatar
+            roleKey={agent.key}
+            color={agent.color}
+            size={34}
+            rounded="rounded-xl"
+          />
+        ) : (
+          <span className="h-[34px] w-[34px] rounded-xl bg-muted" />
+        )}
+      </span>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[13px] font-semibold" style={{ color }}>
+            {name}
+          </span>
+          {!isCoordinator && agent?.handle ? (
+            <span className="text-[11px] text-muted-foreground">{agent.handle}</span>
+          ) : null}
+          {message.status === "error" ? (
+            <span className="text-[11px] font-medium text-destructive">
+              couldn&apos;t finish
+            </span>
+          ) : null}
+        </div>
+
+        {message.thinking ? (
+          <div>
+            <button
+              type="button"
+              onClick={onToggleThinking}
+              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <CaretRight
+                size={12}
+                weight="bold"
+                className={collapseThinking ? "" : "rotate-90"}
+              />
+              Thinking
+            </button>
+            {!collapseThinking ? (
+              <div className="mt-1 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs italic leading-relaxed text-muted-foreground">
+                {message.thinking}
+              </div>
+            ) : null}
+          </div>
         ) : null}
-        {message.status === "streaming" && !message.content && !message.thinking ? (
-          <span className="text-xs text-muted-foreground">· thinking…</span>
+
+        {waiting ? (
+          <span className="inline-flex w-fit items-center rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3.5 text-muted-foreground">
+            <span className="typing-dots" aria-hidden>
+              <span />
+              <span />
+              <span />
+            </span>
+          </span>
+        ) : null}
+
+        {message.content ? (
+          <div
+            className={`w-fit max-w-full rounded-2xl rounded-tl-md border px-4 py-3 text-sm ${
+              isCoordinator
+                ? "border-violet-500/20 bg-violet-500/[0.04]"
+                : "border-border/70 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            }`}
+          >
+            <Markdown>{message.content}</Markdown>
+          </div>
+        ) : null}
+
+        {message.status !== "streaming" && message.content ? (
+          <div
+            className={`flex gap-0.5 transition-opacity group-hover:opacity-100 ${
+              message.feedback ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <IconButton title="Copy" onClick={() => onCopy(message.content)}>
+              <Copy size={14} />
+            </IconButton>
+            <IconButton
+              title="Regenerate"
+              onClick={() => onRegenerate(message)}
+              disabled={busy}
+            >
+              <ArrowClockwise size={14} />
+            </IconButton>
+            {!isCoordinator ? (
+              <>
+                <IconButton title="Good answer" onClick={() => onFeedback(message, 1)}>
+                  <ThumbsUp
+                    size={14}
+                    weight={message.feedback === 1 ? "fill" : "regular"}
+                    className={message.feedback === 1 ? "text-emerald-500" : ""}
+                  />
+                </IconButton>
+                <IconButton title="Bad answer" onClick={() => onFeedback(message, -1)}>
+                  <ThumbsDown
+                    size={14}
+                    weight={message.feedback === -1 ? "fill" : "regular"}
+                    className={message.feedback === -1 ? "text-red-400" : ""}
+                  />
+                </IconButton>
+              </>
+            ) : null}
+          </div>
         ) : null}
       </div>
-
-      {message.thinking ? (
-        <div>
-          <button
-            type="button"
-            onClick={onToggleThinking}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <CaretRight size={12} weight="bold" className={collapseThinking ? "" : "rotate-90"} />
-            Thinking
-          </button>
-          {!collapseThinking ? (
-            <div className="mt-1 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs italic text-muted-foreground">
-              {message.thinking}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {message.content ? (
-        <div className="text-sm">
-          <Markdown>{message.content}</Markdown>
-        </div>
-      ) : null}
-
-      {message.status !== "streaming" && message.content ? (
-        <div
-          className={`flex gap-0.5 transition-opacity group-hover:opacity-100 ${
-            message.feedback ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <IconButton title="Copy" onClick={() => onCopy(message.content)}>
-            <Copy size={14} />
-          </IconButton>
-          <IconButton title="Regenerate" onClick={() => onRegenerate(message)} disabled={busy}>
-            <ArrowClockwise size={14} />
-          </IconButton>
-          {!isCoordinator ? (
-            <>
-              <IconButton title="Good answer" onClick={() => onFeedback(message, 1)}>
-                <ThumbsUp
-                  size={14}
-                  weight={message.feedback === 1 ? "fill" : "regular"}
-                  className={message.feedback === 1 ? "text-emerald-500" : ""}
-                />
-              </IconButton>
-              <IconButton title="Bad answer" onClick={() => onFeedback(message, -1)}>
-                <ThumbsDown
-                  size={14}
-                  weight={message.feedback === -1 ? "fill" : "regular"}
-                  className={message.feedback === -1 ? "text-red-400" : ""}
-                />
-              </IconButton>
-            </>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -81,21 +81,11 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group flex w-full items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 p-2.5 text-left transition-colors hover:bg-white/10"
+        title="Profile & settings"
+        aria-label="Profile & settings"
+        className="group rounded-full ring-2 ring-transparent transition-shadow hover:ring-foreground/20"
       >
         <Avatar url={user?.avatarUrl} initial={initial} className="h-9 w-9" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{name}</div>
-          {user?.email ? (
-            <div className="truncate text-xs text-muted-foreground">
-              {user.email}
-            </div>
-          ) : null}
-        </div>
-        <CaretRight
-          size={15}
-          className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-        />
       </button>
 
       {open && mounted

@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HomeComposer } from "@/components/chat/home-composer";
+import { TopBar } from "@/components/nav/top-bar";
 import type { Agent } from "@/components/chat/chat-view";
 
 export default async function HomePage() {
@@ -17,12 +19,28 @@ export default async function HomePage() {
 
   const agentList = (agents ?? []) as Agent[];
 
+  // Signed-in users get the floating top bar (history + profile) over the hero.
+  let projects: { id: string; title: string; last_message_at: string }[] = [];
+  if (user) {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("projects")
+      .select("id, title, last_message_at")
+      .order("last_message_at", { ascending: false });
+    projects = data ?? [];
+  }
+
   return (
-    <HomeComposer
-      authed={!!user}
-      userName={user?.name ?? null}
-      agents={agentList}
-      defaultAgentKey={agentList[0]?.key ?? "analyst"}
-    />
+    <>
+      {user ? <TopBar user={user} projects={projects} overlay /> : null}
+      <div className="min-h-0 flex-1 overflow-auto">
+        <HomeComposer
+          authed={!!user}
+          userName={user?.name ?? null}
+          agents={agentList}
+          defaultAgentKey={agentList[0]?.key ?? "analyst"}
+        />
+      </div>
+    </>
   );
 }
