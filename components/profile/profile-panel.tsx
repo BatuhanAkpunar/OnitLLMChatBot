@@ -41,6 +41,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     chats: number;
     messages: number;
     tokens: number;
+    costUsd: number;
   } | null>(null);
   const [mode, setMode] = useState("build");
 
@@ -56,7 +57,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     setStats(null);
     getUserStats()
       .then(setStats)
-      .catch(() => setStats({ chats: 0, messages: 0, tokens: 0 }));
+      .catch(() => setStats({ chats: 0, messages: 0, tokens: 0, costUsd: 0 }));
   }, [open]);
   useEffect(() => {
     if (!open) return;
@@ -183,10 +184,14 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
 
             {/* usage */}
             <Section label="Usage">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <Stat label="Chats" value={stats ? fmt(stats.chats) : "·"} />
                 <Stat label="Messages" value={stats ? fmt(stats.messages) : "·"} />
                 <Stat label="Tokens" value={stats ? fmt(stats.tokens) : "·"} />
+                <Stat
+                  label="Cost"
+                  value={stats ? `$${stats.costUsd.toFixed(stats.costUsd < 1 ? 3 : 2)}` : "·"}
+                />
               </div>
             </Section>
 

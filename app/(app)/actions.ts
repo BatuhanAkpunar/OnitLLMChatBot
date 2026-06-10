@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+import { modelCost } from "@/lib/ai/model-prices";
 
 /** Best-effort logging of an auxiliary (orchestrator/synthesis) LLM call. */
 async function logUsage(
@@ -26,14 +27,14 @@ async function logUsage(
       prompt_tokens: inTok,
       completion_tokens: outTok,
       total_tokens: inTok + outTok,
-      cost: 0,
+      cost: modelCost(SUMMARY_MODEL, inTok, outTok),
     });
   } catch {
     // usage logging is best-effort
   }
 }
 
-export type OrchestrateTask = { role: string; task: string };
+export type OrchestrateTask = { role: string; task: string; done: string };
 export type OrchestrateResult =
   | { action: "clarify"; question: string }
   | { action: "work"; rationale: string; tasks: OrchestrateTask[] };
@@ -59,9 +60,27 @@ export async function orchestrate(
   const fallback: OrchestrateResult = {
     action: "work",
     rationale: "",
-    tasks: fallbackRole ? [{ role: fallbackRole, task: text }] : [],
+    tasks: fallbackRole ? [{ role: fallbackRole, task: text, done: "" }] : [],
   };
   if (!list.length || !text.trim()) return fallback;
+
+  // The project's team rules (constitution) and open backlog shape routing.
+  const { data: proj } = await admin
+    .from("projects")
+    .select("rules")
+    .eq("id", projectId)
+    .maybeSingle();
+  const rules = (proj?.rules ?? "").trim();
+  const { data: openTasks } = await admin
+    .from("project_tasks")
+    .select("role_key, task, status")
+    .eq("project_id", projectId)
+    .neq("status", "done")
+    .order("sort")
+    .limit(8);
+  const backlog = (openTasks ?? [])
+    .map((t) => `- [${t.status}] ${t.role_key}: ${t.task}`)
+    .join("\n");
 
   const { data: recent } = await admin
     .from("messages")
@@ -126,59 +145,86 @@ export async function orchestrate(
     .map((a) => `${a.key}: ${a.display_name}: ${a.description ?? ""}`)
     .join("\n");
 
-  try {
-    const { text: out, usage } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
-      system: `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
+  const system = `You are Onit, the coordinator of a team of AI software roles. For the user's latest request choose ONE:
 1. CLARIFY: if it's too vague or missing a key detail, ask ONE short, specific question.
-2. WORK: break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence.
+2. WORK: break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence. For every task also write "done": one short, checkable acceptance criterion ("done when ...").
 Reply with ONLY compact JSON, no prose:
 {"action":"clarify","question":"..."}
 OR
-{"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do"}]}
+{"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do","done":"done when ..."}]}
 Prefer WORK; only CLARIFY when genuinely necessary.
 Roles:
-${roster}${memory}${learned}`,
-      prompt: `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`,
-      maxOutputTokens: 260,
-    });
-    await logUsage(
-      admin,
-      user?.id,
-      projectId,
-      usage?.inputTokens ?? 0,
-      usage?.outputTokens ?? 0,
-    );
-    const json = JSON.parse(
-      out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1),
-    );
-    if (
-      json.action === "clarify" &&
-      typeof json.question === "string" &&
-      json.question.trim()
-    ) {
+${roster}${memory}${learned}${rules ? `\nProject team rules (always respect these):\n${rules.slice(0, 800)}` : ""}${backlog ? `\nOpen backlog for this project (relate new work to it when relevant):\n${backlog}` : ""}`;
+  const userPrompt = `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`;
+
+  /** Parses and validates a decision; throws with a precise reason. */
+  function parseDecision(out: string): OrchestrateResult {
+    const start = out.indexOf("{");
+    const end = out.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("no JSON object found");
+    const json = JSON.parse(out.slice(start, end + 1));
+    if (json.action === "clarify") {
+      if (typeof json.question !== "string" || !json.question.trim()) {
+        throw new Error('action "clarify" requires a non-empty "question" string');
+      }
       return { action: "clarify", question: json.question.trim() };
     }
+    if (json.action !== "work") {
+      throw new Error('"action" must be "clarify" or "work"');
+    }
     const valid = new Set(list.map((a) => a.key));
-    const rawTasks: unknown[] = Array.isArray(json.tasks) ? json.tasks : [];
+    if (!Array.isArray(json.tasks) || json.tasks.length === 0) {
+      throw new Error('"tasks" must be a non-empty array');
+    }
     const tasks: OrchestrateTask[] = [];
     const seen = new Set<string>();
-    for (const t of rawTasks) {
-      const o = t as { role?: unknown; task?: unknown };
+    for (const t of json.tasks as unknown[]) {
+      const o = t as { role?: unknown; task?: unknown; done?: unknown };
       const role = String(o.role ?? "").toLowerCase().trim();
       const task = String(o.task ?? "").trim();
-      if (valid.has(role) && !seen.has(role)) {
-        seen.add(role);
-        tasks.push({ role, task: task || text });
-      }
+      const done = String(o.done ?? "").trim();
+      if (!valid.has(role)) continue;
+      if (seen.has(role)) continue;
+      seen.add(role);
+      tasks.push({ role, task: task || text, done });
       if (tasks.length >= 3) break;
     }
-    if (!tasks.length) return fallback;
+    if (!tasks.length) {
+      throw new Error(`no valid role keys; valid keys: ${[...valid].join(", ")}`);
+    }
     return {
       action: "work",
       rationale: typeof json.rationale === "string" ? json.rationale : "",
       tasks,
     };
+  }
+
+  try {
+    let lastErr = "";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { text: out, usage } = await generateText({
+        model: openrouter(SUMMARY_MODEL),
+        system,
+        prompt:
+          attempt === 0
+            ? userPrompt
+            : `${userPrompt}\n\nYour previous reply was invalid (${lastErr}). Reply again with ONLY valid JSON in the required shape.`,
+        maxOutputTokens: 300,
+      });
+      await logUsage(
+        admin,
+        user?.id,
+        projectId,
+        usage?.inputTokens ?? 0,
+        usage?.outputTokens ?? 0,
+      );
+      try {
+        return parseDecision(out);
+      } catch (err) {
+        lastErr = err instanceof Error ? err.message : String(err);
+      }
+    }
+    return fallback;
   } catch {
     return fallback;
   }
@@ -234,6 +280,7 @@ export async function recordRouting(
 export async function synthesize(
   projectId: string,
   request: string,
+  criteria?: { role: string; done: string }[],
 ): Promise<{ text: string }> {
   const user = await getCurrentUser();
   const admin = createAdminClient();
@@ -250,13 +297,20 @@ export async function synthesize(
     .map((m) => `${m.agent_key}:\n${(m.content || "").slice(0, 1100)}`)
     .join("\n\n");
   if (!outputs) return { text: "" };
+  const checks = (criteria ?? [])
+    .filter((c) => c.done)
+    .map((c) => `- ${c.role}: ${c.done}`)
+    .join("\n");
   try {
     const { text, usage } = await generateText({
       model: openrouter(SUMMARY_MODEL),
       system:
-        "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings or lists.",
-      prompt: `User's request: ${request}\n\nTeam outputs:\n${outputs}\n\nWrap-up:`,
-      maxOutputTokens: 220,
+        "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings." +
+        (checks
+          ? ' Then verify each acceptance criterion against the outputs and append one line per criterion: "✓" if met, "✗ plus what is missing" if not.'
+          : " No lists."),
+      prompt: `User's request: ${request}\n\nTeam outputs:\n${outputs}${checks ? `\n\nAcceptance criteria:\n${checks}` : ""}\n\nWrap-up:`,
+      maxOutputTokens: 300,
     });
     await logUsage(
       admin,
@@ -451,22 +505,177 @@ export async function getUserStats(): Promise<{
   chats: number;
   messages: number;
   tokens: number;
+  costUsd: number;
 }> {
   const supabase = await createClient();
   const [proj, msg, usage] = await Promise.all([
     supabase.from("projects").select("id", { count: "exact", head: true }),
     supabase.from("messages").select("id", { count: "exact", head: true }),
-    supabase.from("usage_logs").select("total_tokens"),
+    supabase.from("usage_logs").select("total_tokens, cost"),
   ]);
   const tokens = (usage.data ?? []).reduce(
     (s, r) => s + (r.total_tokens ?? 0),
+    0,
+  );
+  const costUsd = (usage.data ?? []).reduce(
+    (s, r) => s + Number(r.cost ?? 0),
     0,
   );
   return {
     chats: proj.count ?? 0,
     messages: msg.count ?? 0,
     tokens,
+    costUsd,
   };
+}
+
+// --- Team rules (per-project constitution) -----------------------------------
+
+export async function setProjectRules(
+  projectId: string,
+  rules: string,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ rules: rules.trim().slice(0, 2000) || null })
+    .eq("id", projectId);
+  return { ok: !error };
+}
+
+// --- Project backlog (persistent tasks) ---------------------------------------
+
+export type ProjectTask = {
+  id: string;
+  role_key: string;
+  task: string;
+  done_criteria: string | null;
+  status: "todo" | "doing" | "done";
+  sort: number;
+};
+
+export async function listProjectTasks(projectId: string): Promise<ProjectTask[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("project_tasks")
+    .select("id, role_key, task, done_criteria, status, sort")
+    .eq("project_id", projectId)
+    .order("sort")
+    .order("created_at");
+  return (data ?? []) as ProjectTask[];
+}
+
+/** Persists an approved plan as backlog tasks; returns them in plan order. */
+export async function addProjectTasks(
+  projectId: string,
+  tasks: { role: string; task: string; done?: string }[],
+): Promise<ProjectTask[]> {
+  const user = await getCurrentUser();
+  if (!user || !tasks.length) return [];
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("project_tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId);
+  const base = count ?? 0;
+  const { data } = await supabase
+    .from("project_tasks")
+    .insert(
+      tasks.map((t, i) => ({
+        project_id: projectId,
+        owner_id: user.id,
+        role_key: t.role,
+        task: t.task.slice(0, 500),
+        done_criteria: t.done?.slice(0, 300) || null,
+        sort: base + i,
+      })),
+    )
+    .select("id, role_key, task, done_criteria, status, sort")
+    .order("sort");
+  return (data ?? []) as ProjectTask[];
+}
+
+export async function setTaskStatus(
+  taskId: string,
+  status: "todo" | "doing" | "done",
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_tasks")
+    .update({ status })
+    .eq("id", taskId);
+  return { ok: !error };
+}
+
+// --- Message feedback (thumbs) -------------------------------------------------
+
+export async function setMessageFeedback(
+  messageId: string,
+  feedback: -1 | 0 | 1,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("messages")
+    .update({ feedback: feedback === 0 ? null : feedback })
+    .eq("id", messageId);
+  return { ok: !error };
+}
+
+// --- /status -------------------------------------------------------------------
+
+/** Coordinator summary of where the project stands (used by /status). */
+export async function statusSummary(projectId: string): Promise<{ text: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { text: "" };
+  const admin = createAdminClient();
+  const [{ data: proj }, { data: msgs }, { data: tasks }] = await Promise.all([
+    admin
+      .from("projects")
+      .select("title, owner_id, rules")
+      .eq("id", projectId)
+      .maybeSingle(),
+    admin
+      .from("messages")
+      .select("role, agent_key, content")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(14),
+    admin
+      .from("project_tasks")
+      .select("role_key, task, status")
+      .eq("project_id", projectId)
+      .order("sort"),
+  ]);
+  if (!proj || proj.owner_id !== user.id) return { text: "" };
+  const history = (msgs ?? [])
+    .reverse()
+    .map(
+      (m) =>
+        `${m.role === "user" ? "User" : m.agent_key ?? "agent"}: ${(m.content || "").slice(0, 220)}`,
+    )
+    .join("\n");
+  const backlog = (tasks ?? [])
+    .map((t) => `- [${t.status}] ${t.role_key}: ${t.task}`)
+    .join("\n");
+  try {
+    const { text, usage } = await generateText({
+      model: openrouter(SUMMARY_MODEL),
+      system:
+        "You are Onit, the team coordinator. Give the user a crisp status report of this project: 1) What was decided or produced so far (2-3 bullets). 2) The backlog state (done / in progress / open, by count and the most important open item). 3) The single most useful next step. Keep it under 120 words, use short bullets, speak directly to the user.",
+      prompt: `Project: ${proj.title}\n\nRecent conversation:\n${history || "(empty)"}\n\nBacklog:\n${backlog || "(no tracked tasks)"}\n\nStatus report:`,
+      maxOutputTokens: 260,
+    });
+    await logUsage(
+      admin,
+      user.id,
+      projectId,
+      usage?.inputTokens ?? 0,
+      usage?.outputTokens ?? 0,
+    );
+    return { text: text.trim() };
+  } catch {
+    return { text: "" };
+  }
 }
 
 /** Deletes a message and every message after it in the same chat. */

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { openrouter, DEFAULT_MODEL, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+import { modelCost } from "@/lib/ai/model-prices";
 import { buildSystemPrompt } from "@/lib/ai/guardrails";
 import { buildContext } from "@/lib/context";
 import { maybeSummarizeProject } from "@/lib/summarize";
@@ -16,6 +17,9 @@ import {
 export const maxDuration = 60;
 
 const OPENROUTER_TIMEOUT_MS = 30_000;
+// Used when the primary model errors or times out mid-request.
+const FALLBACK_MODEL =
+  process.env.OPENROUTER_FALLBACK_MODEL || "google/gemini-2.0-flash-001";
 const encoder = new TextEncoder();
 const line = (obj: unknown) => encoder.encode(JSON.stringify(obj) + "\n");
 
@@ -34,12 +38,14 @@ export async function POST(req: Request) {
     agentKey?: string;
     mode?: string;
     task?: string;
+    web?: boolean;
   };
   try {
     body = await req.json();
   } catch {
     return new Response("Invalid request body.", { status: 400 });
   }
+  const webSearch = body.web === true;
 
   const projectId = body.projectId?.trim();
   const agentKey = body.agentKey?.trim();
@@ -78,17 +84,41 @@ export async function POST(req: Request) {
   // RLS scopes this to the user's own projects, so a returned row means it's theirs.
   const { data: project } = await db
     .from("projects")
-    .select("id")
+    .select("id, rules")
     .eq("id", projectId)
     .maybeSingle();
   if (!project) return new Response("Chat not found.", { status: 404 });
+  const teamRules = (project.rules ?? "").trim();
 
   const { data: agentRows } = await db
     .from("agent_configs")
-    .select("key, display_name, system_prompt");
+    .select("key, display_name, system_prompt, model, ab_version_id");
   const agents = agentRows ?? [];
   const agent = agents.find((a) => a.key === agentKey);
   if (!agent) return new Response("Unknown agent.", { status: 400 });
+
+  // Prompt A/B: when a B version is set for this agent, flip a coin per reply
+  // and record which variant answered (feedback joins on messages.variant).
+  let systemPrompt = agent.system_prompt as string;
+  let agentModel = (agent.model as string | null) || DEFAULT_MODEL;
+  let variant: "a" | "b" | null = null;
+  if (agent.ab_version_id) {
+    variant = Math.random() < 0.5 ? "a" : "b";
+    if (variant === "b") {
+      const { data: v } = await admin
+        .from("agent_config_versions")
+        .select("system_prompt, model")
+        .eq("id", agent.ab_version_id)
+        .maybeSingle();
+      if (v) {
+        systemPrompt = v.system_prompt;
+        if (v.model) agentModel = v.model;
+      } else {
+        variant = null; // stale pointer: behave as no test
+      }
+    }
+  }
+  if (webSearch) agentModel = `${agentModel}:online`;
   const agentNames: Record<string, string> = Object.fromEntries(
     agents.map((a) => [a.key, a.display_name]),
   );
@@ -117,6 +147,7 @@ export async function POST(req: Request) {
       content: "",
       thinking: "",
       status: "streaming",
+      variant,
     })
     .select("id")
     .single();
@@ -146,6 +177,9 @@ export async function POST(req: Request) {
       let status: "complete" | "error" = "complete";
       let inTok = 0;
       let outTok = 0;
+      let thinkIn = 0;
+      let thinkOut = 0;
+      let usedModel = agentModel;
 
       try {
         // 1) Thinking bubble (cheaper model), completes before the main answer.
@@ -162,8 +196,8 @@ export async function POST(req: Request) {
         }
         try {
           const u = await think.usage;
-          inTok += u?.inputTokens ?? 0;
-          outTok += u?.outputTokens ?? 0;
+          thinkIn += u?.inputTokens ?? 0;
+          thinkOut += u?.outputTokens ?? 0;
         } catch {}
 
         // 2) Main answer.
@@ -173,21 +207,38 @@ export async function POST(req: Request) {
             : mode === "discuss"
               ? "Explore the trade-offs: give a clear recommendation, but surface 2–3 options with pros/cons and the key risks. If other roles have left notes, build on or respectfully challenge them."
               : "Provide the result directly.";
-        const answerStream = streamText({
-          model: openrouter(DEFAULT_MODEL),
-          system: `${buildSystemPrompt(agent.system_prompt)}${injection ? INJECTION_HARDENING : ""}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`,
-          messages: ctx,
-          abortSignal: timeout.signal,
-        });
-        for await (const d of answerStream.textStream) {
-          answer += d;
-          send({ type: "answer", delta: d });
+        const sysFull = `${buildSystemPrompt(systemPrompt)}${injection ? INJECTION_HARDENING : ""}${teamRules ? `\n\nProject team rules set by the user (follow them strictly):\n${teamRules.slice(0, 2000)}` : ""}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`;
+
+        async function runAnswer(model: string) {
+          const s = streamText({
+            model: openrouter(model),
+            system: sysFull,
+            messages: ctx,
+            abortSignal: timeout.signal,
+          });
+          for await (const d of s.textStream) {
+            answer += d;
+            send({ type: "answer", delta: d });
+          }
+          try {
+            const u = await s.usage;
+            inTok += u?.inputTokens ?? 0;
+            outTok += u?.outputTokens ?? 0;
+          } catch {}
         }
+
         try {
-          const u = await answerStream.usage;
-          inTok += u?.inputTokens ?? 0;
-          outTok += u?.outputTokens ?? 0;
-        } catch {}
+          await runAnswer(agentModel);
+        } catch (err) {
+          // Failover: if the primary died before producing anything, retry
+          // once on the fallback model so the user still gets an answer.
+          if (!aborted && !answer && agentModel !== FALLBACK_MODEL) {
+            usedModel = FALLBACK_MODEL;
+            await runAnswer(FALLBACK_MODEL);
+          } else {
+            throw err;
+          }
+        }
       } catch {
         if (aborted) {
           status = "complete";
@@ -214,17 +265,21 @@ export async function POST(req: Request) {
         }
         if (status === "complete") {
           try {
+            const totalIn = inTok + thinkIn;
+            const totalOut = outTok + thinkOut;
             await admin.from("usage_logs").insert({
               user_id: user.id,
               project_id: projectId,
               message_id: assistantId,
               kind: "chat",
-              model: DEFAULT_MODEL,
+              model: usedModel,
               agent_key: agentKey,
-              prompt_tokens: inTok,
-              completion_tokens: outTok,
-              total_tokens: inTok + outTok,
-              cost: 0,
+              prompt_tokens: totalIn,
+              completion_tokens: totalOut,
+              total_tokens: totalIn + totalOut,
+              cost:
+                modelCost(usedModel, inTok, outTok) +
+                modelCost(SUMMARY_MODEL, thinkIn, thinkOut),
             });
           } catch {
             // usage logging is best-effort

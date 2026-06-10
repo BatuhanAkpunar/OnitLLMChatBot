@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChatView, type Message, type Agent } from "@/components/chat/chat-view";
+import type { ProjectTask } from "@/app/(app)/actions";
 
 export default async function ProjectPage(props: {
   params: Promise<{ id: string }>;
@@ -10,23 +11,29 @@ export default async function ProjectPage(props: {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, last_agent_key, mode")
+    .select("id, title, last_agent_key, mode, rules")
     .eq("id", id)
     .single();
   if (!project) notFound();
 
-  const [{ data: messages }, { data: agents }] = await Promise.all([
-    supabase
-      .from("messages")
-      .select("id, role, agent_key, content, thinking, status")
-      .eq("project_id", id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("agent_configs")
-      .select("key, display_name, handle, color, description")
-      .eq("enabled", true)
-      .order("sort_order"),
-  ]);
+  const [{ data: messages }, { data: agents }, { data: tasks }] =
+    await Promise.all([
+      supabase
+        .from("messages")
+        .select("id, role, agent_key, content, thinking, status, feedback")
+        .eq("project_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("agent_configs")
+        .select("key, display_name, handle, color, description")
+        .eq("enabled", true)
+        .order("sort_order"),
+      supabase
+        .from("project_tasks")
+        .select("id, role_key, task, done_criteria, status, sort")
+        .eq("project_id", id)
+        .order("sort"),
+    ]);
 
   const agentList = (agents ?? []) as Agent[];
 
@@ -44,6 +51,8 @@ export default async function ProjectPage(props: {
             ? "discuss"
             : "build"
       }
+      initialRules={project.rules ?? ""}
+      initialTasks={(tasks ?? []) as ProjectTask[]}
     />
   );
 }

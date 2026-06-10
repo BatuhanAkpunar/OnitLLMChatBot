@@ -1,15 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash, DownloadSimple, Eye, EyeSlash } from "@phosphor-icons/react";
+import {
+  Plus,
+  Trash,
+  DownloadSimple,
+  Eye,
+  EyeSlash,
+  ClockCounterClockwise,
+  Flask,
+  GitBranch,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/chat/markdown";
 import { AGENT_COLORS } from "@/lib/agent-colors";
+import { MODEL_CHOICES } from "@/lib/ai/model-prices";
+import { ROLE_TEMPLATES } from "@/lib/role-templates";
 import {
   saveAgentConfig,
   createAgentConfig,
   setAgentEnabled,
   deleteAgentConfig,
+  listAgentVersions,
+  restoreAgentVersion,
+  testAgentPrompt,
+  setAgentAbVersion,
+  getAgentAbStats,
+  type AgentVersion,
+  type AbStats,
 } from "@/app/admin/actions";
 
 export type EditableAgent = {
@@ -22,6 +41,8 @@ export type EditableAgent = {
   version: number;
   enabled: boolean;
   sort_order: number;
+  model: string | null;
+  ab_version_id: string | null;
 };
 
 type FormState = {
@@ -60,28 +81,130 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
   );
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
+  const [models, setModels] = useState<Record<string, string>>(
+    Object.fromEntries(agents.map((a) => [a.key, a.model ?? ""])),
+  );
+
+  // Tools panel (history / playground / A/B), one open at a time.
+  const [panel, setPanel] = useState<"history" | "test" | "ab" | null>(null);
+  const [versions, setVersions] = useState<AgentVersion[]>([]);
+  const [viewVersion, setViewVersion] = useState<AgentVersion | null>(null);
+  const [sample, setSample] = useState("");
+  const [testResult, setTestResult] = useState<{
+    text: string;
+    ms: number;
+    tokens: number;
+    costUsd: number;
+    error?: string;
+  } | null>(null);
+  const [abStats, setAbStats] = useState<AbStats | null>(null);
 
   const isNew = activeKey === NEW;
   const active = list.find((a) => a.key === activeKey);
   const value = drafts[activeKey] ?? "";
-  const dirty = active ? value !== active.system_prompt : false;
+  const model = models[activeKey] ?? "";
+  const dirty = active
+    ? value !== active.system_prompt || model !== (active.model ?? "")
+    : false;
+
+  function switchAgent(key: string) {
+    setActiveKey(key);
+    setPanel(null);
+    setViewVersion(null);
+    setTestResult(null);
+    setAbStats(null);
+  }
 
   async function save() {
     if (!active) return;
     setBusy(true);
-    const res = await saveAgentConfig(active.key, value);
+    const res = await saveAgentConfig(active.key, value, model || null);
     setBusy(false);
     if (res.ok) {
       setList((l) =>
         l.map((a) =>
           a.key === active.key
-            ? { ...a, system_prompt: value, version: res.version ?? a.version }
+            ? {
+                ...a,
+                system_prompt: value,
+                model: model || null,
+                version: res.version ?? a.version,
+              }
             : a,
         ),
       );
       toast.success("Saved. New conversations use the updated prompt.");
     } else {
       toast.error(res.error ?? "Could not save.");
+    }
+  }
+
+  async function openHistory() {
+    if (!active) return;
+    setPanel(panel === "history" ? null : "history");
+    setViewVersion(null);
+    if (panel !== "history") {
+      const v = await listAgentVersions(active.key);
+      setVersions(v);
+    }
+  }
+
+  async function restore(v: AgentVersion) {
+    if (!active) return;
+    setBusy(true);
+    const res = await restoreAgentVersion(active.key, v.id);
+    setBusy(false);
+    if (res.ok) {
+      setDrafts((d) => ({ ...d, [active.key]: v.system_prompt }));
+      setModels((m) => ({ ...m, [active.key]: v.model ?? "" }));
+      setList((l) =>
+        l.map((a) =>
+          a.key === active.key
+            ? { ...a, system_prompt: v.system_prompt, model: v.model, version: a.version + 1 }
+            : a,
+        ),
+      );
+      setPanel(null);
+      toast.success(`Restored v${v.version}.`);
+    } else {
+      toast.error(res.error ?? "Could not restore.");
+    }
+  }
+
+  async function runTest() {
+    if (!sample.trim()) return;
+    setBusy(true);
+    setTestResult(null);
+    const res = await testAgentPrompt(value, sample, model || null);
+    setBusy(false);
+    setTestResult(res);
+  }
+
+  async function openAb() {
+    if (!active) return;
+    setPanel(panel === "ab" ? null : "ab");
+    if (panel !== "ab") {
+      const [v, s] = await Promise.all([
+        listAgentVersions(active.key),
+        getAgentAbStats(active.key),
+      ]);
+      setVersions(v);
+      setAbStats(s);
+    }
+  }
+
+  async function setAb(versionId: string | null) {
+    if (!active) return;
+    setBusy(true);
+    const res = await setAgentAbVersion(active.key, versionId);
+    setBusy(false);
+    if (res.ok) {
+      setList((l) =>
+        l.map((a) => (a.key === active.key ? { ...a, ab_version_id: versionId } : a)),
+      );
+      toast.success(versionId ? "A/B test started." : "A/B test stopped.");
+    } else {
+      toast.error(res.error ?? "Could not update the test.");
     }
   }
 
@@ -144,6 +267,8 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
       version: 1,
       enabled: true,
       sort_order: Number(form.sort_order) || 99,
+      model: null,
+      ab_version_id: null,
     };
     setList((l) => [...l, created]);
     setDrafts((d) => ({ ...d, [key]: created.system_prompt }));
@@ -171,7 +296,7 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
           <button
             key={a.key}
             type="button"
-            onClick={() => setActiveKey(a.key)}
+            onClick={() => switchAgent(a.key)}
             className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
               a.key === activeKey
                 ? "border-border bg-accent"
@@ -192,7 +317,7 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
         ))}
         <button
           type="button"
-          onClick={() => setActiveKey(NEW)}
+          onClick={() => switchAgent(NEW)}
           className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
             isNew
               ? "border-border bg-accent"
@@ -208,10 +333,30 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
         <NewAgentForm form={form} setForm={setForm} onCreate={create} busy={busy} />
       ) : active ? (
         <>
-          <div className="text-xs text-muted-foreground">
-            {active.handle} · v{active.version}
-            {active.enabled ? "" : " · disabled"}
-            {dirty ? " · unsaved changes" : ""}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-xs text-muted-foreground">
+              {active.handle} · v{active.version}
+              {active.enabled ? "" : " · disabled"}
+              {active.ab_version_id ? " · A/B running" : ""}
+              {dirty ? " · unsaved changes" : ""}
+            </div>
+            <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+              Model
+              <select
+                value={model}
+                onChange={(e) =>
+                  setModels((m) => ({ ...m, [active.key]: e.target.value }))
+                }
+                className="rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-ring/20"
+              >
+                <option value="">Default</option>
+                {MODEL_CHOICES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -247,6 +392,39 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
             </button>
             <button
               type="button"
+              onClick={openHistory}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-accent ${
+                panel === "history" ? "border-foreground/40 bg-accent" : "border-border"
+              }`}
+            >
+              <ClockCounterClockwise size={15} />
+              History
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPanel(panel === "test" ? null : "test");
+                setTestResult(null);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-accent ${
+                panel === "test" ? "border-foreground/40 bg-accent" : "border-border"
+              }`}
+            >
+              <Flask size={15} />
+              Test
+            </button>
+            <button
+              type="button"
+              onClick={openAb}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-accent ${
+                panel === "ab" ? "border-foreground/40 bg-accent" : "border-border"
+              }`}
+            >
+              <GitBranch size={15} />
+              A/B
+            </button>
+            <button
+              type="button"
               onClick={toggleEnabled}
               disabled={busy}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-accent disabled:opacity-40"
@@ -264,6 +442,162 @@ export function AgentEditor({ agents }: { agents: EditableAgent[] }) {
               Delete
             </button>
           </div>
+
+          {panel === "history" ? (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Prompt history (latest 20). Restoring saves the current prompt as
+                a new version first, so nothing is lost.
+              </div>
+              {versions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No versions yet. A version is recorded every time you save a
+                  changed prompt.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {versions.map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center gap-2 rounded-lg border border-border px-3 py-2"
+                    >
+                      <span className="font-mono text-xs">v{v.version}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(v.created_at).toLocaleString()}
+                        {v.model ? ` · ${v.model}` : ""}
+                        {v.note ? ` · ${v.note}` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setViewVersion(viewVersion?.id === v.id ? null : v)}
+                        className="ml-auto rounded-md border border-border px-2 py-1 text-xs transition-colors hover:bg-accent"
+                      >
+                        {viewVersion?.id === v.id ? "Hide" : "View"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restore(v)}
+                        disabled={busy}
+                        className="rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {viewVersion ? (
+                <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-background p-3 font-mono text-[11px] leading-relaxed">
+                  {viewVersion.system_prompt}
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
+
+          {panel === "test" ? (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Playground: runs the CURRENT DRAFT prompt (unsaved edits included)
+                with {model || "the default model"}. Nothing is saved or logged
+                to chats.
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={sample}
+                  onChange={(e) => setSample(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") runTest();
+                  }}
+                  placeholder="A sample user message, e.g. 'Spec a referral program for a fitness app'"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={busy || !sample.trim()}
+                  className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                >
+                  {busy ? "Running…" : "Run"}
+                </button>
+              </div>
+              {testResult ? (
+                testResult.error ? (
+                  <p className="mt-3 text-xs text-destructive">{testResult.error}</p>
+                ) : (
+                  <div className="mt-3">
+                    <div className="mb-2 text-[11px] text-muted-foreground">
+                      {testResult.ms} ms · {testResult.tokens} tokens · $
+                      {testResult.costUsd.toFixed(5)}
+                    </div>
+                    <div className="max-h-72 overflow-y-auto rounded-lg border border-border bg-background p-3">
+                      <Markdown>{testResult.text}</Markdown>
+                    </div>
+                  </div>
+                )
+              ) : null}
+            </div>
+          ) : null}
+
+          {panel === "ab" ? (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Prompt A/B: variant B is a stored version; replies split 50/50 and
+                thumbs feedback decides the winner.
+              </div>
+              {active.ab_version_id ? (
+                <div className="space-y-3">
+                  {abStats ? (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {(["a", "b"] as const).map((k) => (
+                        <div key={k} className="rounded-lg border border-border p-3">
+                          <div className="font-semibold uppercase">Variant {k}</div>
+                          <div className="mt-1 text-muted-foreground">
+                            {abStats[k].count} replies · 👍 {abStats[k].up} · 👎{" "}
+                            {abStats[k].down}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setAb(null)}
+                    disabled={busy}
+                    className="rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-accent disabled:opacity-40"
+                  >
+                    Stop the test
+                  </button>
+                </div>
+              ) : versions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No stored versions to test against. Save a prompt change first,
+                  then pick the previous version as variant B here.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {versions.slice(0, 8).map((v) => (
+                    <div
+                      key={v.id}
+                      className="flex items-center gap-2 rounded-lg border border-border px-3 py-2"
+                    >
+                      <span className="font-mono text-xs">v{v.version}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(v.created_at).toLocaleString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAb(v.id)}
+                        disabled={busy}
+                        className="ml-auto rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                      >
+                        Use as variant B
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -299,6 +633,39 @@ function NewAgentForm({
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }));
   return (
     <div className="space-y-4">
+      <div>
+        <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Sparkle size={13} weight="fill" />
+          Start from a template
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {ROLE_TEMPLATES.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() =>
+                setForm({
+                  key: t.key,
+                  display_name: t.display_name,
+                  handle: t.handle,
+                  color: t.color,
+                  description: t.description,
+                  sort_order: "99",
+                  system_prompt: t.system_prompt,
+                })
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: `var(--agent-${t.color})` }}
+              />
+              {t.display_name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Display name">
           <input

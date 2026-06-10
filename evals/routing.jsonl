@@ -1,0 +1,12 @@
+{"text": "Build a Stripe checkout page for our SaaS", "expect": ["developer"]}
+{"text": "Write user stories for a password reset flow", "expect": ["analyst"]}
+{"text": "Should we charge per seat or usage based pricing?", "expect": ["product_manager"]}
+{"text": "Plan the next two sprints for the mobile app rewrite", "expect": ["project_manager"]}
+{"text": "Design the onboarding screens for a habit tracker", "expect": ["product_designer"]}
+{"text": "Write test cases for the login form", "expect": ["qa"]}
+{"text": "Spec a referral program and then build the API for it", "expect": ["analyst", "developer"]}
+{"text": "Design a settings page and write the e2e tests for it", "expect": ["product_designer", "qa"]}
+{"text": "Decide what to cut from the MVP and plan the remaining work", "expect": ["product_manager", "project_manager"]}
+{"text": "Fix the N+1 query problem in our orders endpoint", "expect": ["developer"]}
+{"text": "Our churn is up 20 percent, figure out why and what to do", "expect": ["analyst", "product_manager"]}
+{"text": "Build a dark mode toggle, design it first", "expect": ["product_designer", "developer"]}

@@ -60,7 +60,9 @@ async function introspect(label) {
 await introspect("BEFORE (current live state)");
 
 if (process.argv.includes("--apply")) {
-  for (const f of ["0001_init.sql", "0002_seed_agents.sql"]) {
+  const requested = process.argv.filter((a) => a.endsWith(".sql"));
+  const files = requested.length ? requested : ["0001_init.sql", "0002_seed_agents.sql"];
+  for (const f of files) {
     const sql = await readFile(
       new URL(`../supabase/migrations/${f}`, import.meta.url),
       "utf8",

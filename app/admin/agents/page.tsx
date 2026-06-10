@@ -8,7 +8,7 @@ export default async function AdminAgentsPage() {
   const { data: agents } = await admin
     .from("agent_configs")
     .select(
-      "key, display_name, handle, color, description, system_prompt, version, enabled, sort_order",
+      "key, display_name, handle, color, description, system_prompt, version, enabled, sort_order, model, ab_version_id",
     )
     .order("sort_order");
 
