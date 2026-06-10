@@ -24,3 +24,28 @@ export const REASONING_RULES = `# REASONING QUALITY RULES (apply to every substa
 export function buildSystemPrompt(rolePrompt: string): string {
   return `${SECURITY_GUARDRAILS}\n\n${REASONING_RULES}\n\n---\n\n${rolePrompt}`;
 }
+
+export type PreferredLanguage = "auto" | "tr" | "en";
+
+/**
+ * Per-user response language rule (profiles.preferred_language).
+ * "auto" keeps the role prompts' own "reply in the user's language" behavior.
+ */
+export function languageRule(lang: string | null | undefined): string {
+  if (lang === "tr") {
+    return "\n\nLANGUAGE (overrides any other language instruction): ALWAYS write your ENTIRE reply in Turkish (Türkçe), no matter which language the user writes in. Keep widely used technical terms (PRD, sprint, backlog, API) in English where natural, and explain them briefly on first use.";
+  }
+  if (lang === "en") {
+    return "\n\nLANGUAGE (overrides any other language instruction): ALWAYS write your ENTIRE reply in English, no matter which language the user writes in.";
+  }
+  return "";
+}
+
+/** Same preference for short coordinator outputs (plans, wrap-ups, questions). */
+export function coordinatorLanguageRule(
+  lang: string | null | undefined,
+): string {
+  if (lang === "tr") return " Write your output in Turkish (Türkçe).";
+  if (lang === "en") return " Write your output in English.";
+  return " Write your output in the same language as the user's latest request.";
+}

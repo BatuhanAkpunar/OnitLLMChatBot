@@ -55,6 +55,14 @@ export default async function ProjectPage(props: {
       .limit(50),
   ]);
 
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("preferred_language")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null };
+
   const agentList = (agents ?? []) as Agent[];
 
   return (
@@ -74,6 +82,7 @@ export default async function ProjectPage(props: {
       initialRules={project.rules ?? ""}
       initialTasks={(tasks ?? []) as ProjectTask[]}
       initialDecisions={(decisions ?? []) as ProjectDecision[]}
+      lang={profile?.preferred_language === "tr" ? "tr" : "en"}
       user={user}
       projects={projects ?? []}
     />

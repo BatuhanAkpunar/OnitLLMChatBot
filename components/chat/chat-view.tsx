@@ -87,6 +87,7 @@ export function ChatView({
   initialRules = "",
   initialTasks = [],
   initialDecisions = [],
+  lang = "en",
   user = null,
   projects = [],
 }: {
@@ -99,6 +100,7 @@ export function ChatView({
   initialRules?: string;
   initialTasks?: ProjectTask[];
   initialDecisions?: ProjectDecision[];
+  lang?: "en" | "tr";
   user?: CurrentUser | null;
   projects?: ProjectListItem[];
 }) {
@@ -505,7 +507,7 @@ export function ChatView({
 
       if (plan.length > 1) {
         const planText =
-          "Here's the plan:\n" +
+          (lang === "tr" ? "İşte plan:\n" : "Here's the plan:\n") +
           decision.tasks
             .map(
               (t) =>

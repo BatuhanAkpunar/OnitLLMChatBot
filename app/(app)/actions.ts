@@ -8,6 +8,29 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
 import { modelCost } from "@/lib/ai/model-prices";
+import {
+  coordinatorLanguageRule,
+  type PreferredLanguage,
+} from "@/lib/ai/guardrails";
+
+/** Reads the user's response-language preference (profiles.preferred_language). */
+async function preferredLanguage(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string | null | undefined,
+): Promise<PreferredLanguage> {
+  if (!userId) return "auto";
+  try {
+    const { data } = await admin
+      .from("profiles")
+      .select("preferred_language")
+      .eq("id", userId)
+      .maybeSingle();
+    const v = data?.preferred_language;
+    return v === "tr" || v === "en" ? v : "auto";
+  } catch {
+    return "auto";
+  }
+}
 
 /** Best-effort logging of an auxiliary (orchestrator/synthesis) LLM call. */
 async function logUsage(
@@ -192,6 +215,7 @@ Reply with ONLY compact JSON, no prose:
 OR
 {"action":"work","rationale":"one short sentence","tasks":[{"role":"rolekey","task":"what this role should do","done":"done when ...","skill":"skillkey or empty"}]}
 Prefer WORK; only CLARIFY when genuinely necessary.
+For every human-facing string you write (question, rationale, task, done):${coordinatorLanguageRule(await preferredLanguage(admin, user?.id))}
 Roles:
 ${roster}${skillCatalog ? `\nMethod library (optional, pick at most one per task):\n${skillCatalog}` : ""}${memory}${learned}${rules ? `\nProject team rules (always respect these):\n${rules.slice(0, 800)}` : ""}${decisionsCtx ? `\nAdopted team decisions (standing constraints; new work must not contradict them):\n${decisionsCtx}` : ""}${backlog ? `\nOpen backlog for this project (relate new work to it when relevant):\n${backlog}` : ""}`;
   const userPrompt = `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`;
@@ -359,7 +383,8 @@ export async function synthesize(
         "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings." +
         (checks
           ? ' Then verify each acceptance criterion against the outputs and append one line per criterion: "✓" if met, "✗ plus what is missing" if not.'
-          : " No lists."),
+          : " No lists.") +
+        coordinatorLanguageRule(await preferredLanguage(admin, user?.id)),
       prompt: `User's request: ${request}\n\nTeam outputs:\n${outputs}${checks ? `\n\nAcceptance criteria:\n${checks}` : ""}\n\nWrap-up:`,
       maxOutputTokens: 300,
     });
@@ -580,6 +605,28 @@ export async function getUserStats(): Promise<{
   };
 }
 
+// --- Response language preference ---------------------------------------------
+
+export async function getPreferredLanguage(): Promise<PreferredLanguage> {
+  const user = await getCurrentUser();
+  if (!user) return "auto";
+  return preferredLanguage(createAdminClient(), user.id);
+}
+
+export async function setPreferredLanguage(
+  lang: PreferredLanguage,
+): Promise<{ ok: boolean }> {
+  if (lang !== "auto" && lang !== "tr" && lang !== "en") return { ok: false };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ preferred_language: lang })
+    .eq("id", user.id);
+  return { ok: !error };
+}
+
 // --- Team rules (per-project constitution) -----------------------------------
 
 export async function setProjectRules(
@@ -750,7 +797,8 @@ export async function captureDecisions(
       model: openrouter(SUMMARY_MODEL),
       system: `You extract DECISIONS from a software team's outputs: choices that constrain future work (stack picks, scope cuts, architectural or process commitments, prioritization verdicts). Not summaries, not tasks, not opinions.
 Reply with ONLY compact JSON: {"decisions":[{"title":"short imperative title","because":["concrete reason",...],"despite":["accepted downside",...],"constraints":["rule future work MUST follow",...]}]}
-Rules: 0-2 decisions max; every decision needs at least one "because" AND one "despite" (if you cannot name a downside, it is not a real decision; skip it); constraints are checkable one-liners; skip anything already in the known list. If nothing qualifies, reply {"decisions":[]}.`,
+Rules: 0-2 decisions max; every decision needs at least one "because" AND one "despite" (if you cannot name a downside, it is not a real decision; skip it); constraints are checkable one-liners; skip anything already in the known list. If nothing qualifies, reply {"decisions":[]}.
+For every human-facing string (title, because, despite, constraints):${coordinatorLanguageRule(await preferredLanguage(admin, user.id))}`,
       prompt: `User's request: ${request.slice(0, 400)}\n\nTeam outputs:\n${outputs}${known ? `\n\nAlready recorded (skip these):\n${known}` : ""}\n\nJSON:`,
       maxOutputTokens: 400,
     });
@@ -857,7 +905,8 @@ export async function statusSummary(projectId: string): Promise<{ text: string }
     const { text, usage } = await generateText({
       model: openrouter(SUMMARY_MODEL),
       system:
-        "You are Onit, the team coordinator. Give the user a crisp status report of this project: 1) What was decided or produced so far (2-3 bullets). 2) The backlog state (done / in progress / open, by count and the most important open item). 3) The single most useful next step. Keep it under 120 words, use short bullets, speak directly to the user.",
+        "You are Onit, the team coordinator. Give the user a crisp status report of this project: 1) What was decided or produced so far (2-3 bullets). 2) The backlog state (done / in progress / open, by count and the most important open item). 3) The single most useful next step. Keep it under 120 words, use short bullets, speak directly to the user." +
+        coordinatorLanguageRule(await preferredLanguage(admin, user.id)),
       prompt: `Project: ${proj.title}\n\nRecent conversation:\n${history || "(empty)"}\n\nBacklog:\n${backlog || "(no tracked tasks)"}\n\nStatus report:`,
       maxOutputTokens: 260,
     });

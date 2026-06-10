@@ -14,8 +14,13 @@ import {
   CaretRight,
 } from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
-import { getUserStats } from "@/app/(app)/actions";
+import {
+  getUserStats,
+  getPreferredLanguage,
+  setPreferredLanguage,
+} from "@/app/(app)/actions";
 import type { CurrentUser } from "@/lib/auth/user";
+import type { PreferredLanguage } from "@/lib/ai/guardrails";
 
 const THEMES = [
   { key: "light", label: "Light", Icon: Sun },
@@ -27,6 +32,12 @@ const MODES = [
   { key: "build", label: "Build" },
   { key: "plan", label: "Plan" },
   { key: "discuss", label: "Discuss" },
+];
+
+const LANGUAGES: { key: PreferredLanguage; label: string; hint: string }[] = [
+  { key: "auto", label: "Auto", hint: "Match my message" },
+  { key: "tr", label: "Türkçe", hint: "Cevaplar hep Türkçe" },
+  { key: "en", label: "English", hint: "Always English" },
 ];
 
 function fmt(n: number) {
@@ -44,6 +55,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     costUsd: number;
   } | null>(null);
   const [mode, setMode] = useState("build");
+  const [lang, setLang] = useState<PreferredLanguage | null>(null);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -58,6 +70,9 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     getUserStats()
       .then(setStats)
       .catch(() => setStats({ chats: 0, messages: 0, tokens: 0, costUsd: 0 }));
+    getPreferredLanguage()
+      .then(setLang)
+      .catch(() => setLang("auto"));
   }, [open]);
   useEffect(() => {
     if (!open) return;
@@ -71,6 +86,11 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     try {
       localStorage.setItem("onit:defaultMode", m);
     } catch {}
+  }
+
+  function pickLang(l: PreferredLanguage) {
+    setLang(l);
+    setPreferredLanguage(l).catch(() => {});
   }
 
   const name = user?.name ?? user?.email ?? "Guest";
@@ -169,6 +189,31 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                     {m.label}
                   </button>
                 ))}
+              </div>
+            </Section>
+
+            {/* response language */}
+            <Section label="Response language">
+              <div className="grid grid-cols-3 gap-1.5">
+                {LANGUAGES.map((l) => {
+                  const active = lang === l.key;
+                  return (
+                    <button
+                      key={l.key}
+                      type="button"
+                      onClick={() => pickLang(l.key)}
+                      disabled={lang === null}
+                      className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-xs transition-colors disabled:opacity-50 ${
+                        active
+                          ? "border-foreground/30 bg-white/10 text-foreground"
+                          : "border-white/10 text-muted-foreground hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="font-medium">{l.label}</span>
+                      <span className="text-[10px] opacity-70">{l.hint}</span>
+                    </button>
+                  );
+                })}
               </div>
             </Section>
 

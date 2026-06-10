@@ -5,7 +5,7 @@ import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { openrouter, DEFAULT_MODEL, SUMMARY_MODEL } from "@/lib/ai/openrouter";
 import { modelCost } from "@/lib/ai/model-prices";
-import { buildSystemPrompt } from "@/lib/ai/guardrails";
+import { buildSystemPrompt, languageRule } from "@/lib/ai/guardrails";
 import { buildContext } from "@/lib/context";
 import { maybeSummarizeProject } from "@/lib/summarize";
 import {
@@ -138,6 +138,14 @@ export async function POST(req: Request) {
     ? detectInjectionAttempt(lastUser.content)
     : false;
 
+  // Per-user response language preference (profiles.preferred_language).
+  const { data: profileRow } = await db
+    .from("profiles")
+    .select("preferred_language")
+    .eq("id", user.id)
+    .maybeSingle();
+  const langRule = languageRule(profileRow?.preferred_language);
+
   // Adopted decisions are standing constraints every role must respect.
   const { data: adopted } = await db
     .from("project_decisions")
@@ -243,7 +251,7 @@ export async function POST(req: Request) {
         // 1) Thinking bubble (cheaper model), completes before the main answer.
         const think = streamText({
           model: openrouter(SUMMARY_MODEL),
-          system: `You are ${agent.display_name}. In AT MOST two short first-person sentences, note what you reviewed (including any notes from other agents) and how you will respond. Do NOT answer the question, and do NOT use lists or headings.`,
+          system: `You are ${agent.display_name}. In AT MOST two short first-person sentences, note what you reviewed (including any notes from other agents) and how you will respond. Do NOT answer the question, and do NOT use lists or headings.${langRule}`,
           messages: ctx,
           maxOutputTokens: 120,
           abortSignal: timeout.signal,
@@ -265,7 +273,7 @@ export async function POST(req: Request) {
             : mode === "discuss"
               ? "Explore the trade-offs: give a clear recommendation, but surface 2–3 options with pros/cons and the key risks. If other roles have left notes, build on or respectfully challenge them."
               : "Provide the result directly.";
-        const sysFull = `${buildSystemPrompt(systemPrompt)}${injection ? INJECTION_HARDENING : ""}${teamRules ? `\n\nProject team rules set by the user (follow them strictly):\n${teamRules.slice(0, 2000)}` : ""}${decisionsBlock ? `\n\nAdopted team decisions (standing constraints):\n${decisionsBlock}\nThese were settled by the team. Never silently contradict one. If the current request touches one, start by acknowledging the standing decision; if the user wants to change it, say explicitly that this would supersede the decision and what the switch would cost, then give your recommendation.` : ""}${skillBlock}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`;
+        const sysFull = `${buildSystemPrompt(systemPrompt)}${injection ? INJECTION_HARDENING : ""}${teamRules ? `\n\nProject team rules set by the user (follow them strictly):\n${teamRules.slice(0, 2000)}` : ""}${decisionsBlock ? `\n\nAdopted team decisions (standing constraints):\n${decisionsBlock}\nThese were settled by the team. Never silently contradict one. If the current request touches one, start by acknowledging the standing decision; if the user wants to change it, say explicitly that this would supersede the decision and what the switch would cost, then give your recommendation.` : ""}${skillBlock}${langRule}\n\nCurrent mode: ${mode}. ${planNote}${task ? `\n\nYour specific assignment in the team's plan: ${task}` : ""}`;
 
         async function runAnswer(model: string) {
           const s = streamText({
