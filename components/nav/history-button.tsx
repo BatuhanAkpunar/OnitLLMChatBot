@@ -21,6 +21,7 @@ import {
   searchProjects,
   type ProjectHit,
 } from "@/app/(app)/actions";
+import { useI18n } from "@/components/i18n-provider";
 
 export type ProjectListItem = {
   id: string;
@@ -28,7 +29,7 @@ export type ProjectListItem = {
   last_message_at: string;
 };
 
-const GROUPS = ["Today", "Yesterday", "Previous 7 days", "Older"] as const;
+const GROUPS = ["groupToday", "groupYesterday", "groupWeek", "groupOlder"] as const;
 
 function groupOf(dateStr: string): (typeof GROUPS)[number] {
   const d = new Date(dateStr);
@@ -38,10 +39,10 @@ function groupOf(dateStr: string): (typeof GROUPS)[number] {
   startYesterday.setDate(startYesterday.getDate() - 1);
   const sevenDaysAgo = new Date(startToday);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  if (d >= startToday) return "Today";
-  if (d >= startYesterday) return "Yesterday";
-  if (d >= sevenDaysAgo) return "Previous 7 days";
-  return "Older";
+  if (d >= startToday) return "groupToday";
+  if (d >= startYesterday) return "groupYesterday";
+  if (d >= sevenDaysAgo) return "groupWeek";
+  return "groupOlder";
 }
 
 /**
@@ -50,6 +51,7 @@ function groupOf(dateStr: string): (typeof GROUPS)[number] {
  * old persistent sidebar.
  */
 export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] }) {
+  const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -113,29 +115,29 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
     if (!v) return;
     const res = await renameProject(id, v);
     if (res.ok) {
-      toast.success("Chat renamed");
+      toast.success(t("chatRenamed"));
       router.refresh();
     } else {
-      toast.error("Could not rename chat");
+      toast.error(t("renameFailed"));
     }
   }
 
   function confirmDelete(p: ProjectListItem) {
-    toast(`Delete "${p.title}"?`, {
+    toast(t("deleteAsk", { title: p.title }), {
       action: {
-        label: "Delete",
+        label: t("delete"),
         onClick: async () => {
           const res = await deleteProject(p.id);
           if (res.ok) {
-            toast.success("Chat deleted");
+            toast.success(t("chatDeleted"));
             if (pathname === `/p/${p.id}`) router.push("/");
             else router.refresh();
           } else {
-            toast.error("Could not delete chat");
+            toast.error(t("deleteFailed"));
           }
         },
       },
-      cancel: { label: "Cancel", onClick: () => {} },
+      cancel: { label: t("cancel"), onClick: () => {} },
     });
   }
 
@@ -175,8 +177,8 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
         <span className="absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
           <button
             type="button"
-            aria-label="Rename chat"
-            title="Rename"
+            aria-label={t("renameChat")}
+            title={t("rename")}
             onClick={() => {
               setRenameValue(p.title);
               setRenamingId(p.id);
@@ -187,8 +189,8 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
           </button>
           <button
             type="button"
-            aria-label="Delete chat"
-            title="Delete"
+            aria-label={t("deleteChat")}
+            title={t("delete")}
             onClick={() => confirmDelete(p)}
             className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
@@ -204,11 +206,11 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Chat history"
+        title={t("historyTitle")}
         className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <ClockCounterClockwise size={18} />
-        <span className="hidden sm:inline">History</span>
+        <span className="hidden sm:inline">{t("history")}</span>
       </button>
 
       {open && mounted
@@ -230,7 +232,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                       autoFocus
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search chats…"
+                      placeholder={t("searchChats")}
                       className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/15"
                     />
                   </div>
@@ -241,12 +243,12 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                       className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-[13px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
                     >
                       <Plus size={15} weight="bold" />
-                      New
+                      {t("new")}
                     </button>
                   </form>
                   <button
                     type="button"
-                    aria-label="Close"
+                    aria-label={t("close")}
                     onClick={close}
                     className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
@@ -257,7 +259,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                 <div className="min-h-0 flex-1 overflow-y-auto p-2">
                   {filtered.length === 0 ? (
                     <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-                      {q ? "No chats found." : "No chats yet."}
+                      {q ? t("noChatsFound") : t("noChatsYet")}
                     </p>
                   ) : q ? (
                     <ul className="space-y-0.5">
@@ -274,7 +276,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                       return (
                         <div key={g} className="mb-3">
                           <div className="px-3 pb-1.5 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                            {g}
+                            {t(g)}
                           </div>
                           <ul className="space-y-0.5">
                             {items.map((p) => (

@@ -4,30 +4,28 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { PaperPlaneRight, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
-import { STARTERS } from "./starters";
+import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { Aurora } from "@/components/hero/aurora";
 import { TeamAtWork } from "@/components/hero/team-at-work";
 import { OrbMark } from "@/components/brand/orb";
+import { useI18n } from "@/components/i18n-provider";
+import type { I18nKey } from "@/lib/i18n";
 import { RoleAvatar, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
 type Mode = "build" | "plan" | "discuss";
 type Panel = "agents" | "modes" | null;
 
-const MODES: { key: Mode; label: string; tip: string }[] = [
-  { key: "build", label: "Build", tip: "The team delivers the result directly." },
-  { key: "plan", label: "Plan", tip: "The team outlines the approach and checks in first." },
-  { key: "discuss", label: "Discuss", tip: "The team weighs options and trade-offs together." },
+const MODE_DEFS: { key: Mode; label: I18nKey; tip: I18nKey }[] = [
+  { key: "build", label: "modeBuild", tip: "tipBuild" },
+  { key: "plan", label: "modePlan", tip: "tipPlan" },
+  { key: "discuss", label: "modeDiscuss", tip: "tipDiscuss" },
 ];
 
 // The promise of the product in three beats: brief, team works, you steer.
-const STEPS = [
-  "Write what you need",
-  "The team gets to work",
-  "You review and steer",
-];
+const STEP_KEYS: I18nKey[] = ["step1", "step2", "step3"];
 
 // Matches the orb plasma palette (violet to indigo).
 const ACCENT_TITLE: CSSProperties = {
@@ -51,6 +49,7 @@ export function HomeComposer({
   agents: Agent[];
   defaultAgentKey?: string;
 }) {
+  const { t, lang } = useI18n();
   const router = useRouter();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -90,9 +89,11 @@ export function HomeComposer({
 
   const filteredModes = useMemo(() => {
     const q = filter.toLowerCase();
-    if (!q) return MODES;
-    return MODES.filter((m) => m.key.startsWith(q));
-  }, [filter]);
+    if (!q) return MODE_DEFS;
+    return MODE_DEFS.filter(
+      (m) => m.key.startsWith(q) || t(m.label).toLowerCase().startsWith(q),
+    );
+  }, [filter, t]);
 
   const items = panel === "agents" ? filteredAgents.length : filteredModes.length;
 
@@ -336,24 +337,24 @@ export function HomeComposer({
         <div className="mb-7 flex flex-col items-center text-center">
           {firstName ? (
             <span className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">
-              Welcome back, {firstName}
+              {t("welcomeBack", { name: firstName })}
             </span>
           ) : null}
           <h1 className="text-balance text-[2.75rem] font-bold leading-[1.04] tracking-tight sm:text-[3.5rem]">
-            Your AI product team.
+            {t("heroTitle")}
             <br />
-            <span style={ACCENT_TITLE}>On it.</span>
+            <span style={ACCENT_TITLE}>{t("heroAccent")}</span>
           </h1>
           <div className="mt-5 flex flex-col items-center gap-1.5 sm:flex-row sm:gap-3">
-            {STEPS.map((step, i) => (
+            {STEP_KEYS.map((step, i) => (
               <span key={step} className="flex items-center gap-3">
                 <span className="flex items-center gap-2 text-[15px] font-medium text-foreground/80">
                   <span className="font-mono text-xs font-semibold text-violet-600 dark:text-violet-300">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  {step}
+                  {t(step)}
                 </span>
-                {i < STEPS.length - 1 ? (
+                {i < STEP_KEYS.length - 1 ? (
                   <CaretRight
                     size={12}
                     weight="bold"
@@ -374,7 +375,7 @@ export function HomeComposer({
               onKeyDown={onKeyDown}
               rows={2}
               autoFocus
-              placeholder="Ask your team anything…"
+              placeholder={t("askAnything")}
               className="max-h-56 min-h-[52px] w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none"
             />
             <div className="flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
@@ -393,7 +394,7 @@ export function HomeComposer({
                     @
                   </kbd>
                   {pinnedAgents.length === 0 ? (
-                    "agents"
+                    t("agentsChip")
                   ) : (
                     <span className="inline-flex items-center gap-1">
                       <span className="flex -space-x-1.5">
@@ -409,7 +410,7 @@ export function HomeComposer({
                       </span>
                       {pinnedAgents.length === 1
                         ? stripAt(pinnedAgents[0].handle)
-                        : `${pinnedAgents.length} agents`}
+                        : t("nAgents", { n: pinnedAgents.length })}
                     </span>
                   )}
                 </button>
@@ -426,14 +427,14 @@ export function HomeComposer({
                   <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-mono text-[10px]">
                     /
                   </kbd>
-                  {mode}
+                  {t(MODE_DEFS.find((m) => m.key === mode)?.label ?? "modeBuild")}
                 </button>
               </div>
               <button
                 type="button"
                 onClick={start}
                 disabled={busy || !input.trim()}
-                aria-label="Send"
+                aria-label={t("sendLabel")}
                 className="send-btn flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
               >
                 <PaperPlaneRight size={16} weight="fill" />
@@ -444,12 +445,12 @@ export function HomeComposer({
           {panel ? (
             <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl">
               <div className="border-b border-border px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {panel === "agents" ? "Agents" : "Modes"}
+                {panel === "agents" ? t("panelAgents") : t("panelModes")}
               </div>
               {panel === "agents" ? (
                 filteredAgents.length === 0 ? (
                   <div className="px-3.5 py-3 text-xs text-muted-foreground">
-                    No matching agent.
+                    {t("noMatchingAgent")}
                   </div>
                 ) : (
                   filteredAgents.map((a, i) => (
@@ -477,7 +478,7 @@ export function HomeComposer({
                 )
               ) : filteredModes.length === 0 ? (
                 <div className="px-3.5 py-3 text-xs text-muted-foreground">
-                  No matching mode.
+                  {t("noMatchingMode")}
                 </div>
               ) : (
                 filteredModes.map((m, i) => (
@@ -494,9 +495,9 @@ export function HomeComposer({
                       /
                     </kbd>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{m.label}</span>
+                      <span className="block text-sm font-semibold">{t(m.label)}</span>
                       <span className="block truncate text-[13px] text-foreground/65">
-                        {m.tip}
+                        {t(m.tip)}
                       </span>
                     </span>
                     {mode === m.key ? (
@@ -511,7 +512,7 @@ export function HomeComposer({
 
         {/* Quick starts: show what the team can do, one tap to begin. */}
         <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-          {STARTERS.map((s) => (
+          {getStarters(lang).map((s) => (
             <button
               key={s.label}
               type="button"
@@ -526,10 +527,10 @@ export function HomeComposer({
         <div className="mt-14">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">
-              Meet your team
+              {t("meetTeam")}
             </h2>
             <p className="mt-1.5 text-sm font-medium text-foreground/70">
-              Six specialists, one brief. Tap anyone to bring them in.
+              {t("meetTeamSub")}
             </p>
           </div>
 
@@ -612,15 +613,13 @@ export function HomeComposer({
               <div className="text-center">
                 <p className="text-[15px] font-semibold">
                   {transition.kind === "signin"
-                    ? "Taking you to sign in"
+                    ? t("signinTitle")
                     : transition.kind === "resume"
-                      ? "You're in. Briefing your team"
-                      : "Briefing your team"}
+                      ? t("resumeTitle")
+                      : t("openTitle")}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {transition.kind === "signin"
-                    ? "Your brief is saved. We'll pick it up right after."
-                    : "Opening your chat. This takes a second."}
+                  {transition.kind === "signin" ? t("signinSub") : t("openSub")}
                 </p>
               </div>
               {transition.text ? (

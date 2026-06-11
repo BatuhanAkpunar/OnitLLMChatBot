@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
+import { resolveAppLanguage } from "@/lib/i18n-server";
 import { ChatView, type Message, type Agent } from "@/components/chat/chat-view";
 import type { ProjectTask, ProjectDecision } from "@/app/(app)/actions";
 
@@ -27,7 +28,7 @@ export default async function ProjectPage(props: {
   ] = await Promise.all([
     supabase
       .from("messages")
-      .select("id, role, agent_key, content, thinking, status, feedback")
+      .select("id, role, agent_key, content, thinking, status, feedback, edited_at")
       .eq("project_id", id)
       .order("created_at", { ascending: true }),
     supabase
@@ -63,6 +64,14 @@ export default async function ProjectPage(props: {
         .maybeSingle()
     : { data: null };
 
+  // Conversation language: explicit reply preference wins; otherwise follow
+  // the app-UI language (so coordinator labels match what the user reads).
+  const appLang = await resolveAppLanguage();
+  const convLang =
+    profile?.preferred_language === "tr" || profile?.preferred_language === "en"
+      ? profile.preferred_language
+      : appLang;
+
   const agentList = (agents ?? []) as Agent[];
 
   return (
@@ -82,7 +91,7 @@ export default async function ProjectPage(props: {
       initialRules={project.rules ?? ""}
       initialTasks={(tasks ?? []) as ProjectTask[]}
       initialDecisions={(decisions ?? []) as ProjectDecision[]}
-      lang={profile?.preferred_language === "tr" ? "tr" : "en"}
+      lang={convLang}
       user={user}
       projects={projects ?? []}
     />

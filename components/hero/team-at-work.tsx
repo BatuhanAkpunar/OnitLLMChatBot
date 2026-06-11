@@ -2,6 +2,7 @@
 
 import { OrbMark } from "@/components/brand/orb";
 import { RoleAvatar } from "@/components/chat/role-visual";
+import { useI18n } from "@/components/i18n-provider";
 import type { Agent } from "@/components/chat/chat-view";
 
 /**
@@ -32,6 +33,7 @@ const ARTIFACTS: Record<string, string> = {
 };
 
 export function TeamAtWork({ agents }: { agents: Agent[] }) {
+  const { t } = useI18n();
   const roles = agents.slice(0, 6);
   if (roles.length < 3) return null;
 
@@ -39,11 +41,10 @@ export function TeamAtWork({ agents }: { agents: Agent[] }) {
     <section className="mx-auto mt-20 w-full max-w-2xl pb-16">
       <div className="mb-8 text-center">
         <h2 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">
-          One brief in, a team&apos;s work out
+          {t("workTitle")}
         </h2>
         <p className="mt-1.5 text-sm font-medium text-foreground/70">
-          Onit routes your request, the specialists deliver, and everything
-          flows back into one thread.
+          {t("workSub")}
         </p>
       </div>
 

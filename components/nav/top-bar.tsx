@@ -6,6 +6,7 @@ import { OrbMark } from "@/components/brand/orb";
 import { ProfilePanel } from "@/components/profile/profile-panel";
 import { HistoryButton, type ProjectListItem } from "./history-button";
 import { createProject } from "@/app/(app)/actions";
+import { useI18n } from "@/components/i18n-provider";
 import type { CurrentUser } from "@/lib/auth/user";
 
 /**
@@ -27,6 +28,7 @@ export function TopBar({
   tools?: React.ReactNode;
   overlay?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <header
       className={`z-20 flex h-14 shrink-0 items-center gap-2 px-4 ${
@@ -57,11 +59,11 @@ export function TopBar({
         <form action={createProject}>
           <button
             type="submit"
-            title="New chat"
+            title={t("newChat")}
             className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Plus size={18} />
-            <span className="hidden sm:inline">New chat</span>
+            <span className="hidden sm:inline">{t("newChat")}</span>
           </button>
         </form>
         <HistoryButton projects={projects} />

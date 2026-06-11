@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   Sun,
@@ -16,26 +17,29 @@ import {
 import { signOut } from "@/lib/auth/actions";
 import {
   getUserStats,
-  getPreferredLanguage,
+  getLanguageSettings,
   setPreferredLanguage,
+  setAppLanguage,
 } from "@/app/(app)/actions";
+import { useI18n } from "@/components/i18n-provider";
 import type { CurrentUser } from "@/lib/auth/user";
 import type { PreferredLanguage } from "@/lib/ai/guardrails";
+import type { AppLanguagePref, I18nKey } from "@/lib/i18n";
 
-const THEMES = [
-  { key: "light", label: "Light", Icon: Sun },
-  { key: "dark", label: "Dark", Icon: Moon },
-  { key: "system", label: "Auto", Icon: Monitor },
+const THEMES: { key: string; label: I18nKey; Icon: typeof Sun }[] = [
+  { key: "light", label: "themeLight", Icon: Sun },
+  { key: "dark", label: "themeDark", Icon: Moon },
+  { key: "system", label: "themeAuto", Icon: Monitor },
 ];
 
-const MODES = [
-  { key: "build", label: "Build" },
-  { key: "plan", label: "Plan" },
-  { key: "discuss", label: "Discuss" },
+const MODES: { key: string; label: I18nKey }[] = [
+  { key: "build", label: "modeBuild" },
+  { key: "plan", label: "modePlan" },
+  { key: "discuss", label: "modeDiscuss" },
 ];
 
-const LANGUAGES: { key: PreferredLanguage; label: string }[] = [
-  { key: "auto", label: "Auto" },
+const LANG_OPTIONS: { key: "auto" | "tr" | "en"; label: string }[] = [
+  { key: "auto", label: "" }, // label resolved via t("langAuto")
   { key: "tr", label: "Türkçe" },
   { key: "en", label: "English" },
 ];
@@ -45,6 +49,8 @@ function fmt(n: number) {
 }
 
 export function ProfilePanel({ user }: { user: CurrentUser | null }) {
+  const { t } = useI18n();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -55,7 +61,8 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     costUsd: number;
   } | null>(null);
   const [mode, setMode] = useState("build");
-  const [lang, setLang] = useState<PreferredLanguage | null>(null);
+  const [replyLang, setReplyLang] = useState<PreferredLanguage | null>(null);
+  const [appLang, setAppLang] = useState<AppLanguagePref | null>(null);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -70,9 +77,15 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     getUserStats()
       .then(setStats)
       .catch(() => setStats({ chats: 0, messages: 0, tokens: 0, costUsd: 0 }));
-    getPreferredLanguage()
-      .then(setLang)
-      .catch(() => setLang("auto"));
+    getLanguageSettings()
+      .then(({ reply, app }) => {
+        setReplyLang(reply);
+        setAppLang(app);
+      })
+      .catch(() => {
+        setReplyLang("auto");
+        setAppLang("auto");
+      });
   }, [open]);
   useEffect(() => {
     if (!open) return;
@@ -88,9 +101,17 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
     } catch {}
   }
 
-  function pickLang(l: PreferredLanguage) {
-    setLang(l);
+  function pickReplyLang(l: PreferredLanguage) {
+    setReplyLang(l);
     setPreferredLanguage(l).catch(() => {});
+  }
+
+  function pickAppLang(l: AppLanguagePref) {
+    setAppLang(l);
+    // The server resolves the UI language per request, so refresh to apply.
+    setAppLanguage(l)
+      .then(() => router.refresh())
+      .catch(() => {});
   }
 
   const name = user?.name ?? user?.email ?? "Guest";
@@ -101,8 +122,8 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Profile & settings"
-        aria-label="Profile & settings"
+        title={t("profileTitle")}
+        aria-label={t("profileTitle")}
         className="group rounded-full ring-2 ring-transparent transition-shadow hover:ring-foreground/20"
       >
         <Avatar url={user?.avatarUrl} initial={initial} className="h-9 w-9" />
@@ -119,7 +140,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
               <div className="relative max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-popover p-5 text-foreground shadow-2xl">
                 <button
                   type="button"
-                  aria-label="Close"
+                  aria-label={t("close")}
                   onClick={() => setOpen(false)}
                   className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
@@ -155,17 +176,17 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                 {/* preferences: aligned label + segmented control rows */}
                 <div className="mt-5 space-y-1">
                   <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Preferences
+                    {t("preferences")}
                   </div>
 
-                  <PrefRow label="Theme">
+                  <PrefRow label={t("theme")}>
                     <Segmented>
                       {THEMES.map(({ key, label, Icon }) => (
                         <SegBtn
                           key={key}
                           active={mounted && theme === key}
                           onClick={() => setTheme(key)}
-                          title={label}
+                          title={t(label)}
                         >
                           <Icon
                             size={14}
@@ -173,13 +194,13 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                               mounted && theme === key ? "fill" : "regular"
                             }
                           />
-                          <span className="hidden sm:inline">{label}</span>
+                          <span className="hidden sm:inline">{t(label)}</span>
                         </SegBtn>
                       ))}
                     </Segmented>
                   </PrefRow>
 
-                  <PrefRow label="Default mode">
+                  <PrefRow label={t("defaultMode")}>
                     <Segmented>
                       {MODES.map((m) => (
                         <SegBtn
@@ -187,22 +208,37 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                           active={mode === m.key}
                           onClick={() => pickMode(m.key)}
                         >
-                          {m.label}
+                          {t(m.label)}
                         </SegBtn>
                       ))}
                     </Segmented>
                   </PrefRow>
 
-                  <PrefRow label="Replies in">
+                  <PrefRow label={t("appLanguage")}>
                     <Segmented>
-                      {LANGUAGES.map((l) => (
+                      {LANG_OPTIONS.map((l) => (
                         <SegBtn
                           key={l.key}
-                          active={lang === l.key}
-                          onClick={() => pickLang(l.key)}
-                          disabled={lang === null}
+                          active={appLang === l.key}
+                          onClick={() => pickAppLang(l.key)}
+                          disabled={appLang === null}
                         >
-                          {l.label}
+                          {l.key === "auto" ? t("langAuto") : l.label}
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </PrefRow>
+
+                  <PrefRow label={t("repliesIn")}>
+                    <Segmented>
+                      {LANG_OPTIONS.map((l) => (
+                        <SegBtn
+                          key={l.key}
+                          active={replyLang === l.key}
+                          onClick={() => pickReplyLang(l.key)}
+                          disabled={replyLang === null}
+                        >
+                          {l.key === "auto" ? t("langAuto") : l.label}
                         </SegBtn>
                       ))}
                     </Segmented>
@@ -212,20 +248,23 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                 {/* usage: one quiet strip, not four boxes */}
                 <div className="mt-5">
                   <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Usage
+                    {t("usage")}
                   </div>
                   <div className="grid grid-cols-4 divide-x divide-border rounded-xl bg-muted/40 py-2.5">
-                    <Stat label="Chats" value={stats ? fmt(stats.chats) : "·"} />
                     <Stat
-                      label="Messages"
+                      label={t("statChats")}
+                      value={stats ? fmt(stats.chats) : "·"}
+                    />
+                    <Stat
+                      label={t("statMessages")}
                       value={stats ? fmt(stats.messages) : "·"}
                     />
                     <Stat
-                      label="Tokens"
+                      label={t("statTokens")}
                       value={stats ? fmt(stats.tokens) : "·"}
                     />
                     <Stat
-                      label="Cost"
+                      label={t("statCost")}
                       value={
                         stats
                           ? `$${stats.costUsd.toFixed(stats.costUsd < 1 ? 3 : 2)}`
@@ -248,7 +287,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                         weight="bold"
                         className="text-muted-foreground"
                       />
-                      Admin panel
+                      {t("adminPanel")}
                       <CaretRight
                         size={13}
                         className="ml-auto text-muted-foreground"
@@ -261,7 +300,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                       className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
                     >
                       <SignOutIcon size={16} weight="bold" />
-                      Sign out
+                      {t("signOut")}
                     </button>
                   </form>
                 </div>

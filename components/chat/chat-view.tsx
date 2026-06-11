@@ -15,9 +15,11 @@ import {
   ListChecks,
   Scroll,
   Gavel,
+  Kanban,
   Check,
   Plus,
   ListNumbers,
+  RocketLaunch,
   ThumbsUp,
   ThumbsDown,
   Globe,
@@ -27,9 +29,11 @@ import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
-import { STARTERS } from "./starters";
+import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
+import { useI18n } from "@/components/i18n-provider";
+import { translate } from "@/lib/i18n";
 import type { ProjectListItem } from "@/components/nav/history-button";
 import type { CurrentUser } from "@/lib/auth/user";
 import { parseMentions } from "@/lib/mentions";
@@ -38,6 +42,7 @@ import {
   setProjectMode,
   deleteMessage,
   truncateFromMessage,
+  updateAgentMessage,
   orchestrate,
   saveCoordinatorMessage,
   recordRouting,
@@ -69,16 +74,13 @@ export type Message = {
   thinking?: string | null;
   status: string;
   feedback?: number | null;
+  edited_at?: string | null;
 };
 
 const THINKING_PREF_KEY = "onit:thinking-collapsed";
 
 type Mode = "build" | "plan" | "discuss";
-const MODE_LABELS: Record<Mode, string> = {
-  build: "Build",
-  plan: "Plan",
-  discuss: "Discuss",
-};
+type BoardTab = "tasks" | "decisions" | "rules";
 
 export function ChatView({
   projectId,
@@ -103,10 +105,12 @@ export function ChatView({
   initialRules?: string;
   initialTasks?: ProjectTask[];
   initialDecisions?: ProjectDecision[];
+  /** Conversation language: the user's reply preference, app language as fallback. */
   lang?: "en" | "tr";
   user?: CurrentUser | null;
   projects?: ProjectListItem[];
 }) {
+  const { t, lang: uiLang } = useI18n();
   // A persisted "streaming" status means the stream died mid-flight (tab
   // closed, function killed): there is no live stream to attach to, so treat
   // those as settled instead of showing an eternal "thinking…" label.
@@ -131,12 +135,11 @@ export function ChatView({
     index: number;
   } | null>(null);
   const [rules, setRules] = useState(initialRules);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesDraft, setRulesDraft] = useState(initialRules);
   const [tasks, setTasks] = useState<ProjectTask[]>(initialTasks);
-  const [tasksOpen, setTasksOpen] = useState(false);
   const [decisions, setDecisions] = useState<ProjectDecision[]>(initialDecisions);
-  const [decisionsOpen, setDecisionsOpen] = useState(false);
+  // One project board (tasks + decisions + rules) instead of three popups.
+  const [board, setBoard] = useState<BoardTab | null>(null);
   const [web, setWeb] = useState(false);
   const webRef = useRef(false);
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -332,8 +335,11 @@ export function ChatView({
         } catch {}
         const msg =
           res.status === 401
-            ? "Your session expired. Please sign in again."
-            : `Couldn't reach the model (HTTP ${res.status})${detail ? `: ${detail}` : ""}. Please try again.`;
+            ? t("sessionExpired")
+            : t("modelError", {
+                status: res.status,
+                detail: detail ? `: ${detail}` : "",
+              });
         setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: msg, status: "error" } : x)));
         return;
       }
@@ -397,7 +403,7 @@ export function ChatView({
         setMessages((m) =>
           m.map((x) =>
             x.id === aid
-              ? { ...x, status: "error", content: x.content || "Network error. Please try again." }
+              ? { ...x, status: "error", content: x.content || t("networkError") }
               : x,
           ),
         );
@@ -423,7 +429,7 @@ export function ChatView({
       setRouting(true);
       try {
         const { text: report } = await statusSummary(projectId);
-        const content = report || "I don't have enough activity to report on yet.";
+        const content = report || t("statusNoActivity");
         const { id } = await saveCoordinatorMessage(projectId, content);
         setMessages((m) => [
           ...m,
@@ -517,7 +523,8 @@ export function ChatView({
 
       if (plan.length > 1) {
         const planText =
-          (lang === "tr" ? "İşte plan:\n" : "Here's the plan:\n") +
+          translate(lang, "planHeader") +
+          "\n" +
           decision.tasks
             .map(
               (t) =>
@@ -537,7 +544,11 @@ export function ChatView({
         ]);
       } else {
         const h = handleOf(plan[0]?.role ?? agentKey);
-        toast(decision.rationale ? `${h} · ${decision.rationale}` : `Routed to ${h}`);
+        toast(
+          decision.rationale
+            ? `${h} · ${decision.rationale}`
+            : t("routedTo", { handle: h }),
+        );
       }
     }
 
@@ -612,12 +623,12 @@ export function ChatView({
         setDecisions((d) => [...proposed, ...d]);
         toast(
           proposed.length === 1
-            ? "Onit captured a decision for your review"
-            : `Onit captured ${proposed.length} decisions for your review`,
+            ? t("decisionCaptured1")
+            : t("decisionCapturedN", { n: proposed.length }),
           {
             action: {
-              label: "Review",
-              onClick: () => setDecisionsOpen(true),
+              label: t("review"),
+              onClick: () => setBoard("decisions"),
             },
           },
         );
@@ -756,11 +767,11 @@ export function ChatView({
 
   async function saveRules() {
     const next = rulesDraft.trim();
-    setRulesOpen(false);
+    setBoard(null);
     setRules(next);
     const { ok } = await setProjectRules(projectId, next);
-    if (ok) toast.success(next ? "Team rules saved" : "Team rules cleared");
-    else toast.error("Could not save the rules");
+    if (ok) toast.success(next ? t("rulesSaved") : t("rulesCleared"));
+    else toast.error(t("rulesSaveFailed"));
   }
 
   async function giveFeedback(m: Message, value: 1 | -1) {
@@ -789,7 +800,7 @@ export function ChatView({
         .filter((x) => x.status !== "dismissed"),
     );
     const { ok } = await setDecisionStatus(d.id, status);
-    if (!ok) toast.error("Could not update the decision.");
+    if (!ok) toast.error(t("decisionUpdateFailed"));
   }
 
   async function cycleTask(t: ProjectTask) {
@@ -812,7 +823,7 @@ export function ChatView({
       if (!m.content) continue;
       const who =
         m.role === "user"
-          ? "You"
+          ? t("you")
           : m.agent_key === "coordinator"
             ? "Onit"
             : (agentByKey[m.agent_key ?? ""]?.display_name ?? "Agent");
@@ -825,7 +836,7 @@ export function ChatView({
     a.download = `${title.slice(0, 40).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "onit-chat"}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Chat exported");
+    toast.success(t("chatExported"));
   }
 
   function stop() {
@@ -836,9 +847,9 @@ export function ChatView({
   async function copyMessage(content: string) {
     try {
       await navigator.clipboard.writeText(content);
-      toast.success("Copied to clipboard");
+      toast.success(t("copied"));
     } catch {
-      toast.error("Could not copy");
+      toast.error(t("copyFailed"));
     }
   }
 
@@ -865,6 +876,33 @@ export function ChatView({
     const text = editValue.trim();
     setEditingId(null);
     if (!text || busy) return;
+
+    // Agent answers are living documents: saving an edit revises the message
+    // in place, and the team works from the edited version from here on.
+    if (message.role === "agent") {
+      if (text === message.content.trim()) return;
+      const prev = message.content;
+      setMessages((m) =>
+        m.map((x) =>
+          x.id === message.id
+            ? { ...x, content: text, edited_at: new Date().toISOString() }
+            : x,
+        ),
+      );
+      if (message.id.startsWith("tmp-")) return;
+      const { ok } = await updateAgentMessage(message.id, text);
+      if (ok) {
+        toast.success(t("msgUpdated"));
+      } else {
+        setMessages((m) =>
+          m.map((x) => (x.id === message.id ? { ...x, content: prev } : x)),
+        );
+        toast.error(t("msgUpdateFailed"));
+      }
+      return;
+    }
+
+    // User messages: rewind the thread to this point and resend.
     setMessages((m) => {
       const idx = m.findIndex((x) => x.id === message.id);
       return idx >= 0 ? m.slice(0, idx) : m;
@@ -875,6 +913,22 @@ export function ChatView({
       } catch {}
     }
     await submit(text);
+  }
+
+  /**
+   * Plan mode's handoff: the user has refined the plan document above and
+   * pushes it to the team. Mode flips to build and the approved plan becomes
+   * the build brief (lovable-style plan, then push).
+   */
+  async function pushToBuild() {
+    if (busy) return;
+    setMode("build");
+    modeRef.current = "build";
+    try {
+      localStorage.setItem(`onit:mode:${projectId}`, "build");
+    } catch {}
+    await setProjectMode(projectId, "build");
+    await submit(translate(lang, "pushMessage"));
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -906,65 +960,53 @@ export function ChatView({
   }
 
   const lastMessage = messages[messages.length - 1];
-  const showPlanActions =
-    mode === "plan" && !busy && lastMessage?.role === "agent" && lastMessage.status === "complete";
+  const showPushBar =
+    mode === "plan" &&
+    !busy &&
+    !pendingPlan &&
+    !pendingNext &&
+    lastMessage?.role === "agent" &&
+    lastMessage.status === "complete" &&
+    editingId !== lastMessage.id;
+
+  // Attention badge: proposed decisions waiting for review + open tasks.
+  const proposedCount = decisions.filter((d) => d.status === "proposed").length;
+  const openTaskCount = tasks.filter((tk) => tk.status !== "done").length;
+  const badgeCount = proposedCount + openTaskCount;
+
+  function openBoard(tab: BoardTab) {
+    if (tab === "rules") setRulesDraft(rules);
+    setBoard(tab);
+  }
 
   const chatTools = (
     <>
       <button
         type="button"
-        onClick={() => setTasksOpen(true)}
-        title="Project backlog"
+        onClick={() => openBoard(proposedCount ? "decisions" : "tasks")}
+        title={t("boardTitle")}
         className="relative inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        <ListChecks size={18} />
-        <span className="hidden lg:inline">Backlog</span>
-        {tasks.some((t) => t.status !== "done") ? (
-          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
-            {tasks.filter((t) => t.status !== "done").length}
+        <Kanban size={18} />
+        <span className="hidden lg:inline">{t("board")}</span>
+        {badgeCount ? (
+          <span
+            className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold leading-none text-white ${
+              proposedCount ? "bg-amber-500" : "bg-primary"
+            }`}
+          >
+            {badgeCount}
           </span>
         ) : null}
-      </button>
-      <button
-        type="button"
-        onClick={() => setDecisionsOpen(true)}
-        title="Team decisions for this project"
-        className={`relative inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium transition-colors hover:bg-accent hover:text-foreground ${
-          decisions.some((d) => d.status === "adopted")
-            ? "text-violet-600 dark:text-violet-300"
-            : "text-muted-foreground"
-        }`}
-      >
-        <Gavel size={18} />
-        <span className="hidden lg:inline">Decisions</span>
-        {decisions.some((d) => d.status === "proposed") ? (
-          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-white">
-            {decisions.filter((d) => d.status === "proposed").length}
-          </span>
-        ) : null}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setRulesDraft(rules);
-          setRulesOpen(true);
-        }}
-        title="Team rules for this project"
-        className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium transition-colors hover:bg-accent hover:text-foreground ${
-          rules ? "text-violet-600 dark:text-violet-300" : "text-muted-foreground"
-        }`}
-      >
-        <Scroll size={18} weight={rules ? "fill" : "regular"} />
-        <span className="hidden lg:inline">Rules</span>
       </button>
       <button
         type="button"
         onClick={exportChat}
-        title="Export chat as Markdown"
+        title={t("exportTitle")}
         className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <DownloadSimple size={18} />
-        <span className="hidden lg:inline">Export</span>
+        <span className="hidden lg:inline">{t("export")}</span>
       </button>
       <span className="mx-1 hidden h-4 w-px bg-border sm:block" aria-hidden />
     </>
@@ -975,254 +1017,260 @@ export function ChatView({
       <div className="onit-chat-glow" aria-hidden />
       <TopBar user={user} projects={projects} title={title} tools={chatTools} />
 
-      {rulesOpen
+      {board
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setRulesOpen(false)}
+                onClick={() => setBoard(null)}
                 aria-hidden
               />
-              <div className="relative w-full max-w-lg rounded-2xl border border-border bg-popover p-5 shadow-2xl">
-                <div className="mb-1 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Team rules</h3>
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={() => setRulesOpen(false)}
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  Every specialist in this project follows these rules. Examples:
-                  &quot;Answer in English.&quot; &quot;Our stack is Next.js +
-                  Supabase.&quot; &quot;Prefer free, open-source tools.&quot;
-                </p>
-                <textarea
-                  value={rulesDraft}
-                  onChange={(e) => setRulesDraft(e.target.value)}
-                  rows={6}
-                  autoFocus
-                  placeholder="Write the rules your team should always follow…"
-                  className="w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring/20"
-                />
-                <div className="mt-3 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRulesOpen(false)}
-                    className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-accent"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveRules}
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
-                  >
-                    Save rules
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-
-      {tasksOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setTasksOpen(false)}
-                aria-hidden
-              />
-              <div className="relative flex max-h-[70vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-popover p-5 shadow-2xl">
+              <div className="relative flex max-h-[78vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-popover p-5 shadow-2xl">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Project backlog</h3>
+                  <h3 className="flex items-center gap-2 text-sm font-semibold">
+                    <Kanban size={16} weight="bold" className="text-muted-foreground" />
+                    {t("boardTitle")}
+                  </h3>
                   <button
                     type="button"
-                    aria-label="Close"
-                    onClick={() => setTasksOpen(false)}
+                    aria-label={t("close")}
+                    onClick={() => setBoard(null)}
                     className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     <X size={16} />
                   </button>
                 </div>
-                {tasks.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted-foreground">
-                    No tracked tasks yet. When you approve a multi-step plan, its
-                    tasks land here and stay with the project.
-                  </p>
-                ) : (
-                  <div className="min-h-0 space-y-1.5 overflow-y-auto pr-1">
-                    {tasks.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => cycleTask(t)}
-                        title="Click to change status"
-                        className="flex w-full items-start gap-2.5 rounded-xl border border-border px-3 py-2 text-left transition-colors hover:bg-accent"
-                      >
+
+                {/* tabs */}
+                <div className="mb-2 flex gap-1 rounded-xl border border-border bg-background/60 p-1">
+                  {(
+                    [
+                      { key: "tasks", label: t("tabTasks"), Icon: ListChecks, count: openTaskCount },
+                      { key: "decisions", label: t("tabDecisions"), Icon: Gavel, count: proposedCount },
+                      { key: "rules", label: t("tabRules"), Icon: Scroll, count: 0 },
+                    ] as const
+                  ).map(({ key, label, Icon, count }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => openBoard(key)}
+                      className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                        board === key
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon size={14} />
+                      {label}
+                      {count ? (
                         <span
-                          className={`mt-0.5 shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
-                            t.status === "done"
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-                              : t.status === "doing"
-                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-300"
-                                : "bg-white/10 text-muted-foreground"
+                          className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold leading-none ${
+                            board === key
+                              ? "bg-background/25 text-background"
+                              : key === "decisions"
+                                ? "bg-amber-500 text-white"
+                                : "bg-primary text-primary-foreground"
                           }`}
                         >
-                          {t.status}
+                          {count}
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={`block text-xs ${t.status === "done" ? "text-muted-foreground line-through" : ""}`}
-                          >
-                            <span className="font-semibold">
-                              {agentByKey[t.role_key]?.handle ?? t.role_key}
-                            </span>{" "}
-                            {t.task}
-                          </span>
-                          {t.done_criteria ? (
-                            <span className="mt-0.5 block text-[11px] italic text-muted-foreground">
-                              {t.done_criteria}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-
-      {decisionsOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setDecisionsOpen(false)}
-                aria-hidden
-              />
-              <div className="relative flex max-h-[75vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-popover p-5 shadow-2xl">
-                <div className="mb-1 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Team decisions</h3>
-                  <button
-                    type="button"
-                    aria-label="Close"
-                    onClick={() => setDecisionsOpen(false)}
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  >
-                    <X size={16} />
-                  </button>
+                      ) : null}
+                    </button>
+                  ))}
                 </div>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  Adopted decisions become standing constraints: every
-                  specialist respects them in future answers. Onit proposes new
-                  ones after team runs; you adopt or dismiss.
+
+                <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                  {board === "tasks"
+                    ? t("tasksExplain")
+                    : board === "decisions"
+                      ? t("decisionsExplain")
+                      : t("rulesExplain")}
                 </p>
-                {decisions.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-muted-foreground">
-                    No decisions yet. When the team settles something worth
-                    remembering, it lands here for your review.
-                  </p>
-                ) : (
-                  <div className="min-h-0 space-y-2 overflow-y-auto pr-1">
-                    {decisions.map((d) => (
-                      <div
-                        key={d.id}
-                        className={`rounded-xl border px-3.5 py-3 ${
-                          d.status === "adopted"
-                            ? "border-violet-500/25 bg-violet-500/[0.04]"
-                            : d.status === "proposed"
-                              ? "border-amber-500/30 bg-amber-500/[0.04]"
-                              : "border-border opacity-60"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="text-[13px] font-semibold leading-snug">
-                            {d.title}
-                          </span>
+
+                {board === "tasks" ? (
+                  tasks.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">
+                      {t("tasksEmpty")}
+                    </p>
+                  ) : (
+                    <div className="min-h-0 space-y-1.5 overflow-y-auto pr-1">
+                      {tasks.map((tk) => (
+                        <button
+                          key={tk.id}
+                          type="button"
+                          onClick={() => cycleTask(tk)}
+                          title={t("changeStatus")}
+                          className="flex w-full items-start gap-2.5 rounded-xl border border-border px-3 py-2 text-left transition-colors hover:bg-accent"
+                        >
                           <span
-                            className={`shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
-                              d.status === "adopted"
-                                ? "bg-violet-500/15 text-violet-600 dark:text-violet-300"
-                                : d.status === "proposed"
+                            className={`mt-0.5 shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
+                              tk.status === "done"
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                                : tk.status === "doing"
                                   ? "bg-amber-500/15 text-amber-600 dark:text-amber-300"
-                                  : "bg-white/10 text-muted-foreground"
+                                  : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {d.status}
+                            {tk.status === "done"
+                              ? t("statusDone")
+                              : tk.status === "doing"
+                                ? t("statusDoing")
+                                : t("statusTodo")}
                           </span>
-                        </div>
-                        {d.because.length ? (
-                          <p className="mt-1.5 text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">Why:</span>{" "}
-                            {d.because.join(" · ")}
-                          </p>
-                        ) : null}
-                        {d.despite.length ? (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">
-                              Trade-off accepted:
-                            </span>{" "}
-                            {d.despite.join(" · ")}
-                          </p>
-                        ) : null}
-                        {d.constraints.length ? (
-                          <ul className="mt-1.5 space-y-0.5">
-                            {d.constraints.map((c, i) => (
-                              <li
-                                key={i}
-                                className="flex items-start gap-1.5 text-xs"
-                              >
-                                <Check
-                                  size={12}
-                                  weight="bold"
-                                  className="mt-0.5 shrink-0 text-violet-500"
-                                />
-                                {c}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        <div className="mt-2.5 flex gap-2">
-                          {d.status === "proposed" ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => decideStatus(d, "adopted")}
-                                className="rounded-lg bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
-                              >
-                                Adopt
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => decideStatus(d, "dismissed")}
-                                className="rounded-lg border border-border px-2.5 py-1 text-[11px] transition-colors hover:bg-accent"
-                              >
-                                Dismiss
-                              </button>
-                            </>
-                          ) : d.status === "adopted" ? (
-                            <button
-                              type="button"
-                              onClick={() => decideStatus(d, "superseded")}
-                              className="rounded-lg border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                          <span className="min-w-0 flex-1">
+                            <span
+                              className={`block text-xs ${tk.status === "done" ? "text-muted-foreground line-through" : ""}`}
                             >
-                              Mark superseded
-                            </button>
+                              <span className="font-semibold">
+                                {agentByKey[tk.role_key]?.handle ?? tk.role_key}
+                              </span>{" "}
+                              {tk.task}
+                            </span>
+                            {tk.done_criteria ? (
+                              <span className="mt-0.5 block text-[11px] italic text-muted-foreground">
+                                {tk.done_criteria}
+                              </span>
+                            ) : null}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ) : null}
+
+                {board === "decisions" ? (
+                  decisions.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">
+                      {t("decisionsEmpty")}
+                    </p>
+                  ) : (
+                    <div className="min-h-0 space-y-2 overflow-y-auto pr-1">
+                      {decisions.map((d) => (
+                        <div
+                          key={d.id}
+                          className={`rounded-xl border px-3.5 py-3 ${
+                            d.status === "adopted"
+                              ? "border-violet-500/25 bg-violet-500/[0.04]"
+                              : d.status === "proposed"
+                                ? "border-amber-500/30 bg-amber-500/[0.04]"
+                                : "border-border opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-[13px] font-semibold leading-snug">
+                              {d.title}
+                            </span>
+                            <span
+                              className={`shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase ${
+                                d.status === "adopted"
+                                  ? "bg-violet-500/15 text-violet-600 dark:text-violet-300"
+                                  : d.status === "proposed"
+                                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                                    : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {d.status === "adopted"
+                                ? t("statusAdopted")
+                                : d.status === "proposed"
+                                  ? t("statusProposed")
+                                  : t("statusSuperseded")}
+                            </span>
+                          </div>
+                          {d.because.length ? (
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">
+                                {t("why")}
+                              </span>{" "}
+                              {d.because.join(" · ")}
+                            </p>
                           ) : null}
+                          {d.despite.length ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">
+                                {t("tradeoff")}
+                              </span>{" "}
+                              {d.despite.join(" · ")}
+                            </p>
+                          ) : null}
+                          {d.constraints.length ? (
+                            <ul className="mt-1.5 space-y-0.5">
+                              {d.constraints.map((c, i) => (
+                                <li
+                                  key={i}
+                                  className="flex items-start gap-1.5 text-xs"
+                                >
+                                  <Check
+                                    size={12}
+                                    weight="bold"
+                                    className="mt-0.5 shrink-0 text-violet-500"
+                                  />
+                                  {c}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          <div className="mt-2.5 flex gap-2">
+                            {d.status === "proposed" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => decideStatus(d, "adopted")}
+                                  className="rounded-lg bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                                >
+                                  {t("adopt")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => decideStatus(d, "dismissed")}
+                                  className="rounded-lg border border-border px-2.5 py-1 text-[11px] transition-colors hover:bg-accent"
+                                >
+                                  {t("dismiss")}
+                                </button>
+                              </>
+                            ) : d.status === "adopted" ? (
+                              <button
+                                type="button"
+                                onClick={() => decideStatus(d, "superseded")}
+                                className="rounded-lg border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                              >
+                                {t("markSuperseded")}
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )
+                ) : null}
+
+                {board === "rules" ? (
+                  <>
+                    <textarea
+                      value={rulesDraft}
+                      onChange={(e) => setRulesDraft(e.target.value)}
+                      rows={6}
+                      autoFocus
+                      placeholder={t("rulesPlaceholder")}
+                      className="w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-ring/20"
+                    />
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setBoard(null)}
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-accent"
+                      >
+                        {t("cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveRules}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                      >
+                        {t("saveRules")}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>,
             document.body,
@@ -1251,14 +1299,13 @@ export function ChatView({
                   ))}
                 </div>
                 <div>
-                  <p className="text-[15px] font-semibold">Your team is ready.</p>
+                  <p className="text-[15px] font-semibold">{t("emptyTitle")}</p>
                   <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                    Describe what you need and Onit hands it to the right
-                    specialists, or @mention a role to pick yourself.
+                    {t("emptyBody")}
                   </p>
                 </div>
                 <div className="flex max-w-md flex-wrap justify-center gap-1.5">
-                  {STARTERS.map((s) => (
+                  {getStarters(uiLang).map((s) => (
                     <button
                       key={s.label}
                       type="button"
@@ -1307,26 +1354,22 @@ export function ChatView({
                 }
               />
             ))}
-            {routing ? (
-              <OnitWorking label="Onit is picking the right specialists" />
-            ) : null}
-            {synthesizing ? (
-              <OnitWorking label="Onit is wrapping up the team's work" />
-            ) : null}
+            {routing ? <OnitWorking label={t("routingWorking")} /> : null}
+            {synthesizing ? <OnitWorking label={t("synthWorking")} /> : null}
             {pendingPlan && !busy ? (
               <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">
                 <div className="flex items-baseline gap-2.5 px-4 pt-3.5">
                   <OrbMark size={20} />
                   <span className="text-sm font-semibold">
-                    Onit drafted a {pendingPlan.tasks.length}-step plan
+                    {t("planDrafted", { n: pendingPlan.tasks.length })}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    Edit anything before the team runs.
+                    {t("planEditHint")}
                   </span>
                 </div>
                 <ul className="space-y-2 px-4 py-3.5">
-                  {pendingPlan.tasks.map((t, i) => {
-                    const a = agentByKey[t.role];
+                  {pendingPlan.tasks.map((step, i) => {
+                    const a = agentByKey[step.role];
                     return (
                       <li
                         key={i}
@@ -1344,11 +1387,11 @@ export function ChatView({
                             <span className="h-[26px] w-[26px] rounded-lg bg-muted" />
                           )}
                           <select
-                            value={t.role}
+                            value={step.role}
                             onChange={(e) =>
                               updatePlanTask(i, { role: e.target.value })
                             }
-                            aria-label="Assigned role"
+                            aria-label={t("assignedRole")}
                             className="cursor-pointer appearance-none rounded-lg border border-transparent bg-transparent py-0.5 pl-1 pr-5 text-[13px] font-semibold outline-none transition-colors hover:border-border focus:border-border"
                             style={
                               a ? { color: `var(--agent-${a.color})` } : undefined
@@ -1364,8 +1407,8 @@ export function ChatView({
                             <button
                               type="button"
                               onClick={() => removePlanTask(i)}
-                              aria-label="Remove step"
-                              title="Remove step"
+                              aria-label={t("removeStep")}
+                              title={t("removeStep")}
                               className="ml-auto rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/task:opacity-100"
                             >
                               <X size={14} />
@@ -1373,20 +1416,20 @@ export function ChatView({
                           ) : null}
                         </div>
                         <textarea
-                          value={t.task}
+                          value={step.task}
                           onChange={(e) =>
                             updatePlanTask(i, { task: e.target.value })
                           }
                           rows={2}
-                          placeholder="What should this role do?"
+                          placeholder={t("taskPlaceholder")}
                           className="mt-1.5 w-full resize-none rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-sm leading-snug outline-none transition-colors focus:border-border"
                         />
                         <input
-                          value={t.done}
+                          value={step.done}
                           onChange={(e) =>
                             updatePlanTask(i, { done: e.target.value })
                           }
-                          placeholder="Done when ... (optional)"
+                          placeholder={t("donePlaceholder")}
                           className="w-full rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-xs italic text-muted-foreground outline-none transition-colors focus:border-border"
                         />
                       </li>
@@ -1399,7 +1442,7 @@ export function ChatView({
                       className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
                       <Plus size={13} weight="bold" />
-                      Add a step
+                      {t("addStep")}
                     </button>
                   </li>
                 </ul>
@@ -1410,17 +1453,17 @@ export function ChatView({
                     className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     <Play size={12} weight="fill" />
-                    Run the plan
+                    {t("runPlan")}
                   </button>
                   {pendingPlan.tasks.length > 1 ? (
                     <button
                       type="button"
                       onClick={() => approvePlan(true)}
-                      title="Run one step at a time; you approve each next step"
+                      title={t("runStepTitle")}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-accent"
                     >
                       <ListNumbers size={13} weight="bold" />
-                      Run step by step
+                      {t("runStepByStep")}
                     </button>
                   ) : null}
                   <button
@@ -1428,7 +1471,7 @@ export function ChatView({
                     onClick={cancelPlan}
                     className="rounded-lg border border-border px-3.5 py-2 text-xs transition-colors hover:bg-accent"
                   >
-                    Cancel
+                    {t("cancel")}
                   </button>
                 </div>
               </div>
@@ -1438,13 +1481,16 @@ export function ChatView({
                 <div className="flex items-center gap-2.5 px-4 pt-3.5">
                   <OrbMark size={20} />
                   <span className="text-sm font-semibold">
-                    Step {pendingNext.index} of {pendingNext.tasks.length} done
+                    {t("stepDone", {
+                      x: pendingNext.index,
+                      n: pendingNext.tasks.length,
+                    })}
                   </span>
                 </div>
                 <div className="flex items-start gap-3 px-4 py-3.5">
                   {(() => {
-                    const t = pendingNext.tasks[pendingNext.index];
-                    const a = agentByKey[t.role];
+                    const step = pendingNext.tasks[pendingNext.index];
+                    const a = agentByKey[step.role];
                     return (
                       <>
                         {a ? (
@@ -1457,7 +1503,7 @@ export function ChatView({
                         ) : null}
                         <span className="min-w-0 flex-1 text-sm leading-snug">
                           <span className="text-xs text-muted-foreground">
-                            Next up
+                            {t("nextUp")}
                           </span>
                           <span className="block">
                             <span
@@ -1468,9 +1514,9 @@ export function ChatView({
                                   : undefined
                               }
                             >
-                              {a?.handle ?? t.role}
+                              {a?.handle ?? step.role}
                             </span>{" "}
-                            {t.task}
+                            {step.task}
                           </span>
                         </span>
                       </>
@@ -1491,34 +1537,43 @@ export function ChatView({
                     className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     <Play size={12} weight="fill" />
-                    Run next step
+                    {t("runNext")}
                   </button>
                   <button
                     type="button"
                     onClick={finishStepRun}
                     className="rounded-lg border border-border px-3.5 py-2 text-xs transition-colors hover:bg-accent"
                   >
-                    Finish here
+                    {t("finishHere")}
                   </button>
                 </div>
               </div>
             ) : null}
-            {showPlanActions ? (
-              <div className="flex gap-2 pl-0.5">
-                <button
-                  type="button"
-                  onClick={() => submit("Approved, please continue.", [lastMessage.agent_key!])}
-                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
-                >
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={() => taRef.current?.focus()}
-                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
-                >
-                  Modify
-                </button>
+            {showPushBar ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-violet-500/25 bg-violet-500/[0.04] px-4 py-3">
+                <span className="min-w-0 flex-1 text-sm">
+                  <span className="font-semibold">{t("pushTitle")}</span>{" "}
+                  <span className="text-xs text-muted-foreground">
+                    {t("pushHint")}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={pushToBuild}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  >
+                    <RocketLaunch size={13} weight="fill" />
+                    {t("pushToBuild")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => taRef.current?.focus()}
+                    className="rounded-lg border border-border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-accent"
+                  >
+                    {t("keepPlanning")}
+                  </button>
+                </span>
               </div>
             ) : null}
           </div>
@@ -1528,7 +1583,7 @@ export function ChatView({
           <button
             type="button"
             onClick={scrollToBottom}
-            aria-label="Scroll to bottom"
+            aria-label={t("scrollBottom")}
             className="glass absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-muted-foreground shadow-md transition-colors hover:text-foreground"
           >
             <ArrowDown size={16} />
@@ -1572,7 +1627,7 @@ export function ChatView({
                 onChange={onChange}
                 onKeyDown={onKeyDown}
                 rows={1}
-                placeholder="Describe what you need. Onit routes it, or @mention a role…"
+                placeholder={t("composerPlaceholder")}
                 className="max-h-48 min-h-[28px] w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
               <div className="flex items-center justify-between gap-2 pt-1">
@@ -1590,14 +1645,20 @@ export function ChatView({
                             : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {MODE_LABELS[m]}
+                        {t(
+                          m === "build"
+                            ? "modeBuild"
+                            : m === "plan"
+                              ? "modePlan"
+                              : "modeDiscuss",
+                        )}
                       </button>
                     ))}
                   </div>
                   <button
                     type="button"
                     onClick={toggleWeb}
-                    title={web ? "Web search on" : "Let agents search the web"}
+                    title={web ? t("webOn") : t("webOff")}
                     aria-pressed={web}
                     className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
                       web
@@ -1613,7 +1674,7 @@ export function ChatView({
                   <button
                     type="button"
                     onClick={stop}
-                    aria-label="Stop"
+                    aria-label={t("stopLabel")}
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition-opacity hover:opacity-90"
                   >
                     <Stop size={14} weight="fill" />
@@ -1623,7 +1684,7 @@ export function ChatView({
                     type="button"
                     onClick={send}
                     disabled={!input.trim()}
-                    aria-label="Send"
+                    aria-label={t("sendLabel")}
                     className="send-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
                   >
                     <PaperPlaneRight size={16} weight="fill" />
@@ -1733,6 +1794,7 @@ function MessageRow({
   canPickOption: boolean;
   onPickOption: (option: string) => void;
 }) {
+  const { t } = useI18n();
   if (message.role === "user") {
     if (editing) {
       return (
@@ -1751,14 +1813,14 @@ function MessageRow({
                 onClick={onCancelEdit}
                 className="rounded-md border border-border px-3 py-1 text-xs transition-colors hover:bg-accent"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => onSaveEdit(message)}
                 className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90"
               >
-                Save &amp; resend
+                {t("saveResend")}
               </button>
             </div>
           </div>
@@ -1771,10 +1833,10 @@ function MessageRow({
           {message.content}
         </div>
         <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <IconButton title="Copy" onClick={() => onCopy(message.content)}>
+          <IconButton title={t("copy")} onClick={() => onCopy(message.content)}>
             <Copy size={14} />
           </IconButton>
-          <IconButton title="Edit" onClick={() => onStartEdit(message)}>
+          <IconButton title={t("edit")} onClick={() => onStartEdit(message)}>
             <PencilSimple size={14} />
           </IconButton>
         </div>
@@ -1820,9 +1882,15 @@ function MessageRow({
           {!isCoordinator && agent?.handle ? (
             <span className="text-[11px] text-muted-foreground">{agent.handle}</span>
           ) : null}
+          {message.edited_at ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-px text-[10px] font-medium text-violet-600 dark:text-violet-300">
+              <PencilSimple size={10} weight="bold" />
+              {t("edited")}
+            </span>
+          ) : null}
           {message.status === "error" ? (
             <span className="text-[11px] font-medium text-destructive">
-              couldn&apos;t finish
+              {t("couldntFinish")}
             </span>
           ) : null}
         </div>
@@ -1839,7 +1907,7 @@ function MessageRow({
                 weight="bold"
                 className={collapseThinking ? "" : "rotate-90"}
               />
-              Thinking
+              {t("thinking")}
             </button>
             {!collapseThinking ? (
               <div className="mt-1 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs italic leading-relaxed text-muted-foreground">
@@ -1859,7 +1927,35 @@ function MessageRow({
           </span>
         ) : null}
 
-        {message.content
+        {editing ? (
+          <div className="w-full">
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={(e) => onEditChange(e.target.value)}
+              rows={Math.min(18, Math.max(6, editValue.split("\n").length + 1))}
+              className="w-full resize-y rounded-2xl border border-violet-500/30 bg-card p-3 font-mono text-[13px] leading-relaxed outline-none focus:ring-2 focus:ring-ring/20"
+            />
+            <div className="mt-1.5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => onSaveEdit(message)}
+                className="rounded-md bg-primary px-3 py-1 text-xs text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                {t("save")}
+              </button>
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="rounded-md border border-border px-3 py-1 text-xs transition-colors hover:bg-accent"
+              >
+                {t("cancel")}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {message.content && !editing
           ? (() => {
               const { body, options } = splitOptions(message.content);
               return (
@@ -1910,17 +2006,24 @@ function MessageRow({
             })()
           : null}
 
-        {message.status !== "streaming" && message.content ? (
+        {message.status !== "streaming" && message.content && !editing ? (
           <div
             className={`flex gap-0.5 transition-opacity group-hover:opacity-100 ${
               message.feedback ? "opacity-100" : "opacity-0"
             }`}
           >
-            <IconButton title="Copy" onClick={() => onCopy(message.content)}>
+            <IconButton title={t("copy")} onClick={() => onCopy(message.content)}>
               <Copy size={14} />
             </IconButton>
             <IconButton
-              title="Regenerate"
+              title={t("edit")}
+              onClick={() => onStartEdit(message)}
+              disabled={busy}
+            >
+              <PencilSimple size={14} />
+            </IconButton>
+            <IconButton
+              title={t("regenerate")}
               onClick={() => onRegenerate(message)}
               disabled={busy}
             >
@@ -1928,14 +2031,14 @@ function MessageRow({
             </IconButton>
             {!isCoordinator ? (
               <>
-                <IconButton title="Good answer" onClick={() => onFeedback(message, 1)}>
+                <IconButton title={t("goodAnswer")} onClick={() => onFeedback(message, 1)}>
                   <ThumbsUp
                     size={14}
                     weight={message.feedback === 1 ? "fill" : "regular"}
                     className={message.feedback === 1 ? "text-emerald-500" : ""}
                   />
                 </IconButton>
-                <IconButton title="Bad answer" onClick={() => onFeedback(message, -1)}>
+                <IconButton title={t("badAnswer")} onClick={() => onFeedback(message, -1)}>
                   <ThumbsDown
                     size={14}
                     weight={message.feedback === -1 ? "fill" : "regular"}

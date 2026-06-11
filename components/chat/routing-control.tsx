@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Lightning, CaretDown, Check } from "@phosphor-icons/react";
 import { RoleAvatar, rolePersona } from "./role-visual";
+import { useI18n } from "@/components/i18n-provider";
 import type { Agent } from "./chat-view";
 
 /**
- * Routing control: "Auto" (Onit picks the right role) by default, or pin
+ * Agent picker: "Agent: Auto" (Onit picks the right role) by default, or pin
  * specific roles to override. Used by both the landing and chat composers.
  */
 export function RoutingControl({
@@ -20,6 +21,7 @@ export function RoutingControl({
   onChange: (keys: string[]) => void;
   up?: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -44,13 +46,13 @@ export function RoutingControl({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
-        title="Who handles this"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background/40 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
+        title={t("whoHandles")}
       >
         {pinned.length === 0 ? (
           <>
             <Lightning size={13} weight="fill" className="text-amber-400" />
-            Auto
+            {t("routingAuto")}
           </>
         ) : (
           <>
@@ -63,7 +65,9 @@ export function RoutingControl({
                 />
               ))}
             </span>
-            {pinnedAgents.length === 1 ? pinnedAgents[0].handle : `${pinnedAgents.length} roles`}
+            {pinnedAgents.length === 1
+              ? pinnedAgents[0].handle
+              : t("nRoles", { n: pinnedAgents.length })}
           </>
         )}
         <CaretDown size={11} className="text-muted-foreground" />
@@ -71,7 +75,7 @@ export function RoutingControl({
 
       {open ? (
         <div
-          className={`absolute left-0 z-30 w-72 overflow-hidden rounded-xl border border-white/10 bg-popover/95 p-1 shadow-xl backdrop-blur-xl ${
+          className={`absolute left-0 z-30 w-72 overflow-hidden rounded-xl border border-border bg-popover/95 p-1 shadow-xl backdrop-blur-xl ${
             up ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >
@@ -79,23 +83,20 @@ export function RoutingControl({
             type="button"
             onClick={() => onChange([])}
             className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
-              pinned.length === 0 ? "bg-white/10" : "hover:bg-white/5"
+              pinned.length === 0 ? "bg-accent" : "hover:bg-accent/60"
             }`}
           >
             <Lightning size={14} weight="fill" className="shrink-0 text-amber-400" />
             <span className="flex-1">
-              <span className="font-medium">Auto</span>
-              <span className="text-muted-foreground">
-                {" "}
-                · Onit reads it, asks if unclear, then routes
-              </span>
+              <span className="font-medium">{t("routingAuto")}</span>
+              <span className="text-muted-foreground"> · {t("routingAutoDesc")}</span>
             </span>
             {pinned.length === 0 ? <Check size={13} className="shrink-0" /> : null}
           </button>
 
-          <div className="my-1 h-px bg-white/10" />
+          <div className="my-1 h-px bg-border" />
           <div className="px-2.5 pb-1 pt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            or pin roles
+            {t("orPinRoles")}
           </div>
 
           {agents.map((a) => {
@@ -106,7 +107,7 @@ export function RoutingControl({
                 type="button"
                 onClick={() => toggle(a.key)}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
-                  on ? "bg-white/10" : "hover:bg-white/5"
+                  on ? "bg-accent" : "hover:bg-accent/60"
                 }`}
               >
                 <RoleAvatar roleKey={a.key} color={a.color} size={28} rounded="rounded-lg" />

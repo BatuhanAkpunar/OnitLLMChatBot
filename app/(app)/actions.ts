@@ -12,6 +12,7 @@ import {
   coordinatorLanguageRule,
   type PreferredLanguage,
 } from "@/lib/ai/guardrails";
+import type { AppLanguagePref } from "@/lib/i18n";
 
 /** Reads the user's response-language preference (profiles.preferred_language). */
 async function preferredLanguage(
@@ -607,12 +608,6 @@ export async function getUserStats(): Promise<{
 
 // --- Response language preference ---------------------------------------------
 
-export async function getPreferredLanguage(): Promise<PreferredLanguage> {
-  const user = await getCurrentUser();
-  if (!user) return "auto";
-  return preferredLanguage(createAdminClient(), user.id);
-}
-
 export async function setPreferredLanguage(
   lang: PreferredLanguage,
 ): Promise<{ ok: boolean }> {
@@ -624,6 +619,64 @@ export async function setPreferredLanguage(
     .from("profiles")
     .update({ preferred_language: lang })
     .eq("id", user.id);
+  return { ok: !error };
+}
+
+// --- App-UI language preference ------------------------------------------------
+
+export async function getLanguageSettings(): Promise<{
+  reply: PreferredLanguage;
+  app: AppLanguagePref;
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { reply: "auto", app: "auto" };
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("preferred_language, app_language")
+    .eq("id", user.id)
+    .maybeSingle();
+  const reply = data?.preferred_language;
+  const app = data?.app_language;
+  return {
+    reply: reply === "tr" || reply === "en" ? reply : "auto",
+    app: app === "tr" || app === "en" ? app : "auto",
+  };
+}
+
+export async function setAppLanguage(
+  lang: AppLanguagePref,
+): Promise<{ ok: boolean }> {
+  if (lang !== "auto" && lang !== "tr" && lang !== "en") return { ok: false };
+  const user = await getCurrentUser();
+  if (!user) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ app_language: lang })
+    .eq("id", user.id);
+  return { ok: !error };
+}
+
+// --- User-edited agent messages (plan documents) -------------------------------
+
+/**
+ * Saves the user's in-place edit of an agent answer. Because every later
+ * context window is rebuilt from the messages table, the edited version is
+ * what the whole team works from after this point.
+ */
+export async function updateAgentMessage(
+  messageId: string,
+  content: string,
+): Promise<{ ok: boolean }> {
+  const text = content.trim();
+  if (!text || text.length > 40000) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("messages")
+    .update({ content: text, edited_at: new Date().toISOString() })
+    .eq("id", messageId)
+    .eq("role", "agent");
   return { ok: !error };
 }
 
