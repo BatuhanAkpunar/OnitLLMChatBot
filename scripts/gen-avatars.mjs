@@ -1,5 +1,6 @@
 // Generates the 6 pixel-art role portraits (plus 2 animation frames each)
-// via the Gemini API and writes them to public/avatars/.
+// via the Gemini API and writes full-size sources to assets/avatars/.
+// Then run scripts/optimize-avatars.sh to emit the 512px WebP files the app serves.
 //
 //   node --env-file=.env.local scripts/gen-avatars.mjs            # all roles
 //   node --env-file=.env.local scripts/gen-avatars.mjs qa analyst # only these
@@ -173,7 +174,7 @@ async function generate(prompt, refBuffer) {
   throw lastErr ?? new Error("generation failed");
 }
 
-const outDir = path.join(import.meta.dirname, "..", "public", "avatars");
+const outDir = path.join(import.meta.dirname, "..", "assets", "avatars");
 await mkdir(outDir, { recursive: true });
 
 const args = process.argv.slice(2);

@@ -652,17 +652,6 @@ export type ProjectTask = {
   sort: number;
 };
 
-export async function listProjectTasks(projectId: string): Promise<ProjectTask[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("project_tasks")
-    .select("id, role_key, task, done_criteria, status, sort")
-    .eq("project_id", projectId)
-    .order("sort")
-    .order("created_at");
-  return (data ?? []) as ProjectTask[];
-}
-
 /** Persists an approved plan as backlog tasks; returns them in plan order. */
 export async function addProjectTasks(
   projectId: string,
@@ -723,20 +712,6 @@ export type ProjectDecision = {
 
 const DECISION_COLS =
   "id, title, status, context, because, despite, constraints, scope_roles, created_at";
-
-export async function listDecisions(
-  projectId: string,
-): Promise<ProjectDecision[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("project_decisions")
-    .select(DECISION_COLS)
-    .eq("project_id", projectId)
-    .neq("status", "dismissed")
-    .order("created_at", { ascending: false })
-    .limit(50);
-  return (data ?? []) as ProjectDecision[];
-}
 
 export async function setDecisionStatus(
   decisionId: string,

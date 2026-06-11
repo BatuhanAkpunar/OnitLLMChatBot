@@ -587,3 +587,65 @@
 }
 
 
+
+/* team-at-work showcase: dashes flow along the lines, artifact chips travel
+   from each role into the center, and the core breathes gently */
+.onit-work-line {
+  animation: onit-work-dash 2.6s linear infinite;
+}
+@keyframes onit-work-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.onit-work-core {
+  animation: onit-work-pulse 4s ease-in-out infinite;
+}
+@keyframes onit-work-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.onit-work-chip {
+  opacity: 0;
+  animation: onit-work-flow 9s ease-in-out infinite;
+}
+@keyframes onit-work-flow {
+  0% {
+    left: var(--sx);
+    top: var(--sy);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  13% {
+    left: 50%;
+    top: 50%;
+    opacity: 1;
+  }
+  16% {
+    left: 50%;
+    top: 50%;
+    opacity: 0;
+  }
+  100% {
+    left: 50%;
+    top: 50%;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onit-work-line,
+  .onit-work-core,
+  .onit-work-chip {
+    animation: none;
+  }
+  .onit-work-chip {
+    opacity: 0;
+  }
+}

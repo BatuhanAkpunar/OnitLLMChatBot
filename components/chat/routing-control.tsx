@@ -44,7 +44,7 @@ export function RoutingControl({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent"
         title="Who handles this"
       >
         {pinned.length === 0 ? (

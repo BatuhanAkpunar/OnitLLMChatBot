@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { PaperPlaneRight, Sparkle, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
+import { PaperPlaneRight, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
 import { STARTERS } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { Aurora } from "@/components/hero/aurora";
+import { TeamAtWork } from "@/components/hero/team-at-work";
+import { OrbMark } from "@/components/brand/orb";
 import { RoleAvatar, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
@@ -24,15 +27,6 @@ const STEPS = [
   "Write what you need",
   "The team gets to work",
   "You review and steer",
-];
-
-const EXAMPLES = [
-  "@Developer build a Stripe checkout, then @QA cover the edge cases.",
-  "@Analyst spec a referral program, then @ProductManager prioritize the rollout.",
-  "@Designer sketch an onboarding flow and @Developer build the first screen.",
-  "Plan a two week MVP for a habit tracker app.",
-  "Should we use SQL or NoSQL for a realtime chat app? Weigh the trade offs.",
-  "@QA write test cases for a password reset flow, and @Developer fix what breaks.",
 ];
 
 // Matches the orb plasma palette (violet to indigo).
@@ -68,7 +62,12 @@ export function HomeComposer({
   const [mode, setMode] = useState<Mode>("build");
   const [busy, setBusy] = useState(false);
   const [pinned, setPinned] = useState<string[]>([]);
-  const [exIdx, setExIdx] = useState(0);
+  // Full-screen handoff overlay: sign-in redirect, post-login resume, or
+  // project creation. Without it those gaps look like a broken, dead page.
+  const [transition, setTransition] = useState<{
+    kind: "signin" | "resume" | "open";
+    text?: string;
+  } | null>(null);
 
   // Inline command panel (@ agents, / modes), like a command palette.
   const [panel, setPanel] = useState<Panel>(null);
@@ -181,9 +180,11 @@ export function HomeComposer({
 
   async function openChat(text: string, modeArg: Mode, agentKeysArg: string[]) {
     setBusy(true);
+    setTransition((t) => t ?? { kind: "open", text });
     const { id } = await createProjectAndGetId();
     if (!id) {
       setBusy(false);
+      setTransition(null);
       return;
     }
     try {
@@ -208,6 +209,7 @@ export function HomeComposer({
         );
       } catch {}
       setBusy(true);
+      setTransition({ kind: "signin", text });
       await signInWithGoogle();
       return;
     }
@@ -233,6 +235,9 @@ export function HomeComposer({
       const text = p.content?.trim();
       if (!text) return;
       const m: Mode = p.mode === "plan" || p.mode === "discuss" ? p.mode : "build";
+      // Returning from the sign-in redirect with a saved brief: cover the
+      // project-creation gap with the handoff overlay instead of a dead page.
+      setTransition({ kind: "resume", text });
       openChat(text, m, p.agents ?? []);
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,16 +285,6 @@ export function HomeComposer({
     const el = trackRef.current;
     dragState.current.down = false;
     if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-  }
-
-  function cycleExample() {
-    closePanel();
-    setInput(EXAMPLES[exIdx % EXAMPLES.length]);
-    setExIdx((i) => i + 1);
-    requestAnimationFrame(() => {
-      taRef.current?.focus();
-      autosize();
-    });
   }
 
   function pickStarter(prompt: string) {
@@ -432,14 +427,6 @@ export function HomeComposer({
                     /
                   </kbd>
                   {mode}
-                </button>
-                <button
-                  type="button"
-                  onClick={cycleExample}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1.5 text-[13px] font-semibold text-foreground/70 transition-colors hover:text-foreground"
-                >
-                  <Sparkle size={12} weight="fill" className="text-violet-500 dark:text-violet-300" />
-                  example
                 </button>
               </div>
               <button
@@ -614,7 +601,42 @@ export function HomeComposer({
             </div>
           </div>
         </div>
+
+        <TeamAtWork agents={agents} />
       </div>
+
+      {transition
+        ? createPortal(
+            <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5 bg-background/90 px-6 backdrop-blur-md">
+              <OrbMark size={44} />
+              <div className="text-center">
+                <p className="text-[15px] font-semibold">
+                  {transition.kind === "signin"
+                    ? "Taking you to sign in"
+                    : transition.kind === "resume"
+                      ? "You're in. Briefing your team"
+                      : "Briefing your team"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {transition.kind === "signin"
+                    ? "Your brief is saved. We'll pick it up right after."
+                    : "Opening your chat. This takes a second."}
+                </p>
+              </div>
+              {transition.text ? (
+                <div className="max-w-sm truncate rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                  {transition.text}
+                </div>
+              ) : null}
+              <span className="typing-dots" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

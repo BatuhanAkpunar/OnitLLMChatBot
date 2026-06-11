@@ -78,7 +78,7 @@ export function RoleAvatar({
   useEffect(() => {
     (["_blink", "_alt"] as const).forEach((suffix) => {
       const img = new Image();
-      img.src = `/avatars/${roleKey}${suffix}.png`;
+      img.src = `/avatars/${roleKey}${suffix}.webp`;
     });
   }, [roleKey]);
 
@@ -143,10 +143,10 @@ export function RoleAvatar({
 
   const src =
     frame === 1
-      ? `/avatars/${roleKey}_blink.png`
+      ? `/avatars/${roleKey}_blink.webp`
       : frame === 2
-        ? `/avatars/${roleKey}_alt.png`
-        : `/avatars/${roleKey}.png`;
+        ? `/avatars/${roleKey}_alt.webp`
+        : `/avatars/${roleKey}.webp`;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element

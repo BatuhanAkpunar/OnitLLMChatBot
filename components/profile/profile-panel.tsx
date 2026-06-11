@@ -25,7 +25,7 @@ import type { PreferredLanguage } from "@/lib/ai/guardrails";
 const THEMES = [
   { key: "light", label: "Light", Icon: Sun },
   { key: "dark", label: "Dark", Icon: Moon },
-  { key: "system", label: "System", Icon: Monitor },
+  { key: "system", label: "Auto", Icon: Monitor },
 ];
 
 const MODES = [
@@ -34,10 +34,10 @@ const MODES = [
   { key: "discuss", label: "Discuss" },
 ];
 
-const LANGUAGES: { key: PreferredLanguage; label: string; hint: string }[] = [
-  { key: "auto", label: "Auto", hint: "Match my message" },
-  { key: "tr", label: "Türkçe", hint: "Cevaplar hep Türkçe" },
-  { key: "en", label: "English", hint: "Always English" },
+const LANGUAGES: { key: PreferredLanguage; label: string }[] = [
+  { key: "auto", label: "Auto" },
+  { key: "tr", label: "Türkçe" },
+  { key: "en", label: "English" },
 ];
 
 function fmt(n: number) {
@@ -111,156 +111,220 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
       {open && mounted
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          <div className="glass-strong glass-edge relative z-10 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl p-6 text-foreground">
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => setOpen(false)}
-              className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-            >
-              <X size={18} />
-            </button>
-
-            {/* identity */}
-            <div className="flex items-center gap-3.5">
-              <Avatar
-                url={user?.avatarUrl}
-                initial={initial}
-                className="h-14 w-14 text-lg"
+              <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setOpen(false)}
+                aria-hidden
               />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-base font-semibold">{name}</span>
-                  <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {user?.isAdmin ? "Admin" : "Member"}
-                  </span>
-                </div>
-                {user?.email ? (
-                  <div className="truncate text-sm text-muted-foreground">
-                    {user.email}
+              <div className="relative max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-popover p-5 text-foreground shadow-2xl">
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => setOpen(false)}
+                  className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
+
+                {/* identity */}
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    url={user?.avatarUrl}
+                    initial={initial}
+                    className="h-12 w-12 text-base"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-[15px] font-semibold">
+                        {name}
+                      </span>
+                      {user?.isAdmin ? (
+                        <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">
+                          Admin
+                        </span>
+                      ) : null}
+                    </div>
+                    {user?.email ? (
+                      <div className="truncate text-[13px] text-muted-foreground">
+                        {user.email}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            </div>
+                </div>
 
-            {/* appearance */}
-            <Section label="Appearance">
-              <div className="grid grid-cols-3 gap-1.5">
-                {THEMES.map(({ key, label, Icon }) => {
-                  const active = mounted && theme === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setTheme(key)}
-                      className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-xs transition-colors ${
-                        active
-                          ? "border-foreground/30 bg-white/10 text-foreground"
-                          : "border-white/10 text-muted-foreground hover:bg-white/5"
-                      }`}
+                {/* preferences: aligned label + segmented control rows */}
+                <div className="mt-5 space-y-1">
+                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Preferences
+                  </div>
+
+                  <PrefRow label="Theme">
+                    <Segmented>
+                      {THEMES.map(({ key, label, Icon }) => (
+                        <SegBtn
+                          key={key}
+                          active={mounted && theme === key}
+                          onClick={() => setTheme(key)}
+                          title={label}
+                        >
+                          <Icon
+                            size={14}
+                            weight={
+                              mounted && theme === key ? "fill" : "regular"
+                            }
+                          />
+                          <span className="hidden sm:inline">{label}</span>
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </PrefRow>
+
+                  <PrefRow label="Default mode">
+                    <Segmented>
+                      {MODES.map((m) => (
+                        <SegBtn
+                          key={m.key}
+                          active={mode === m.key}
+                          onClick={() => pickMode(m.key)}
+                        >
+                          {m.label}
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </PrefRow>
+
+                  <PrefRow label="Replies in">
+                    <Segmented>
+                      {LANGUAGES.map((l) => (
+                        <SegBtn
+                          key={l.key}
+                          active={lang === l.key}
+                          onClick={() => pickLang(l.key)}
+                          disabled={lang === null}
+                        >
+                          {l.label}
+                        </SegBtn>
+                      ))}
+                    </Segmented>
+                  </PrefRow>
+                </div>
+
+                {/* usage: one quiet strip, not four boxes */}
+                <div className="mt-5">
+                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Usage
+                  </div>
+                  <div className="grid grid-cols-4 divide-x divide-border rounded-xl bg-muted/40 py-2.5">
+                    <Stat label="Chats" value={stats ? fmt(stats.chats) : "·"} />
+                    <Stat
+                      label="Messages"
+                      value={stats ? fmt(stats.messages) : "·"}
+                    />
+                    <Stat
+                      label="Tokens"
+                      value={stats ? fmt(stats.tokens) : "·"}
+                    />
+                    <Stat
+                      label="Cost"
+                      value={
+                        stats
+                          ? `$${stats.costUsd.toFixed(stats.costUsd < 1 ? 3 : 2)}`
+                          : "·"
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* account */}
+                <div className="mt-5 border-t border-border pt-3">
+                  {user?.isAdmin ? (
+                    <Link
+                      href="/admin"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-accent"
                     >
-                      <Icon size={18} weight={active ? "fill" : "regular"} />
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </Section>
-
-            {/* preferences */}
-            <Section label="Default mode">
-              <div className="inline-flex w-full items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-                {MODES.map((m) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => pickMode(m.key)}
-                    className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-                      mode === m.key
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </Section>
-
-            {/* response language */}
-            <Section label="Response language">
-              <div className="grid grid-cols-3 gap-1.5">
-                {LANGUAGES.map((l) => {
-                  const active = lang === l.key;
-                  return (
+                      <ShieldStar
+                        size={16}
+                        weight="bold"
+                        className="text-muted-foreground"
+                      />
+                      Admin panel
+                      <CaretRight
+                        size={13}
+                        className="ml-auto text-muted-foreground"
+                      />
+                    </Link>
+                  ) : null}
+                  <form action={signOut}>
                     <button
-                      key={l.key}
-                      type="button"
-                      onClick={() => pickLang(l.key)}
-                      disabled={lang === null}
-                      className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-xs transition-colors disabled:opacity-50 ${
-                        active
-                          ? "border-foreground/30 bg-white/10 text-foreground"
-                          : "border-white/10 text-muted-foreground hover:bg-white/5"
-                      }`}
+                      type="submit"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
                     >
-                      <span className="font-medium">{l.label}</span>
-                      <span className="text-[10px] opacity-70">{l.hint}</span>
+                      <SignOutIcon size={16} weight="bold" />
+                      Sign out
                     </button>
-                  );
-                })}
+                  </form>
+                </div>
               </div>
-            </Section>
-
-            {/* usage */}
-            <Section label="Usage">
-              <div className="grid grid-cols-4 gap-2">
-                <Stat label="Chats" value={stats ? fmt(stats.chats) : "·"} />
-                <Stat label="Messages" value={stats ? fmt(stats.messages) : "·"} />
-                <Stat label="Tokens" value={stats ? fmt(stats.tokens) : "·"} />
-                <Stat
-                  label="Cost"
-                  value={stats ? `$${stats.costUsd.toFixed(stats.costUsd < 1 ? 3 : 2)}` : "·"}
-                />
-              </div>
-            </Section>
-
-            {/* account */}
-            <Section label="Account">
-              <div className="flex flex-col gap-1.5">
-                {user?.isAdmin ? (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 rounded-xl border border-white/10 px-3 py-2.5 text-sm transition-colors hover:bg-white/5"
-                  >
-                    <ShieldStar size={16} weight="bold" />
-                    Admin panel
-                    <CaretRight size={14} className="ml-auto text-muted-foreground" />
-                  </Link>
-                ) : null}
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-2.5 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
-                  >
-                    <SignOutIcon size={16} weight="bold" />
-                    Sign out
-                  </button>
-                </form>
-              </div>
-            </Section>
-          </div>
-        </div>,
+            </div>,
             document.body,
           )
         : null}
     </>
+  );
+}
+
+function PrefRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <span className="text-[13px] text-foreground/75">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Segmented({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-background/60 p-0.5">
+      {children}
+    </div>
+  );
+}
+
+function SegBtn({
+  active,
+  onClick,
+  disabled,
+  title,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-pressed={active}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+        active
+          ? "bg-foreground text-background"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -279,7 +343,7 @@ function Avatar({
       <img
         src={url}
         alt=""
-        className={`${className} shrink-0 rounded-full object-cover ring-1 ring-white/15`}
+        className={`${className} shrink-0 rounded-full object-cover ring-1 ring-border`}
       />
     );
   }
@@ -292,28 +356,11 @@ function Avatar({
   );
 }
 
-function Section({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mt-5">
-      <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-center">
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted-foreground">{label}</div>
+    <div className="px-2 text-center">
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-[10px] text-muted-foreground">{label}</div>
     </div>
   );
 }

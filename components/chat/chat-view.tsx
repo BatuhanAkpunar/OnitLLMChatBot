@@ -990,7 +990,7 @@ export function ChatView({
                     type="button"
                     aria-label="Close"
                     onClick={() => setRulesOpen(false)}
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     <X size={16} />
                   </button>
@@ -1045,7 +1045,7 @@ export function ChatView({
                     type="button"
                     aria-label="Close"
                     onClick={() => setTasksOpen(false)}
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     <X size={16} />
                   </button>
@@ -1116,7 +1116,7 @@ export function ChatView({
                     type="button"
                     aria-label="Close"
                     onClick={() => setDecisionsOpen(false)}
-                    className="rounded-lg p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     <X size={16} />
                   </button>
@@ -1578,7 +1578,7 @@ export function ChatView({
               <div className="flex items-center justify-between gap-2 pt-1">
                 <div className="flex items-center gap-1.5">
                   <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
-                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 p-0.5">
+                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/70 bg-background/40 p-0.5">
                     {(["build", "plan", "discuss"] as Mode[]).map((m) => (
                       <button
                         key={m}
@@ -1602,7 +1602,7 @@ export function ChatView({
                     className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
                       web
                         ? "border-sky-400/40 text-sky-600 dark:text-sky-300"
-                        : "border-white/10 bg-white/5 text-muted-foreground hover:text-foreground"
+                        : "border-border/70 bg-background/40 text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Globe size={13} weight={web ? "fill" : "regular"} />

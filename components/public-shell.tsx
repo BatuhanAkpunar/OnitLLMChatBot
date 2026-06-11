@@ -14,7 +14,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <form action={signInWithGoogle}>
             <button
               type="submit"
-              className="glass inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors hover:bg-white/10"
+              className="glass inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors hover:bg-accent"
             >
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <path
