@@ -39,9 +39,10 @@ Built with **Next.js 16** (App Router), **Supabase** (Postgres + Auth + RLS),
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server only) |
-| `OPENROUTER_API_KEY` | OpenRouter API key |
-| `OPENROUTER_DEFAULT_MODEL` | Default chat model, e.g. `openai/gpt-4o-mini` |
-| `OPENROUTER_SUMMARY_MODEL` | Cheaper model for thinking + summaries |
+| `GEMINI_API_KEY` | Google AI Studio API key |
+| `GEMINI_DEFAULT_MODEL` | Default chat model, e.g. `gemini-3.5-flash` |
+| `GEMINI_SUMMARY_MODEL` | Cheaper model for thinking + summaries |
+| `GEMINI_FALLBACK_MODEL` | Failover model when the primary errors |
 | `NEXT_PUBLIC_SITE_URL` | App URL, used for the OAuth redirect |
 | `ADMIN_EMAIL` | The email allowed to access `/admin` |
 

@@ -20,7 +20,7 @@ export async function signInWithGoogle() {
   });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/?error=${encodeURIComponent(error.message)}`);
   }
 
   if (data.url) {
@@ -32,7 +32,7 @@ export async function signInWithGoogle() {
 // only method in production).
 export async function signInWithDevPassword(formData: FormData) {
   if (process.env.NODE_ENV === "production") {
-    redirect("/login?error=Dev+sign-in+is+disabled+in+production");
+    redirect("/?error=Dev+sign-in+is+disabled+in+production");
   }
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -40,7 +40,7 @@ export async function signInWithDevPassword(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/?error=${encodeURIComponent(error.message)}`);
   }
   redirect("/");
 }

@@ -1859,18 +1859,18 @@ function MessageRow({
       {/* The pixel-art teammate answering; Onit itself appears as the orb. */}
       <span className="mt-1 shrink-0">
         {isCoordinator ? (
-          <span className="grid h-[34px] w-[34px] place-items-center">
-            <OrbMark size={24} />
+          <span className="grid h-[46px] w-[46px] place-items-center">
+            <OrbMark size={30} />
           </span>
         ) : agent ? (
           <RoleAvatar
             roleKey={agent.key}
             color={agent.color}
-            size={34}
+            size={46}
             rounded="rounded-xl"
           />
         ) : (
-          <span className="h-[34px] w-[34px] rounded-xl bg-muted" />
+          <span className="h-[46px] w-[46px] rounded-xl bg-muted" />
         )}
       </span>
 

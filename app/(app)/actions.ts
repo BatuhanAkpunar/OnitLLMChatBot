@@ -2,11 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { LANG_COOKIE } from "@/lib/i18n-server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
-import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+import { llm, SUMMARY_MODEL, NO_THINKING } from "@/lib/ai/llm";
 import { modelCost } from "@/lib/ai/model-prices";
 import {
   coordinatorLanguageRule,
@@ -279,7 +281,8 @@ ${roster}${skillCatalog ? `\nMethod library (optional, pick at most one per task
     let lastErr = "";
     for (let attempt = 0; attempt < 2; attempt++) {
       const { text: out, usage } = await generateText({
-        model: openrouter(SUMMARY_MODEL),
+        model: llm(SUMMARY_MODEL),
+        providerOptions: NO_THINKING,
         system,
         prompt:
           attempt === 0
@@ -379,7 +382,8 @@ export async function synthesize(
     .join("\n");
   try {
     const { text, usage } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL),
+      providerOptions: NO_THINKING,
       system:
         "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together and one concrete suggested next step. Speak directly to the user. No headings." +
         (checks
@@ -404,7 +408,7 @@ export async function synthesize(
 
 export async function createProject() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -648,8 +652,21 @@ export async function setAppLanguage(
   lang: AppLanguagePref,
 ): Promise<{ ok: boolean }> {
   if (lang !== "auto" && lang !== "tr" && lang !== "en") return { ok: false };
+  // Cookie works for everyone (anonymous header toggle included) and keeps
+  // the choice alive across sign-in/sign-out; the profile column is the
+  // durable copy for signed-in users.
+  const jar = await cookies();
+  if (lang === "auto") {
+    jar.delete(LANG_COOKIE);
+  } else {
+    jar.set(LANG_COOKIE, lang, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
+  }
   const user = await getCurrentUser();
-  if (!user) return { ok: false };
+  if (!user) return { ok: true };
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
@@ -822,7 +839,8 @@ export async function captureDecisions(
 
   try {
     const { text: out, usage } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL),
+      providerOptions: NO_THINKING,
       system: `You extract DECISIONS from a software team's outputs: choices that constrain future work (stack picks, scope cuts, architectural or process commitments, prioritization verdicts). Not summaries, not tasks, not opinions.
 Reply with ONLY compact JSON: {"decisions":[{"title":"short imperative title","because":["concrete reason",...],"despite":["accepted downside",...],"constraints":["rule future work MUST follow",...]}]}
 Rules: 0-2 decisions max; every decision needs at least one "because" AND one "despite" (if you cannot name a downside, it is not a real decision; skip it); constraints are checkable one-liners; skip anything already in the known list. If nothing qualifies, reply {"decisions":[]}.
@@ -931,7 +949,8 @@ export async function statusSummary(projectId: string): Promise<{ text: string }
     .join("\n");
   try {
     const { text, usage } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL),
+      providerOptions: NO_THINKING,
       system:
         "You are Onit, the team coordinator. Give the user a crisp status report of this project: 1) What was decided or produced so far (2-3 bullets). 2) The backlog state (done / in progress / open, by count and the most important open item). 3) The single most useful next step. Keep it under 120 words, use short bullets, speak directly to the user." +
         coordinatorLanguageRule(await preferredLanguage(admin, user.id)),

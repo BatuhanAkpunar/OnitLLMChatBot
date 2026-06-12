@@ -1,12 +1,16 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import type { AppLanguage } from "@/lib/i18n";
 
+export const LANG_COOKIE = "onit_lang";
+
 /**
- * Resolves the app-UI language for this request: the signed-in user's
- * explicit choice (profiles.app_language) wins; "auto" and anonymous
- * visitors fall back to the browser's Accept-Language.
+ * Resolves the app-UI language for this request, in priority order:
+ * 1. the signed-in user's explicit choice (profiles.app_language),
+ * 2. the onit_lang cookie (anonymous visitors' header toggle; also mirrored
+ *    when a signed-in user saves a preference, so it survives sign-out),
+ * 3. the browser's Accept-Language.
  */
 export async function resolveAppLanguage(): Promise<AppLanguage> {
   try {
@@ -23,8 +27,13 @@ export async function resolveAppLanguage(): Promise<AppLanguage> {
       }
     }
   } catch {
-    // fall through to header detection
+    // fall through to cookie/header detection
   }
+  try {
+    const c = await cookies();
+    const v = c.get(LANG_COOKIE)?.value;
+    if (v === "tr" || v === "en") return v;
+  } catch {}
   try {
     const h = await headers();
     const accept = (h.get("accept-language") ?? "").toLowerCase();

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateText } from "ai";
-import { openrouter, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+import { llm, SUMMARY_MODEL, NO_THINKING } from "@/lib/ai/llm";
 
 const RECENT_WINDOW = 20; // keep the last 20 messages as full text
 const SUMMARIZE_BATCH = 20; // summarize the oldest 20 when triggered
@@ -42,7 +42,8 @@ export async function maybeSummarizeProject(
     .join("\n");
 
   const { text: summary } = await generateText({
-    model: openrouter(SUMMARY_MODEL),
+    model: llm(SUMMARY_MODEL),
+    providerOptions: NO_THINKING,
     system:
       "Summarize this conversation excerpt in 3-5 concise bullet points, emphasizing decisions made, conclusions reached, and open questions. Output only the bullets.",
     prompt: transcript,
@@ -73,7 +74,8 @@ export async function maybeSummarizeProject(
   if (rollings && rollings.length > MAX_ROLLING) {
     const toCollapse = rollings.slice(0, rollings.length - MAX_ROLLING);
     const { text: intro } = await generateText({
-      model: openrouter(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL),
+      providerOptions: NO_THINKING,
       system:
         "Compress these summaries into a SINGLE sentence capturing what this project is about and its key decisions so far.",
       prompt: toCollapse.map((r) => r.summary).join("\n"),

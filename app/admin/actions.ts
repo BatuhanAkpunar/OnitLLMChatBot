@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAgentColor } from "@/lib/agent-colors";
 import { generateText } from "ai";
-import { openrouter, DEFAULT_MODEL } from "@/lib/ai/openrouter";
+import { llm, DEFAULT_MODEL } from "@/lib/ai/llm";
 import { modelCost, MODEL_CHOICES } from "@/lib/ai/model-prices";
 import { buildSystemPrompt } from "@/lib/ai/guardrails";
 
@@ -102,7 +102,7 @@ export async function testAgentPrompt(
   const started = Date.now();
   try {
     const { text, usage } = await generateText({
-      model: openrouter(m),
+      model: llm(m),
       system: buildSystemPrompt(draftPrompt),
       prompt: sample,
       maxOutputTokens: 700,
@@ -224,6 +224,7 @@ export async function createAgentConfig(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/agents");
   revalidatePath("/", "layout");
+  revalidateTag("agent-roster", { expire: 0 });
   return { ok: true };
 }
 
@@ -240,6 +241,7 @@ export async function setAgentEnabled(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/agents");
   revalidatePath("/", "layout");
+  revalidateTag("agent-roster", { expire: 0 });
   return { ok: true };
 }
 
@@ -252,5 +254,6 @@ export async function deleteAgentConfig(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/agents");
   revalidatePath("/", "layout");
+  revalidateTag("agent-roster", { expire: 0 });
   return { ok: true };
 }

@@ -27,7 +27,7 @@ const LEAK_PATTERNS: RegExp[] = [
   /SUPABASE_SERVICE_ROLE_KEY/i,
   /\bservice_role\b/i,
   /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/,
-  /\b(DATABASE_URL|PGPASSWORD|OPENROUTER_API_KEY)\b/,
+  /\b(DATABASE_URL|PGPASSWORD|GEMINI_API_KEY)\b/,
   /postgresql:\/\/postgres:/i,
 ];
 

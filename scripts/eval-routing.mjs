@@ -10,10 +10,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-const KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.OPENROUTER_SUMMARY_MODEL || "openai/gpt-4o-mini";
+const KEY = process.env.GEMINI_API_KEY;
+const MODEL = process.env.GEMINI_SUMMARY_MODEL || "gemini-2.5-flash-lite";
 if (!KEY) {
-  console.error("OPENROUTER_API_KEY missing");
+  console.error("GEMINI_API_KEY missing");
   process.exit(1);
 }
 
@@ -37,21 +37,25 @@ Roles:
 ${ROSTER}`;
 
 async function route(text) {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${KEY}`,
-      "Content-Type": "application/json",
+  // Google AI Studio's OpenAI-compatible endpoint keeps this script simple.
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: SYSTEM },
+          { role: "user", content: `Latest request: ${text}\n\nJSON:` },
+        ],
+        max_tokens: 300,
+      }),
     },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: `Latest request: ${text}\n\nJSON:` },
-      ],
-      max_tokens: 300,
-    }),
-  });
+  );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   const out = json.choices?.[0]?.message?.content ?? "";

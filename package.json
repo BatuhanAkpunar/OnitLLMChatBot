@@ -12,7 +12,7 @@
     "seed:skills": "node --env-file=.env.local scripts/seed-skills.mjs"
   },
   "dependencies": {
-    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "@ai-sdk/google": "^3.0.81",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",

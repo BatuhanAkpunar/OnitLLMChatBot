@@ -572,80 +572,64 @@
     radial-gradient(42% 30% at 82% 0%, rgba(56, 189, 248, 0.08), transparent 70%);
 }
 
-/* team carousel: drag or swipe horizontally, no visible scrollbar */
-.onit-carousel {
-  overflow-x: auto;
-  touch-action: pan-x;
-  scrollbar-width: none;
-  user-select: none;
+/* vision pillars: icon tiles breathe gently, staggered per card */
+.onit-pillar-icon {
+  animation: onit-pillar-float 5s ease-in-out infinite;
+  animation-delay: var(--pillar-delay, 0s);
 }
-.onit-carousel::-webkit-scrollbar {
-  display: none;
-}
-.onit-carousel img {
-  -webkit-user-drag: none;
-}
-
-
-
-/* team-at-work showcase: dashes flow along the lines, artifact chips travel
-   from each role into the center, and the core breathes gently */
-.onit-work-line {
-  animation: onit-work-dash 2.6s linear infinite;
-}
-@keyframes onit-work-dash {
-  to {
-    stroke-dashoffset: -12;
-  }
-}
-.onit-work-core {
-  animation: onit-work-pulse 4s ease-in-out infinite;
-}
-@keyframes onit-work-pulse {
+@keyframes onit-pillar-float {
   0%,
   100% {
-    transform: scale(1);
+    transform: translateY(0);
   }
   50% {
-    transform: scale(1.05);
+    transform: translateY(-4px);
   }
 }
-.onit-work-chip {
-  opacity: 0;
-  animation: onit-work-flow 9s ease-in-out infinite;
+
+/* retro team story: the active speaker idles like a game sprite, the dialog
+   caret blinks while typing and the advance arrow bounces when a line ends */
+.onit-story-sprite {
+  animation: onit-story-idle 2.4s ease-in-out infinite;
 }
-@keyframes onit-work-flow {
-  0% {
-    left: var(--sx);
-    top: var(--sy);
-    opacity: 0;
-  }
-  3% {
-    opacity: 1;
-  }
-  13% {
-    left: 50%;
-    top: 50%;
-    opacity: 1;
-  }
-  16% {
-    left: 50%;
-    top: 50%;
-    opacity: 0;
-  }
+@keyframes onit-story-idle {
+  0%,
   100% {
-    left: 50%;
-    top: 50%;
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.onit-story-caret {
+  animation: onit-story-blink 0.9s step-end infinite;
+}
+@keyframes onit-story-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
     opacity: 0;
+  }
+}
+.onit-story-advance {
+  animation: onit-story-bounce 1.1s ease-in-out infinite;
+}
+@keyframes onit-story-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .onit-work-line,
-  .onit-work-core,
-  .onit-work-chip {
+  .onit-pillar-icon,
+  .onit-story-sprite,
+  .onit-story-caret,
+  .onit-story-advance {
     animation: none;
-  }
-  .onit-work-chip {
-    opacity: 0;
   }
 }

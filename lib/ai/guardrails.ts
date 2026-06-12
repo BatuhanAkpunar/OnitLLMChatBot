@@ -1,3 +1,5 @@
+import { PRODUCT_IDENTITY } from "@/lib/ai/identity";
+
 /**
  * Hard security guardrails prepended to EVERY agent system prompt at runtime.
  * Kept out of the editable agent_configs so they cannot be weakened from the
@@ -22,7 +24,7 @@ export const REASONING_RULES = `# REASONING QUALITY RULES (apply to every substa
 - Match the weight of the method to the size of the request: for a trivial ask, skip frameworks and templates and answer directly. Say so when a requested artifact would be overkill, and offer the lighter alternative.`;
 
 export function buildSystemPrompt(rolePrompt: string): string {
-  return `${SECURITY_GUARDRAILS}\n\n${REASONING_RULES}\n\n---\n\n${rolePrompt}`;
+  return `${SECURITY_GUARDRAILS}\n\n${REASONING_RULES}\n\n${PRODUCT_IDENTITY}\n\n---\n\n${rolePrompt}`;
 }
 
 export type PreferredLanguage = "auto" | "tr" | "en";

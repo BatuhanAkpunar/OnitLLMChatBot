@@ -173,9 +173,8 @@ const en = {
   welcomeBack: "Welcome back, {name}",
   heroTitle: "Your AI product team.",
   heroAccent: "On it.",
-  step1: "Write what you need",
-  step2: "The team gets to work",
-  step3: "You review and steer",
+  heroTagline:
+    "Most AI tools answer questions. Onit owns the work: it plans, debates, and builds with you.",
   askAnything: "Ask your team anything…",
   agentsChip: "agents",
   nAgents: "{n} agents",
@@ -183,11 +182,47 @@ const en = {
   panelModes: "Modes",
   noMatchingAgent: "No matching agent.",
   noMatchingMode: "No matching mode.",
-  meetTeam: "Meet your team",
-  meetTeamSub: "Six specialists, one brief. Tap anyone to bring them in.",
-  workTitle: "One brief in, a team's work out",
-  workSub:
-    "Onit routes your request, the specialists deliver, and everything flows back into one thread.",
+
+  // public header
+  signIn: "Sign in",
+  switchLanguage: "Switch language",
+  devChip: "Built by",
+  devAria: "About the developer",
+  devRole: "Product Manager & Builder",
+
+  // vision pillars
+  // Pre-uppercased: CSS uppercase would turn "i" into "İ" under lang="tr".
+  visionKicker: "WHY ONIT",
+  pillar1Title: "One brief, six specialists",
+  pillar1Body:
+    "Onit reads your request and routes it to the right roles, or you @mention them yourself.",
+  pillar2Title: "Plan first, then build",
+  pillar2Body:
+    "Plans are documents you edit. When it reads right, push it to build.",
+  pillar3Title: "A team that remembers",
+  pillar3Body:
+    "Decisions, tasks and rules stay with the project and shape every answer.",
+
+  // retro team story
+  storyKicker: "Meet the team",
+  storyNext: "Continue",
+  storyTapHint: "Click the box to continue, or a character to hear them",
+  storyCta: "Write your brief",
+  storyIntro1: "You have an idea.",
+  storyIntro2: "You shouldn't have to build it alone. Meet your team.",
+  storyAnalyst:
+    "I turn ideas into requirements and user stories. Nothing vague gets past me.",
+  storyProductManager:
+    "I own the roadmap. I decide what we build next, and I can tell you why.",
+  storyDeveloper:
+    "I design the architecture and write the code. Reviewed, tested, shipped.",
+  storyProjectManager:
+    "I plan the sprints and clear the blockers. We ship on time.",
+  storyProductDesigner:
+    "I map the flows and design interfaces people actually enjoy.",
+  storyQa: "I break things before your users do. Bugs fear me.",
+  storyOutro: "One brief is enough. Write it. We're on it.",
+
   signinTitle: "Taking you to sign in",
   resumeTitle: "You're in. Briefing your team",
   openTitle: "Briefing your team",
@@ -365,9 +400,8 @@ const tr: Record<I18nKey, string> = {
   welcomeBack: "Tekrar hoş geldin, {name}",
   heroTitle: "Yapay zekâ ürün ekibin.",
   heroAccent: "On it.",
-  step1: "İhtiyacını yaz",
-  step2: "Ekip işe koyulur",
-  step3: "Sen incele, yönlendir",
+  heroTagline:
+    "Çoğu yapay zeka aracı soruları yanıtlar. Onit işi sahiplenir: seninle planlar, tartışır, üretir.",
   askAnything: "Ekibine ne istersen sor…",
   agentsChip: "ajanlar",
   nAgents: "{n} ajan",
@@ -375,11 +409,43 @@ const tr: Record<I18nKey, string> = {
   panelModes: "Modlar",
   noMatchingAgent: "Eşleşen ajan yok.",
   noMatchingMode: "Eşleşen mod yok.",
-  meetTeam: "Ekibinle tanış",
-  meetTeamSub: "Altı uzman, tek brief. Katmak istediğine dokun.",
-  workTitle: "Tek brief gir, ekibin işini al",
-  workSub:
-    "Onit isteğini yönlendirir, uzmanlar üretir, her şey tek akışta birleşir.",
+
+  signIn: "Giriş yap",
+  switchLanguage: "Dili değiştir",
+  devChip: "Geliştiren",
+  devAria: "Geliştirici hakkında",
+  devRole: "Ürün Yöneticisi & Geliştirici",
+
+  visionKicker: "NEDEN ONIT",
+  pillar1Title: "Tek brief, altı uzman",
+  pillar1Body:
+    "Onit isteğini okur ve doğru rollere dağıtır; istersen @ ile kendin seçersin.",
+  pillar2Title: "Önce plan, sonra üretim",
+  pillar2Body:
+    "Planlar düzenleyebildiğin dokümanlardır. Hazır olunca üretime gönderirsin.",
+  pillar3Title: "Hatırlayan bir ekip",
+  pillar3Body:
+    "Kararlar, görevler ve kurallar projeyle yaşar; her yanıtı şekillendirir.",
+
+  storyKicker: "Takımla tanış",
+  storyNext: "Devam",
+  storyTapHint: "İlerlemek için kutuya, dinlemek için karaktere tıkla",
+  storyCta: "Brief'ini yaz",
+  storyIntro1: "Bir fikrin var.",
+  storyIntro2: "Onu tek başına inşa etmek zorunda değilsin. Ekibinle tanış.",
+  storyAnalyst:
+    "Fikirleri gereksinimlere ve kullanıcı hikayelerine çeviririm. Benden muğlak iş geçmez.",
+  storyProductManager:
+    "Yol haritası bende. Sırada ne üreteceğimize karar verir, nedenini de söylerim.",
+  storyDeveloper:
+    "Mimariyi kurar, kodu yazarım. İncelenmiş, test edilmiş, yayında.",
+  storyProjectManager:
+    "Sprintleri planlar, engelleri kaldırırım. Zamanında teslim ederiz.",
+  storyProductDesigner:
+    "Akışları haritalar, insanların gerçekten sevdiği arayüzler tasarlarım.",
+  storyQa: "Kullanıcıların bulmadan önce ben bozarım. Buglar benden korkar.",
+  storyOutro: "Tek bir brief yeter. Yaz. Gerisi bizde.",
+
   signinTitle: "Girişe yönlendiriliyorsun",
   resumeTitle: "Giriş tamam. Ekibine brief veriliyor",
   openTitle: "Ekibine brief veriliyor",

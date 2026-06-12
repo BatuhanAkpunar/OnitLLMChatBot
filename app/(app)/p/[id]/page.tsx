@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAppLanguage } from "@/lib/i18n-server";
-import { ChatView, type Message, type Agent } from "@/components/chat/chat-view";
+import { getAgentRoster } from "@/lib/agents-roster";
+import { ChatView, type Message } from "@/components/chat/chat-view";
 import type { ProjectTask, ProjectDecision } from "@/app/(app)/actions";
 
 export default async function ProjectPage(props: {
@@ -19,23 +20,22 @@ export default async function ProjectPage(props: {
     .single();
   if (!project) notFound();
 
+  // Everything below is independent: one parallel round-trip instead of six.
   const [
     { data: messages },
-    { data: agents },
+    agentList,
     { data: tasks },
     { data: projects },
     { data: decisions },
+    { data: profile },
+    appLang,
   ] = await Promise.all([
     supabase
       .from("messages")
       .select("id, role, agent_key, content, thinking, status, feedback, edited_at")
       .eq("project_id", id)
       .order("created_at", { ascending: true }),
-    supabase
-      .from("agent_configs")
-      .select("key, display_name, handle, color, description")
-      .eq("enabled", true)
-      .order("sort_order"),
+    getAgentRoster(),
     supabase
       .from("project_tasks")
       .select("id, role_key, task, done_criteria, status, sort")
@@ -54,25 +54,22 @@ export default async function ProjectPage(props: {
       .neq("status", "dismissed")
       .order("created_at", { ascending: false })
       .limit(50),
+    user
+      ? supabase
+          .from("profiles")
+          .select("preferred_language")
+          .eq("id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    resolveAppLanguage(),
   ]);
-
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("preferred_language")
-        .eq("id", user.id)
-        .maybeSingle()
-    : { data: null };
 
   // Conversation language: explicit reply preference wins; otherwise follow
   // the app-UI language (so coordinator labels match what the user reads).
-  const appLang = await resolveAppLanguage();
   const convLang =
     profile?.preferred_language === "tr" || profile?.preferred_language === "en"
       ? profile.preferred_language
       : appLang;
-
-  const agentList = (agents ?? []) as Agent[];
 
   return (
     <ChatView

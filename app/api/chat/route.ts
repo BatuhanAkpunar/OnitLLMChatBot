@@ -1,9 +1,16 @@
-import { streamText } from "ai";
+import { streamText, type ToolSet } from "ai";
 import { createClient as createSbClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/user";
 import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { openrouter, DEFAULT_MODEL, SUMMARY_MODEL } from "@/lib/ai/openrouter";
+import {
+  google,
+  llm,
+  DEFAULT_MODEL,
+  SUMMARY_MODEL,
+  FALLBACK_MODEL,
+  NO_THINKING,
+} from "@/lib/ai/llm";
 import { modelCost } from "@/lib/ai/model-prices";
 import { buildSystemPrompt, languageRule } from "@/lib/ai/guardrails";
 import { buildContext } from "@/lib/context";
@@ -16,10 +23,7 @@ import {
 
 export const maxDuration = 60;
 
-const OPENROUTER_TIMEOUT_MS = 30_000;
-// Used when the primary model errors or times out mid-request.
-const FALLBACK_MODEL =
-  process.env.OPENROUTER_FALLBACK_MODEL || "google/gemini-2.0-flash-001";
+const LLM_TIMEOUT_MS = 30_000;
 const encoder = new TextEncoder();
 const line = (obj: unknown) => encoder.encode(JSON.stringify(obj) + "\n");
 
@@ -121,7 +125,12 @@ export async function POST(req: Request) {
       }
     }
   }
-  if (webSearch) agentModel = `${agentModel}:online`;
+  // Web search: Gemini's provider-executed grounding tool. The cast bridges
+  // the provider factory's generics to streamText's ToolSet (no executors
+  // here; Google runs the search server-side).
+  const webTools = webSearch
+    ? ({ google_search: google.tools.googleSearch({}) } as ToolSet)
+    : undefined;
   const agentNames: Record<string, string> = Object.fromEntries(
     agents.map((a) => [a.key, a.display_name]),
   );
@@ -223,7 +232,7 @@ export async function POST(req: Request) {
   const assistantId = placeholder.id;
 
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), OPENROUTER_TIMEOUT_MS);
+  const timer = setTimeout(() => timeout.abort(), LLM_TIMEOUT_MS);
   let aborted = false;
 
   const stream = new ReadableStream<Uint8Array>({
@@ -250,7 +259,8 @@ export async function POST(req: Request) {
       try {
         // 1) Thinking bubble (cheaper model), completes before the main answer.
         const think = streamText({
-          model: openrouter(SUMMARY_MODEL),
+          model: llm(SUMMARY_MODEL),
+          providerOptions: NO_THINKING,
           system: `You are ${agent.display_name}. In AT MOST two short first-person sentences, note what you reviewed (including any notes from other agents) and how you will respond. Do NOT answer the question, and do NOT use lists or headings.${langRule}`,
           messages: ctx,
           maxOutputTokens: 120,
@@ -277,7 +287,8 @@ export async function POST(req: Request) {
 
         async function runAnswer(model: string) {
           const s = streamText({
-            model: openrouter(model),
+            model: llm(model),
+            tools: webTools,
             system: sysFull,
             messages: ctx,
             abortSignal: timeout.signal,

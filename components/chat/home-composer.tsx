@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { PaperPlaneRight, Check, CheckCircle, CaretRight } from "@phosphor-icons/react";
+import { PaperPlaneRight, Check } from "@phosphor-icons/react";
 import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { Aurora } from "@/components/hero/aurora";
-import { TeamAtWork } from "@/components/hero/team-at-work";
+import { Vision } from "@/components/hero/vision";
+import { TeamStory } from "@/components/hero/team-story";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
@@ -23,9 +24,6 @@ const MODE_DEFS: { key: Mode; label: I18nKey; tip: I18nKey }[] = [
   { key: "plan", label: "modePlan", tip: "tipPlan" },
   { key: "discuss", label: "modeDiscuss", tip: "tipDiscuss" },
 ];
-
-// The promise of the product in three beats: brief, team works, you steer.
-const STEP_KEYS: I18nKey[] = ["step1", "step2", "step3"];
 
 // Matches the orb plasma palette (violet to indigo).
 const ACCENT_TITLE: CSSProperties = {
@@ -53,10 +51,6 @@ export function HomeComposer({
   const router = useRouter();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
-
-  // Drag-to-scroll state for the team carousel.
-  const trackRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({ down: false, startX: 0, scrollStart: 0, moved: 0 });
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<Mode>("build");
   const [busy, setBusy] = useState(false);
@@ -256,38 +250,6 @@ export function HomeComposer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panel]);
 
-  function onTrackPointerDown(e: React.PointerEvent) {
-    if (e.pointerType !== "mouse") return; // touch scrolls natively
-    const el = trackRef.current;
-    if (!el) return;
-    dragState.current = {
-      down: true,
-      startX: e.clientX,
-      scrollStart: el.scrollLeft,
-      moved: 0,
-    };
-    // No pointer capture yet: capturing here would swallow the click on the
-    // cards. We only capture once the pointer actually starts dragging.
-  }
-
-  function onTrackPointerMove(e: React.PointerEvent) {
-    const el = trackRef.current;
-    const d = dragState.current;
-    if (!el || !d.down) return;
-    const dx = e.clientX - d.startX;
-    d.moved = Math.max(d.moved, Math.abs(dx));
-    if (d.moved > 6 && !el.hasPointerCapture(e.pointerId)) {
-      el.setPointerCapture(e.pointerId);
-    }
-    el.scrollLeft = d.scrollStart - dx;
-  }
-
-  function onTrackPointerUp(e: React.PointerEvent) {
-    const el = trackRef.current;
-    dragState.current.down = false;
-    if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-  }
-
   function pickStarter(prompt: string) {
     closePanel();
     setInput(prompt);
@@ -345,25 +307,9 @@ export function HomeComposer({
             <br />
             <span style={ACCENT_TITLE}>{t("heroAccent")}</span>
           </h1>
-          <div className="mt-5 flex flex-col items-center gap-1.5 sm:flex-row sm:gap-3">
-            {STEP_KEYS.map((step, i) => (
-              <span key={step} className="flex items-center gap-3">
-                <span className="flex items-center gap-2 text-[15px] font-medium text-foreground/80">
-                  <span className="font-mono text-xs font-semibold text-violet-600 dark:text-violet-300">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  {t(step)}
-                </span>
-                {i < STEP_KEYS.length - 1 ? (
-                  <CaretRight
-                    size={12}
-                    weight="bold"
-                    className="hidden text-foreground/30 sm:block"
-                  />
-                ) : null}
-              </span>
-            ))}
-          </div>
+          <p className="mt-4 max-w-xl text-balance text-[15px] font-medium leading-relaxed text-foreground/70">
+            {t("heroTagline")}
+          </p>
         </div>
 
         <div ref={composerRef} className="relative">
@@ -524,86 +470,15 @@ export function HomeComposer({
           ))}
         </div>
 
-        <div className="mt-14">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">
-              {t("meetTeam")}
-            </h2>
-            <p className="mt-1.5 text-sm font-medium text-foreground/70">
-              {t("meetTeamSub")}
-            </p>
-          </div>
+        <Vision />
 
-          <div className="relative py-2">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-background to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-background to-transparent" />
-
-            <div
-              ref={trackRef}
-              onPointerDown={onTrackPointerDown}
-              onPointerMove={onTrackPointerMove}
-              onPointerUp={onTrackPointerUp}
-              onPointerCancel={onTrackPointerUp}
-              className="onit-carousel flex cursor-grab gap-4 px-4 active:cursor-grabbing"
-            >
-              {agents.map((a) => {
-                  const on = pinned.includes(a.key);
-                  return (
-                    <button
-                      key={a.key}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (dragState.current.moved > 6) return;
-                        pinForKey(a.key);
-                      }}
-                      className={`relative flex w-[168px] shrink-0 flex-col overflow-hidden rounded-2xl bg-card text-left shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.35)] ${
-                        on ? "" : "ring-1 ring-inset ring-border"
-                      }`}
-                      style={
-                        on
-                          ? { boxShadow: `inset 0 0 0 2px var(--agent-${a.color}), 0 10px 30px -10px rgba(0,0,0,0.35)` }
-                          : undefined
-                      }
-                    >
-                      <span
-                        className="block w-full"
-                        style={{
-                          background: `linear-gradient(160deg, color-mix(in srgb, var(--agent-${a.color}) 28%, transparent), color-mix(in srgb, var(--agent-${a.color}) 8%, transparent))`,
-                        }}
-                      >
-                        <RoleAvatar
-                          roleKey={a.key}
-                          color={a.color}
-                          size={168}
-                          rounded="rounded-none"
-                        />
-                      </span>
-                      {on ? (
-                        <span className="absolute right-2 top-2 grid place-items-center rounded-full bg-background shadow-md">
-                          <CheckCircle
-                            size={22}
-                            weight="fill"
-                            style={{ color: `var(--agent-${a.color})` }}
-                          />
-                        </span>
-                      ) : null}
-                      <span className="flex flex-col gap-1 p-3.5">
-                        <span className="text-[15px] font-bold tracking-tight">
-                          {a.handle}
-                        </span>
-                        <span className="line-clamp-3 text-[13px] leading-snug text-foreground/70">
-                          {rolePersona(a.key, a.description)}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
-
-        <TeamAtWork agents={agents} />
+        <TeamStory
+          agents={agents}
+          onCta={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            taRef.current?.focus();
+          }}
+        />
       </div>
 
       {transition
