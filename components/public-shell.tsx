@@ -18,7 +18,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           className="flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-opacity hover:opacity-80"
         >
           <OrbMark size={20} />
-          <span className="text-[15px] font-bold tracking-tight">onit</span>
+          <span className="font-pixel text-[17px] tracking-tight">onit</span>
         </a>
 
         <div className="flex items-center gap-2">

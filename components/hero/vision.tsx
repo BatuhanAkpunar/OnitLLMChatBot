@@ -24,29 +24,30 @@ export function Vision() {
   const { t } = useI18n();
   return (
     <section className="mt-16">
-      <p className="mb-5 text-center font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+      <p className="mb-5 text-center font-pixel text-[13px] uppercase tracking-[0.25em] text-muted-foreground">
         {t("visionKicker")}
       </p>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3.5 sm:grid-cols-3">
         {PILLARS.map(({ icon: IconCmp, tint, title, body }, i) => (
           <div
             key={title}
-            className="group rounded-2xl border border-border bg-card/70 p-5 backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)]"
+            className="pixel-panel-soft group p-5 transition-transform duration-150 hover:-translate-y-1 hover:translate-x-0"
           >
             <span
-              className="onit-pillar-icon mb-3.5 grid h-11 w-11 place-items-center rounded-xl"
+              className="onit-pillar-icon mb-3.5 grid h-11 w-11 place-items-center rounded-xl border-[1.5px]"
               style={
                 {
                   "--pillar-delay": `${i * 0.6}s`,
                   backgroundColor: `color-mix(in srgb, ${tint} 14%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${tint} 45%, transparent)`,
                   color: tint,
                 } as React.CSSProperties
               }
             >
               <IconCmp size={22} weight="duotone" />
             </span>
-            <h3 className="text-[15px] font-bold tracking-tight">{t(title)}</h3>
-            <p className="mt-1 text-[13px] leading-relaxed text-foreground/65">
+            <h3 className="font-pixel text-[15px] tracking-tight">{t(title)}</h3>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/65">
               {t(body)}
             </p>
           </div>

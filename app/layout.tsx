@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -16,10 +16,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Display/accent only — the neo-retro "Pixel Atelier" spice. Never body copy.
+const pixelifySans = Pixelify_Sans({
+  variable: "--font-pixel",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "Onit AI · AI roles for software teams",
+  title: "Onit AI · Your AI product team",
   description:
-    "Work with AI roles (Analyst, Product Manager, Developer, and more) across project-based conversations.",
+    "Brief a party of AI specialists — Analyst, PM, Designer, QA — in one chat. They plan, debate, and build with you.",
 };
 
 export default async function RootLayout({
@@ -32,7 +39,7 @@ export default async function RootLayout({
     <html
       lang={lang}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${pixelifySans.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
         <ThemeProvider

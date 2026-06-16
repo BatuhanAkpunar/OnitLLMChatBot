@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { PaperPlaneRight, Check } from "@phosphor-icons/react";
 import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
-import { Aurora } from "@/components/hero/aurora";
+import { RetroBackdrop } from "@/components/ui/retro-backdrop";
+import { DynamicIsland } from "@/components/ui/dynamic-island";
 import { Vision } from "@/components/hero/vision";
-import { TeamStory } from "@/components/hero/team-story";
+import { Party } from "@/components/hero/party";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
@@ -24,14 +25,6 @@ const MODE_DEFS: { key: Mode; label: I18nKey; tip: I18nKey }[] = [
   { key: "plan", label: "modePlan", tip: "tipPlan" },
   { key: "discuss", label: "modeDiscuss", tip: "tipDiscuss" },
 ];
-
-// Matches the orb plasma palette (violet to indigo).
-const ACCENT_TITLE: CSSProperties = {
-  backgroundImage: "linear-gradient(95deg, #a78bfa, #6366f1)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-};
 
 function stripAt(handle: string) {
   return handle.startsWith("@") ? handle.slice(1) : handle;
@@ -292,28 +285,50 @@ export function HomeComposer({
   const pinnedAgents = agents.filter((a) => pinned.includes(a.key));
 
   return (
-    <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden px-6 py-12">
-      <Aurora className="absolute inset-x-0 top-0 z-0 h-[52%]" />
+    <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden px-6 py-16">
+      <RetroBackdrop scanlines />
+
+      {!authed ? (
+        <DynamicIsland state="ready" label={t("islandReady")} />
+      ) : null}
 
       <div className="relative z-10 w-full max-w-2xl">
-        <div className="mb-7 flex flex-col items-center text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
           {firstName ? (
-            <span className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">
+            <span className="mb-3 font-pixel text-xs uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
               {t("welcomeBack", { name: firstName })}
             </span>
-          ) : null}
-          <h1 className="text-balance text-[2.75rem] font-bold leading-[1.04] tracking-tight sm:text-[3.5rem]">
-            {t("heroTitle")}
+          ) : (
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full border-[1.5px] border-border bg-card/70 px-3 py-1 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
+              <span className="dyn-island-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {t("heroBadge")}
+            </span>
+          )}
+          <h1 className="font-pixel text-balance text-[2.9rem] leading-[1.02] tracking-tight sm:text-[3.7rem]">
+            <span className="shiny-text">{t("heroTitle")}</span>
             <br />
-            <span style={ACCENT_TITLE}>{t("heroAccent")}</span>
+            <span
+              style={{
+                backgroundImage: "linear-gradient(95deg, #a78bfa, #38bdf8, #34d399)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {t("heroAccent")}
+            </span>
           </h1>
-          <p className="mt-4 max-w-xl text-balance text-[15px] font-medium leading-relaxed text-foreground/70">
+          <p className="mt-5 max-w-xl text-balance text-[15px] font-medium leading-relaxed text-foreground/70">
             {t("heroTagline")}
           </p>
         </div>
 
         <div ref={composerRef} className="relative">
-          <div className="rounded-2xl border border-border bg-card/85 p-2.5 shadow-xl backdrop-blur-xl">
+          <div
+            className="onit-border-glow"
+            style={{ "--obg-radius": "16px" } as React.CSSProperties}
+          >
+          <div className="onit-border-glow__inner p-2.5">
             <textarea
               ref={taRef}
               value={input}
@@ -322,21 +337,21 @@ export function HomeComposer({
               rows={2}
               autoFocus
               placeholder={t("askAnything")}
-              className="max-h-56 min-h-[52px] w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none"
+              className="relative z-10 max-h-56 min-h-[52px] w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none"
             />
-            <div className="flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
+            <div className="relative z-10 flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => togglePanel("agents")}
                   aria-expanded={panel === "agents"}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[13px] font-semibold transition-colors ${
+                  className={`pressable inline-flex items-center gap-1.5 rounded-lg border-[1.5px] px-2 py-1.5 text-[13px] font-semibold transition-colors ${
                     panel === "agents"
-                      ? "border-violet-500/45 text-foreground"
-                      : "border-border text-foreground/70 hover:text-foreground"
+                      ? "border-violet-500/60 bg-violet-500/10 text-foreground"
+                      : "border-border text-foreground/70 hover:bg-accent hover:text-foreground"
                   }`}
                 >
-                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-mono text-[10px]">
+                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-pixel text-[11px]">
                     @
                   </kbd>
                   {pinnedAgents.length === 0 ? (
@@ -364,13 +379,13 @@ export function HomeComposer({
                   type="button"
                   onClick={() => togglePanel("modes")}
                   aria-expanded={panel === "modes"}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[13px] font-semibold transition-colors ${
+                  className={`pressable inline-flex items-center gap-1.5 rounded-lg border-[1.5px] px-2 py-1.5 text-[13px] font-semibold transition-colors ${
                     panel === "modes"
-                      ? "border-violet-500/45 text-foreground"
-                      : "border-border text-foreground/70 hover:text-foreground"
+                      ? "border-violet-500/60 bg-violet-500/10 text-foreground"
+                      : "border-border text-foreground/70 hover:bg-accent hover:text-foreground"
                   }`}
                 >
-                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-mono text-[10px]">
+                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-pixel text-[11px]">
                     /
                   </kbd>
                   {t(MODE_DEFS.find((m) => m.key === mode)?.label ?? "modeBuild")}
@@ -381,16 +396,17 @@ export function HomeComposer({
                 onClick={start}
                 disabled={busy || !input.trim()}
                 aria-label={t("sendLabel")}
-                className="send-btn flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
+                className="send-btn pressable flex h-9 w-9 items-center justify-center rounded-xl border-[1.5px] border-foreground bg-primary text-primary-foreground disabled:opacity-40"
               >
                 <PaperPlaneRight size={16} weight="fill" />
               </button>
             </div>
           </div>
+          </div>
 
           {panel ? (
-            <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl">
-              <div className="border-b border-border px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="pixel-panel absolute left-0 right-0 top-full z-30 mt-3 overflow-hidden bg-popover p-0">
+              <div className="border-b border-border px-3.5 py-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 {panel === "agents" ? t("panelAgents") : t("panelModes")}
               </div>
               {panel === "agents" ? (
@@ -456,14 +472,14 @@ export function HomeComposer({
           ) : null}
         </div>
 
-        {/* Quick starts: show what the team can do, one tap to begin. */}
-        <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+        {/* Quick quests: show what the team can do, one tap to begin. */}
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
           {getStarters(lang).map((s) => (
             <button
               key={s.label}
               type="button"
               onClick={() => pickStarter(s.prompt)}
-              className="rounded-xl border border-border bg-card/60 px-3 py-1.5 text-[13px] text-foreground/75 backdrop-blur transition-colors hover:border-violet-500/40 hover:bg-violet-500/[0.06] hover:text-foreground"
+              className="pressable rounded-lg border-[1.5px] border-border bg-card/70 px-3 py-1.5 text-[13px] font-medium text-foreground/75 backdrop-blur transition-colors hover:border-violet-500/45 hover:bg-violet-500/[0.07] hover:text-foreground"
             >
               {s.label}
             </button>
@@ -472,7 +488,7 @@ export function HomeComposer({
 
         <Vision />
 
-        <TeamStory
+        <Party
           agents={agents}
           onCta={() => {
             window.scrollTo({ top: 0, behavior: "smooth" });

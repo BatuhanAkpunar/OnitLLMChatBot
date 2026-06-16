@@ -29,6 +29,12 @@ import { toast } from "sonner";
 import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
+import { RetroBackdrop } from "@/components/ui/retro-backdrop";
+import {
+  DynamicIsland,
+  type IslandState,
+  type IslandAgent,
+} from "@/components/ui/dynamic-island";
 import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
@@ -1012,9 +1018,41 @@ export function ChatView({
     </>
   );
 
+  // Dynamic Island: narrate what the team is doing right now. Derived from the
+  // routing flag and the last streaming agent message.
+  const streamingMsg = [...messages].reverse().find((m) => m.status === "streaming");
+  const islandAgent = streamingMsg?.agent_key
+    ? agents.find((a) => a.key === streamingMsg.agent_key)
+    : null;
+  const island: { state: IslandState; label: string; agent?: IslandAgent | null } =
+    routing
+      ? { state: "routing", label: t("islandRouting") }
+      : streamingMsg
+        ? streamingMsg.content
+          ? {
+              state: "streaming",
+              label: islandAgent
+                ? translate(uiLang, "islandWriting", { name: islandAgent.display_name })
+                : t("islandWorking"),
+              agent: islandAgent
+                ? { key: islandAgent.key, color: islandAgent.color, name: islandAgent.display_name }
+                : null,
+            }
+          : {
+              state: "thinking",
+              label: islandAgent
+                ? translate(uiLang, "islandThinking", { name: islandAgent.display_name })
+                : t("islandWorking"),
+              agent: islandAgent
+                ? { key: islandAgent.key, color: islandAgent.color, name: islandAgent.display_name }
+                : null,
+            }
+        : { state: "hidden", label: "" };
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div className="onit-chat-glow" aria-hidden />
+      <RetroBackdrop grid={false} className="opacity-70" />
+      <DynamicIsland state={island.state} label={island.label} agent={island.agent} />
       <TopBar user={user} projects={projects} title={title} tools={chatTools} />
 
       {board
@@ -1856,31 +1894,43 @@ function MessageRow({
 
   return (
     <div className="group flex gap-3">
-      {/* The pixel-art teammate answering; Onit itself appears as the orb. */}
+      {/* The teammate answering speaks as a character; Onit appears as the orb.
+          A role-colored frame + name plate sells the "party member" feel. */}
       <span className="mt-1 shrink-0">
         {isCoordinator ? (
-          <span className="grid h-[46px] w-[46px] place-items-center">
-            <OrbMark size={30} />
+          <span className="grid h-[46px] w-[46px] place-items-center rounded-xl border-[1.5px] border-border bg-card">
+            <OrbMark size={28} />
           </span>
         ) : agent ? (
-          <RoleAvatar
-            roleKey={agent.key}
-            color={agent.color}
-            size={46}
-            rounded="rounded-xl"
-          />
+          <span
+            className="inline-block rounded-[12px] border-[1.5px]"
+            style={{ borderColor: `color-mix(in srgb, var(--agent-${agent.color}) 60%, transparent)` }}
+          >
+            <RoleAvatar
+              roleKey={agent.key}
+              color={agent.color}
+              size={46}
+              rounded="rounded-[10px]"
+              state={message.status === "streaming" ? "speaking" : "static"}
+            />
+          </span>
         ) : (
           <span className="h-[46px] w-[46px] rounded-xl bg-muted" />
         )}
       </span>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[13px] font-semibold" style={{ color }}>
+        <div className="flex items-center gap-2">
+          <span
+            className="font-pixel text-[13px] tracking-wide"
+            style={{ color }}
+          >
             {name}
           </span>
           {!isCoordinator && agent?.handle ? (
-            <span className="text-[11px] text-muted-foreground">{agent.handle}</span>
+            <span className="rounded border border-border px-1 font-mono text-[10px] text-muted-foreground">
+              {agent.handle}
+            </span>
           ) : null}
           {message.edited_at ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-px text-[10px] font-medium text-violet-600 dark:text-violet-300">

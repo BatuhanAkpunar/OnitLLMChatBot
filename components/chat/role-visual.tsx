@@ -1,21 +1,20 @@
 "use client";
 
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useState } from "react";
 import {
   MagnifyingGlass,
   ChartLineUp,
-  Code,
   Kanban,
   PenNib,
   Bug,
   UsersThree,
   type Icon,
 } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, Icon> = {
   analyst: MagnifyingGlass,
   product_manager: ChartLineUp,
-  developer: Code,
   project_manager: Kanban,
   product_designer: PenNib,
   qa: Bug,
@@ -27,8 +26,6 @@ const PERSONAS: Record<string, string> = {
     "I gather requirements and write user stories with clear acceptance criteria.",
   product_manager:
     "I own the roadmap and prioritize what we build next, and why.",
-  developer:
-    "I design the architecture, write the code, and review every change.",
   project_manager:
     "I plan sprints, track progress, and remove blockers so we ship on time.",
   product_designer:
@@ -44,87 +41,52 @@ export function rolePersona(key: string, fallback?: string | null): string {
   return PERSONAS[key] ?? fallback ?? "";
 }
 
-// Idle animation: which frame to show at each ~250ms step (0 base, 1 blink,
-// 2 gesture). The gesture holds for ~1s so each character's signature move
-// reads clearly. Runs at most 3 seconds per hover, then settles back to base.
-const FRAME_SEQ = [1, 0, 2, 2, 2, 2, 0, 0, 1, 0, 2, 2];
-const FRAME_MS = 250;
-const ANIM_MAX_MS = 3000;
+export type SpriteState = "static" | "idle" | "speaking";
 
 /**
- * Pixel-art portrait for a role. Plays a short sprite animation (blink and a
- * warm smile frame) while hovered, GIF style. Falls back to the role icon in
- * a colored disc when the image asset is missing or fails to load.
+ * RoleAvatar — a character's framed portrait. The source is a single
+ * high-resolution (1024px) illustration with a baked role-colored backdrop, so
+ * it stays crisp at every size (16px chip → 200px stage); we render it SMOOTH
+ * (no forced pixelation, which was the old "blurry when small" culprit).
+ *
+ * Motion is CSS-driven, no per-frame sprite swaps:
+ *   idle     → gentle breathing bob
+ *   speaking → livelier bounce + a small equalizer at the chin
+ * Falls back to a role-tinted icon disc if the asset is missing.
  */
 export function RoleAvatar({
   roleKey,
   color,
   size = 40,
   rounded = "rounded-xl",
+  state = "static",
+  className,
 }: {
   roleKey: string;
   color: string;
   size?: number;
   rounded?: string;
+  state?: SpriteState;
+  className?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  const [frame, setFrame] = useState(0);
-  // Optimistic: assume animation frames exist, demote one on load error.
-  const frameOk = useRef<[boolean, boolean]>([true, true]);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
 
-  // Warm the browser cache so the first hover does not flicker.
-  useEffect(() => {
-    (["_blink", "_alt"] as const).forEach((suffix) => {
-      const img = new Image();
-      img.src = `/avatars/${roleKey}${suffix}.webp`;
-    });
-  }, [roleKey]);
-
-  function stopAnim() {
-    if (timer.current) {
-      clearInterval(timer.current);
-      timer.current = null;
-    }
-    setFrame(0);
-  }
-
-  function startAnim() {
-    if (timer.current) return;
-    const stopAt = Date.now() + ANIM_MAX_MS;
-    let step = 0;
-    timer.current = setInterval(() => {
-      if (Date.now() >= stopAt) {
-        stopAnim();
-        return;
-      }
-      const f = FRAME_SEQ[step % FRAME_SEQ.length];
-      step++;
-      const usable = f === 0 || frameOk.current[f - 1];
-      setFrame(usable ? f : 0);
-    }, FRAME_MS);
-  }
-
-  // Native listeners: hover starts the sprite loop, leaving resets it.
-  useEffect(() => {
-    const el = imgRef.current;
-    if (!el) return;
-    el.addEventListener("mouseenter", startAnim);
-    el.addEventListener("mouseleave", stopAnim);
-    return () => {
-      el.removeEventListener("mouseenter", startAnim);
-      el.removeEventListener("mouseleave", stopAnim);
-      if (timer.current) clearInterval(timer.current);
-      timer.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [failed, roleKey]);
+  const motionClass =
+    state === "speaking"
+      ? "sprite-speaking"
+      : state === "idle"
+        ? "sprite-idle"
+        : "";
 
   if (failed) {
     return (
       <span
-        className={`grid shrink-0 place-items-center ${rounded} ring-1 ring-inset ring-white/10`}
+        className={cn(
+          "grid shrink-0 place-items-center",
+          rounded,
+          motionClass,
+          className,
+        )}
         style={{
           width: size,
           height: size,
@@ -141,34 +103,40 @@ export function RoleAvatar({
     );
   }
 
-  const src =
-    frame === 1
-      ? `/avatars/${roleKey}_blink.webp`
-      : frame === 2
-        ? `/avatars/${roleKey}_alt.webp`
-        : `/avatars/${roleKey}.webp`;
+  const eqSize = Math.max(2, Math.round(size * 0.05));
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      ref={imgRef}
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      draggable={false}
-      onError={() => {
-        if (frame === 0) {
-          setFailed(true);
-        } else {
-          // A missing animation frame only disables that frame.
-          frameOk.current[frame - 1] = false;
-          setFrame(0);
-        }
-      }}
-      className={`shrink-0 select-none ${rounded} object-cover ring-1 ring-inset ring-white/10`}
-      style={{ width: size, height: size, imageRendering: "pixelated" }}
-      aria-hidden
-    />
+    <span
+      className={cn("relative inline-block shrink-0", rounded, motionClass, className)}
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`/avatars/${roleKey}.webp`}
+        alt=""
+        width={size}
+        height={size}
+        draggable={false}
+        onError={() => setFailed(true)}
+        className={cn(
+          "h-full w-full select-none object-cover",
+          rounded,
+          "ring-1 ring-inset ring-black/10 dark:ring-white/10",
+        )}
+        style={{ width: size, height: size }}
+        aria-hidden
+      />
+      {state === "speaking" && size >= 40 ? (
+        <span
+          className="absolute bottom-1 left-1/2 flex -translate-x-1/2 items-end gap-[2px] text-white/90"
+          style={{ height: eqSize * 3 }}
+          aria-hidden
+        >
+          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0s" }} />
+          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0.15s" }} />
+          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0.3s" }} />
+        </span>
+      ) : null}
+    </span>
   );
 }
