@@ -9,7 +9,6 @@ import {
   DEFAULT_MODEL,
   SUMMARY_MODEL,
   FALLBACK_MODEL,
-  NO_THINKING,
 } from "@/lib/ai/llm";
 import { modelCost } from "@/lib/ai/model-prices";
 import { buildSystemPrompt, languageRule } from "@/lib/ai/guardrails";
@@ -257,26 +256,8 @@ export async function POST(req: Request) {
       let usedModel = agentModel;
 
       try {
-        // 1) Thinking bubble (cheaper model), completes before the main answer.
-        const think = streamText({
-          model: llm(SUMMARY_MODEL),
-          providerOptions: NO_THINKING,
-          system: `You are ${agent.display_name}. In AT MOST two short first-person sentences, note what you reviewed (including any notes from other agents) and how you will respond. Do NOT answer the question, and do NOT use lists or headings.${langRule}`,
-          messages: ctx,
-          maxOutputTokens: 120,
-          abortSignal: timeout.signal,
-        });
-        for await (const d of think.textStream) {
-          thinking += d;
-          send({ type: "thinking", delta: d });
-        }
-        try {
-          const u = await think.usage;
-          thinkIn += u?.inputTokens ?? 0;
-          thinkOut += u?.outputTokens ?? 0;
-        } catch {}
-
-        // 2) Main answer.
+        // The team answers directly — thinking bubbles were removed (the user
+        // doesn't want to see them), which also saves a model call per reply.
         const planNote =
           mode === "plan"
             ? 'End your reply with a brief "Shall I continue?" and state the next step.'

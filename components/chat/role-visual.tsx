@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import {
   MagnifyingGlass,
   ChartLineUp,
@@ -44,14 +44,14 @@ export function rolePersona(key: string, fallback?: string | null): string {
 export type SpriteState = "static" | "idle" | "speaking";
 
 /**
- * RoleAvatar — a character's framed portrait. The source is a single
- * high-resolution (1024px) illustration with a baked role-colored backdrop, so
- * it stays crisp at every size (16px chip → 200px stage); we render it SMOOTH
- * (no forced pixelation, which was the old "blurry when small" culprit).
+ * RoleAvatar — a character's Street Fighter II-style framed portrait. The
+ * source is a high-resolution 16-bit pixel-art bust with a baked role-colored
+ * backdrop, rendered SMOOTH so it stays crisp at every size (the old "blurry
+ * when small" culprit was forced pixelation on low-res art).
  *
- * Motion is CSS-driven, no per-frame sprite swaps:
- *   idle     → gentle breathing bob
- *   speaking → livelier bounce + a small equalizer at the chin
+ * Two frames per character: `<key>.webp` (neutral) and `<key>_wave.webp` (a
+ * hand gesture). The gesture plays on hover, and on an interval while idle —
+ * the little "el hareketi". Motion (bob/bounce/equalizer) is CSS-driven.
  * Falls back to a role-tinted icon disc if the asset is missing.
  */
 export function RoleAvatar({
@@ -70,6 +70,27 @@ export function RoleAvatar({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const [gesturing, setGesturing] = useState(false);
+  const hovering = useRef(false);
+  const waveOk = useRef(true);
+
+  // Warm the gesture frame so the first hover doesn't flicker.
+  useEffect(() => {
+    const img = new Image();
+    img.src = `/avatars/${roleKey}_wave.webp`;
+  }, [roleKey]);
+
+  // While idle (home stage/party), throw a gesture every few seconds.
+  useEffect(() => {
+    if (state !== "idle") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const iv = setInterval(() => {
+      if (hovering.current || !waveOk.current) return;
+      setGesturing(true);
+      setTimeout(() => setGesturing(false), 1100);
+    }, 4600);
+    return () => clearInterval(iv);
+  }, [state, roleKey]);
 
   const motionClass =
     state === "speaking"
@@ -104,20 +125,37 @@ export function RoleAvatar({
   }
 
   const eqSize = Math.max(2, Math.round(size * 0.05));
+  const showWave = gesturing && waveOk.current;
 
   return (
     <span
       className={cn("relative inline-block shrink-0", rounded, motionClass, className)}
       style={{ width: size, height: size }}
+      onMouseEnter={() => {
+        hovering.current = true;
+        if (waveOk.current) setGesturing(true);
+      }}
+      onMouseLeave={() => {
+        hovering.current = false;
+        setGesturing(false);
+      }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/avatars/${roleKey}.webp`}
+        src={`/avatars/${roleKey}${showWave ? "_wave" : ""}.webp`}
         alt=""
         width={size}
         height={size}
         draggable={false}
-        onError={() => setFailed(true)}
+        onError={() => {
+          // A missing gesture frame just disables the wave; base failing hides.
+          if (showWave) {
+            waveOk.current = false;
+            setGesturing(false);
+          } else {
+            setFailed(true);
+          }
+        }}
         className={cn(
           "h-full w-full select-none object-cover",
           rounded,

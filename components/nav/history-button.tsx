@@ -221,7 +221,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                 onClick={close}
                 aria-hidden
               />
-              <div className="relative flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl">
+              <div className="pixel-panel relative flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden bg-popover p-0">
                 <div className="flex items-center gap-2 border-b border-border p-3">
                   <div className="relative flex-1">
                     <MagnifyingGlass
@@ -275,7 +275,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                       if (items.length === 0) return null;
                       return (
                         <div key={g} className="mb-3">
-                          <div className="px-3 pb-1.5 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          <div className="px-3 pb-1.5 pt-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                             {t(g)}
                           </div>
                           <ul className="space-y-0.5">

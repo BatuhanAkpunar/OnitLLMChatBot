@@ -24,9 +24,6 @@ export function Vision() {
   const { t } = useI18n();
   return (
     <section className="mt-16">
-      <p className="mb-5 text-center font-pixel text-[13px] uppercase tracking-[0.25em] text-muted-foreground">
-        {t("visionKicker")}
-      </p>
       <div className="grid gap-3.5 sm:grid-cols-3">
         {PILLARS.map(({ icon: IconCmp, tint, title, body }, i) => (
           <div

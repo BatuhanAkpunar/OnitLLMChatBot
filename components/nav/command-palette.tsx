@@ -3,18 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import {
   MagnifyingGlass,
   Plus,
-  Moon,
-  SunDim,
-  Translate,
   House,
   ChatCircleDots,
   ArrowElbowDownLeft,
 } from "@phosphor-icons/react";
-import { createProjectAndGetId, setAppLanguage } from "@/app/(app)/actions";
+import { createProjectAndGetId } from "@/app/(app)/actions";
 import { useI18n } from "@/components/i18n-provider";
 import type { ProjectListItem } from "@/components/nav/history-button";
 
@@ -29,13 +25,11 @@ type Cmd = {
 
 /**
  * ⌘K command palette — the power-user spine. Open from anywhere with ⌘K /
- * Ctrl+K: new chat, jump to a conversation, flip theme/language, go home.
- * Keyboard-first; arrow keys + Enter.
+ * Ctrl+K: new chat, jump to a conversation, go home. Keyboard-first.
  */
 export function CommandPalette({ projects = [] }: { projects?: ProjectListItem[] }) {
-  const { lang, t } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
@@ -90,31 +84,8 @@ export function CommandPalette({ projects = [] }: { projects?: ProjectListItem[]
           router.push("/");
         },
       },
-      {
-        id: "theme",
-        label: t("cmdTheme"),
-        hint: resolvedTheme === "dark" ? "→ light" : "→ dark",
-        icon: resolvedTheme === "dark" ? <SunDim size={16} /> : <Moon size={16} />,
-        keywords: "theme tema dark light karanlık",
-        run: () => {
-          setTheme(resolvedTheme === "dark" ? "light" : "dark");
-          close();
-        },
-      },
-      {
-        id: "lang",
-        label: t("cmdLanguage"),
-        hint: lang === "tr" ? "→ EN" : "→ TR",
-        icon: <Translate size={16} />,
-        keywords: "language dil türkçe english",
-        run: async () => {
-          close();
-          await setAppLanguage(lang === "tr" ? "en" : "tr");
-          router.refresh();
-        },
-      },
     ];
-  }, [t, lang, resolvedTheme, router, setTheme]);
+  }, [t, router]);
 
   const q = query.trim().toLowerCase();
   const projHits: Cmd[] = projects

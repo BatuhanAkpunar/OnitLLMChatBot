@@ -137,7 +137,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                 onClick={() => setOpen(false)}
                 aria-hidden
               />
-              <div className="relative max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-popover p-5 text-foreground shadow-2xl">
+              <div className="pixel-panel relative max-h-[90dvh] w-full max-w-sm overflow-y-auto bg-popover p-5 text-foreground">
                 <button
                   type="button"
                   aria-label={t("close")}
@@ -175,7 +175,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
 
                 {/* preferences: aligned label + segmented control rows */}
                 <div className="mt-5 space-y-1">
-                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="mb-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     {t("preferences")}
                   </div>
 
@@ -247,10 +247,10 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
 
                 {/* usage: one quiet strip, not four boxes */}
                 <div className="mt-5">
-                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="mb-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     {t("usage")}
                   </div>
-                  <div className="grid grid-cols-4 divide-x divide-border rounded-xl bg-muted/40 py-2.5">
+                  <div className="grid grid-cols-4 divide-x divide-border rounded-xl border-[1.5px] border-border bg-muted/30 py-2.5">
                     <Stat
                       label={t("statChats")}
                       value={stats ? fmt(stats.chats) : "·"}
@@ -330,7 +330,7 @@ function PrefRow({
 
 function Segmented({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-background/60 p-0.5">
+    <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/60 p-0.5">
       {children}
     </div>
   );
@@ -356,7 +356,7 @@ function SegBtn({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+      className={`pressable inline-flex items-center gap-1 rounded-md px-2 py-1 font-pixel text-[11px] transition-colors disabled:opacity-50 ${
         active
           ? "bg-foreground text-background"
           : "text-muted-foreground hover:text-foreground"

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  CaretRight,
   PaperPlaneRight,
   Stop,
   Copy,
@@ -22,7 +21,6 @@ import {
   RocketLaunch,
   ThumbsUp,
   ThumbsDown,
-  Globe,
   X,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -83,7 +81,6 @@ export type Message = {
   edited_at?: string | null;
 };
 
-const THINKING_PREF_KEY = "onit:thinking-collapsed";
 
 type Mode = "build" | "plan" | "discuss";
 type BoardTab = "tasks" | "decisions" | "rules";
@@ -146,12 +143,9 @@ export function ChatView({
   const [decisions, setDecisions] = useState<ProjectDecision[]>(initialDecisions);
   // One project board (tasks + decisions + rules) instead of three popups.
   const [board, setBoard] = useState<BoardTab | null>(null);
-  const [web, setWeb] = useState(false);
-  const webRef = useRef(false);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [collapseThinking, setCollapseThinking] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -183,10 +177,6 @@ export function ChatView({
         a.handle.toLowerCase().includes(q) || a.display_name.toLowerCase().includes(q),
     );
   }, [mention, agents]);
-
-  useEffect(() => {
-    setCollapseThinking(localStorage.getItem(THINKING_PREF_KEY) === "1");
-  }, []);
 
   // Restore the per-chat mode (covers "discuss", which isn't persisted server-side).
   useEffect(() => {
@@ -272,14 +262,6 @@ export function ChatView({
     setAtBottom(true);
   }
 
-  function toggleThinking() {
-    setCollapseThinking((c) => {
-      const next = !c;
-      localStorage.setItem(THINKING_PREF_KEY, next ? "1" : "0");
-      return next;
-    });
-  }
-
   async function pickMode(next: Mode) {
     if (next === mode) return;
     setMode(next);
@@ -329,7 +311,6 @@ export function ChatView({
           agentKey: key,
           mode: modeRef.current,
           task,
-          web: webRef.current,
           skill: skill || undefined,
         }),
         signal: ac.signal,
@@ -789,13 +770,6 @@ export function ChatView({
     await setMessageFeedback(m.id, next as -1 | 0 | 1);
   }
 
-  function toggleWeb() {
-    setWeb((w) => {
-      webRef.current = !w;
-      return !w;
-    });
-  }
-
   async function decideStatus(
     d: ProjectDecision,
     status: ProjectDecision["status"],
@@ -1063,7 +1037,7 @@ export function ChatView({
                 onClick={() => setBoard(null)}
                 aria-hidden
               />
-              <div className="relative flex max-h-[78vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-popover p-5 shadow-2xl">
+              <div className="pixel-panel relative flex max-h-[78vh] w-full max-w-xl flex-col bg-popover p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="flex items-center gap-2 text-sm font-semibold">
                     <Kanban size={16} weight="bold" className="text-muted-foreground" />
@@ -1364,8 +1338,6 @@ export function ChatView({
                 key={m.id}
                 message={m}
                 agent={m.agent_key ? agentByKey[m.agent_key] : undefined}
-                collapseThinking={collapseThinking}
-                onToggleThinking={toggleThinking}
                 busy={busy}
                 editing={editingId === m.id}
                 editValue={editValue}
@@ -1622,7 +1594,7 @@ export function ChatView({
             type="button"
             onClick={scrollToBottom}
             aria-label={t("scrollBottom")}
-            className="glass absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-muted-foreground shadow-md transition-colors hover:text-foreground"
+            className="pressable absolute bottom-3 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-[1.5px] border-border bg-card text-muted-foreground shadow-md transition-colors hover:text-foreground"
           >
             <ArrowDown size={16} />
           </button>
@@ -1634,7 +1606,7 @@ export function ChatView({
         <div className="mx-auto max-w-3xl">
           <div className="relative">
             {mention.open && filtered.length ? (
-              <div className="glass-strong absolute bottom-full mb-2 w-64 overflow-hidden rounded-xl shadow-lg">
+              <div className="pixel-panel absolute bottom-full mb-2 w-64 overflow-hidden bg-popover p-0">
                 {filtered.map((a, i) => (
                   <button
                     key={a.key}
@@ -1658,7 +1630,7 @@ export function ChatView({
               </div>
             ) : null}
 
-            <div className="glass-strong glass-edge rounded-2xl p-2 shadow-2xl">
+            <div className="pixel-panel p-2">
               <textarea
                 ref={taRef}
                 value={input}
@@ -1671,13 +1643,13 @@ export function ChatView({
               <div className="flex items-center justify-between gap-2 pt-1">
                 <div className="flex items-center gap-1.5">
                   <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
-                  <div className="inline-flex items-center gap-0.5 rounded-lg border border-border/70 bg-background/40 p-0.5">
+                  <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
                     {(["build", "plan", "discuss"] as Mode[]).map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => pickMode(m)}
-                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                        className={`pressable rounded-md px-2.5 py-1 font-pixel text-[12px] tracking-wide transition-colors ${
                           mode === m
                             ? "bg-foreground text-background"
                             : "text-muted-foreground hover:text-foreground"
@@ -1693,20 +1665,6 @@ export function ChatView({
                       </button>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={toggleWeb}
-                    title={web ? t("webOn") : t("webOff")}
-                    aria-pressed={web}
-                    className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
-                      web
-                        ? "border-sky-400/40 text-sky-600 dark:text-sky-300"
-                        : "border-border/70 bg-background/40 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Globe size={13} weight={web ? "fill" : "regular"} />
-                    Web
-                  </button>
                 </div>
                 {busy ? (
                   <button
@@ -1800,8 +1758,6 @@ function splitOptions(content: string): { body: string; options: string[] } {
 function MessageRow({
   message,
   agent,
-  collapseThinking,
-  onToggleThinking,
   busy,
   editing,
   editValue,
@@ -1817,8 +1773,6 @@ function MessageRow({
 }: {
   message: Message;
   agent?: Agent;
-  collapseThinking: boolean;
-  onToggleThinking: () => void;
   busy: boolean;
   editing: boolean;
   editValue: string;
@@ -1944,28 +1898,6 @@ function MessageRow({
             </span>
           ) : null}
         </div>
-
-        {message.thinking ? (
-          <div>
-            <button
-              type="button"
-              onClick={onToggleThinking}
-              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <CaretRight
-                size={12}
-                weight="bold"
-                className={collapseThinking ? "" : "rotate-90"}
-              />
-              {t("thinking")}
-            </button>
-            {!collapseThinking ? (
-              <div className="mt-1 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-xs italic leading-relaxed text-muted-foreground">
-                {message.thinking}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
 
         {waiting ? (
           <span className="inline-flex w-fit items-center rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3.5 text-muted-foreground">
