@@ -35,27 +35,27 @@ export function TopBar({
       className={`z-20 flex h-14 shrink-0 items-center gap-2 px-4 ${
         overlay
           ? "absolute inset-x-0 top-0"
-          : "border-b border-border/60 bg-background/80 backdrop-blur-xl"
+          : "scanlines border-b-2 border-border bg-background/85 backdrop-blur-xl"
       }`}
     >
       <Link
         href="/"
-        className="flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1 transition-opacity hover:opacity-80"
+        className="pressable flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1"
       >
-        <OrbMark size={20} />
+        <OrbMark size={22} />
         <span className="font-pixel text-[17px] tracking-tight">onit</span>
       </Link>
 
       {title ? (
         <>
-          <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
-          <h1 className="min-w-0 truncate text-sm font-medium text-foreground/85">
+          <span className="h-5 w-[2px] shrink-0 bg-border" aria-hidden />
+          <h1 className="min-w-0 truncate font-pixel text-[13px] tracking-tight text-foreground/85">
             {title}
           </h1>
         </>
       ) : null}
 
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {tools}
         <CommandPalette projects={projects} />
         <button
@@ -66,7 +66,7 @@ export function TopBar({
             )
           }
           title="⌘K"
-          className="hidden h-9 items-center gap-1.5 rounded-xl border border-border px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex"
+          className="pressable hidden h-9 items-center gap-1.5 rounded-lg border-[1.5px] border-border bg-card px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex"
         >
           <Command size={13} weight="bold" />
           <span className="font-pixel">K</span>
@@ -75,14 +75,14 @@ export function TopBar({
           <button
             type="submit"
             title={t("newChat")}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="pressable inline-flex h-9 items-center gap-1.5 rounded-lg border-[1.5px] border-foreground bg-primary px-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
           >
-            <Plus size={18} />
-            <span className="hidden sm:inline">{t("newChat")}</span>
+            <Plus size={18} weight="bold" />
+            <span className="hidden font-pixel sm:inline">{t("newChat")}</span>
           </button>
         </form>
         <HistoryButton projects={projects} />
-        <span className="ml-1">
+        <span className="ml-0.5">
           <ProfilePanel user={user} />
         </span>
       </div>

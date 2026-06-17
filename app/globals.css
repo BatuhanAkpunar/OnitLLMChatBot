@@ -761,6 +761,72 @@
   background-size: 18px 18px;
 }
 
+/* --- Onit core orb: lives (float + breathe), with a blinking spark. --- */
+.onit-orb {
+  animation: onit-orb-float 4.2s ease-in-out infinite;
+}
+@keyframes onit-orb-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.04);
+    filter: brightness(1.12);
+  }
+}
+.onit-orb-spark {
+  animation: onit-orb-spark 4.2s ease-in-out infinite;
+}
+@keyframes onit-orb-spark {
+  0%,
+  44%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  48% {
+    opacity: 0.2;
+    transform: scale(0.5);
+  }
+  52% {
+    opacity: 0.95;
+    transform: scale(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onit-orb,
+  .onit-orb-spark {
+    animation: none;
+  }
+}
+
+/* --- Arcade speech bubbles: chunky border + hard offset shadow. --- */
+.bubble-agent {
+  position: relative;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-left: 3px solid var(--bubble-accent, var(--border));
+  border-radius: 13px;
+  box-shadow: 3px 3px 0 0 color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+.dark .bubble-agent {
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.5);
+}
+.bubble-user {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1.5px solid color-mix(in oklab, var(--foreground) 78%, var(--primary));
+  border-radius: 13px;
+  border-bottom-right-radius: 4px;
+  box-shadow: 3px 3px 0 0 color-mix(in oklab, var(--foreground) 26%, transparent);
+}
+.dark .bubble-user {
+  border-color: color-mix(in oklab, #000 55%, var(--primary));
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.5);
+}
+
 /* --- Character sprite motion (single high-res portrait, no frame-swaps). --- */
 .sprite-idle {
   animation: onit-sprite-breathe 3.4s ease-in-out infinite;

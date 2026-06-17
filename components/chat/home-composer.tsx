@@ -9,7 +9,6 @@ import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { DynamicIsland } from "@/components/ui/dynamic-island";
-import { Vision } from "@/components/hero/vision";
 import { Party } from "@/components/hero/party";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
@@ -324,11 +323,7 @@ export function HomeComposer({
         </div>
 
         <div ref={composerRef} className="relative">
-          <div
-            className="onit-border-glow"
-            style={{ "--obg-radius": "16px" } as React.CSSProperties}
-          >
-          <div className="onit-border-glow__inner p-2.5">
+          <div className="pixel-panel p-2.5">
             <textarea
               ref={taRef}
               value={input}
@@ -401,7 +396,6 @@ export function HomeComposer({
                 <PaperPlaneRight size={16} weight="fill" />
               </button>
             </div>
-          </div>
           </div>
 
           {panel ? (
@@ -485,8 +479,6 @@ export function HomeComposer({
             </button>
           ))}
         </div>
-
-        <Vision />
 
         <Party
           agents={agents}
