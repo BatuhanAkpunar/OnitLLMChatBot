@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Display/accent only — the neo-retro "Pixel Atelier" spice. Never body copy.
+// Display/accent only - the neo-retro "Pixel Atelier" spice. Never body copy.
 const pixelifySans = Pixelify_Sans({
   variable: "--font-pixel",
   subsets: ["latin"],
@@ -26,7 +26,7 @@ const pixelifySans = Pixelify_Sans({
 export const metadata: Metadata = {
   title: "Onit AI · Your AI product team",
   description:
-    "Brief a party of AI specialists — Analyst, PM, Designer, QA — in one chat. They plan, debate, and build with you.",
+    "Brief a party of AI specialists - Analyst, PM, Designer, QA - in one chat. They plan, debate, and build with you.",
 };
 
 export default async function RootLayout({

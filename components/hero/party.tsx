@@ -2,17 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CaretDown, PlayCircle } from "@phosphor-icons/react";
-import { OrbMark } from "@/components/brand/orb";
 import { RoleAvatar } from "@/components/chat/role-visual";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
 import type { Agent } from "@/components/chat/chat-view";
 
 /**
- * "Meet the party" — a JRPG character-select. One big framed portrait on stage,
- * a pixel dialog box that types the character's line, and the party lined up
- * below as pressable cards. Auto-advances, click a card to hear anyone, ends on
- * a call to action. Uses the new high-res role portraits.
+ * "Meet the team": a JRPG character select. One big framed portrait on stage,
+ * a pixel dialog box that types the character's line, and the crew lined up
+ * below as pressable cards. Auto advances, click a card to hear anyone. Onit
+ * itself is the coordinator, never shown here as a selectable team member.
  */
 
 const STORY_KEYS: Record<string, I18nKey> = {
@@ -22,8 +21,6 @@ const STORY_KEYS: Record<string, I18nKey> = {
   product_designer: "storyProductDesigner",
   qa: "storyQa",
 };
-
-type Line = { speaker: string; text: string; cta?: boolean };
 
 const TYPE_MS = 18;
 const ADVANCE_MS = 4200;
@@ -42,16 +39,6 @@ export function Party({
     [agents],
   );
 
-  const script: Line[] = useMemo(
-    () => [
-      { speaker: "onit", text: t("storyIntro1") },
-      { speaker: "onit", text: t("storyIntro2") },
-      ...roles.map((a) => ({ speaker: a.key, text: t(STORY_KEYS[a.key]) })),
-      { speaker: "onit", text: t("storyOutro"), cta: true },
-    ],
-    [roles, t],
-  );
-
   const [idx, setIdx] = useState(0);
   const [chars, setChars] = useState(0);
   const hoverRef = useRef(false);
@@ -61,15 +48,16 @@ export function Party({
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }, []);
 
-  const line = script[idx] ?? script[0];
-  const complete = chars >= line.text.length;
+  const active = roles[idx] ?? roles[0];
+  const text = active ? t(STORY_KEYS[active.key]) : "";
+  const complete = chars >= text.length;
 
   useEffect(() => {
-    setChars(reduced.current ? line.text.length : 0);
+    setChars(reduced.current ? text.length : 0);
     if (reduced.current) return;
     const timer = setInterval(() => {
       setChars((c) => {
-        if (c >= line.text.length) {
+        if (c >= text.length) {
           clearInterval(timer);
           return c;
         }
@@ -77,11 +65,11 @@ export function Party({
       });
     }, TYPE_MS);
     return () => clearInterval(timer);
-  }, [idx, line.text]);
+  }, [idx, text]);
 
   const goto = useCallback(
-    (next: number) => setIdx(((next % script.length) + script.length) % script.length),
-    [script.length],
+    (next: number) => setIdx(((next % roles.length) + roles.length) % roles.length),
+    [roles.length],
   );
 
   useEffect(() => {
@@ -93,15 +81,12 @@ export function Party({
   }, [complete, idx, goto]);
 
   function onBoxClick() {
-    if (!complete) setChars(line.text.length);
+    if (!complete) setChars(text.length);
     else goto(idx + 1);
   }
 
-  const speaker = roles.find((a) => a.key === line.speaker);
-  const plateColor = speaker ? `var(--agent-${speaker.color})` : "#a78bfa";
-  const plateName = speaker ? speaker.handle : "Onit";
-
-  if (roles.length < 3) return null;
+  if (roles.length < 3 || !active) return null;
+  const plateColor = `var(--agent-${active.color})`;
 
   return (
     <section
@@ -109,9 +94,9 @@ export function Party({
       onMouseEnter={() => (hoverRef.current = true)}
       onMouseLeave={() => (hoverRef.current = false)}
     >
-      <p className="mb-7 text-center font-pixel text-[13px] uppercase tracking-[0.25em] text-muted-foreground">
-        ▸ {t("storyKicker")}
-      </p>
+      <h2 className="mb-8 text-center font-pixel text-2xl tracking-tight text-foreground sm:text-3xl">
+        {t("storyKicker")}
+      </h2>
 
       <div className="flex flex-col items-stretch gap-5 sm:flex-row sm:items-end sm:gap-6">
         {/* stage portrait */}
@@ -120,20 +105,14 @@ export function Party({
             className="pixel-panel scanlines relative overflow-hidden p-0"
             style={{ width: 188, height: 188 }}
           >
-            {speaker ? (
-              <RoleAvatar
-                key={speaker.key}
-                roleKey={speaker.key}
-                color={speaker.color}
-                size={188}
-                rounded="rounded-[12px]"
-                state="speaking"
-              />
-            ) : (
-              <span className="grid h-full w-full place-items-center bg-gradient-to-b from-violet-500/25 to-indigo-500/10">
-                <OrbMark size={90} />
-              </span>
-            )}
+            <RoleAvatar
+              key={active.key}
+              roleKey={active.key}
+              color={active.color}
+              size={188}
+              rounded="rounded-[12px]"
+              state="idle"
+            />
           </div>
         </div>
 
@@ -156,30 +135,15 @@ export function Party({
               className="absolute -top-3 left-5 rounded-md border-[1.5px] bg-background px-2 py-0.5 font-pixel text-[12px] uppercase tracking-wide"
               style={{ borderColor: plateColor, color: plateColor }}
             >
-              {plateName}
+              {active.handle}
             </span>
 
             <p className="min-h-[68px] font-mono text-[14.5px] leading-relaxed text-foreground/90">
-              {line.text.slice(0, chars)}
+              {text.slice(0, chars)}
               {!complete ? <span className="onit-story-caret text-foreground/50">▌</span> : null}
             </p>
 
-            {complete && line.cta ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCta();
-                }}
-                className="pressable is-shadowed mt-2 inline-flex items-center gap-2 rounded-xl border-[1.5px] border-foreground bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
-                style={{ boxShadow: "3px 3px 0 0 var(--foreground)" }}
-              >
-                <PlayCircle size={16} weight="fill" />
-                {t("storyCta")}
-              </button>
-            ) : null}
-
-            {complete && !line.cta ? (
+            {complete ? (
               <CaretDown
                 size={15}
                 weight="bold"
@@ -191,40 +155,40 @@ export function Party({
         </div>
       </div>
 
-      {/* party row */}
+      {/* the crew row (Onit is the coordinator, not listed here) */}
       <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
-        <button
-          type="button"
-          onClick={() => goto(0)}
-          aria-label="Onit"
-          className={`pressable grid h-12 w-12 place-items-center rounded-xl border-[1.5px] transition-all ${
-            !speaker
-              ? "scale-110 border-violet-400 bg-violet-500/10"
-              : "border-border opacity-55 hover:opacity-100"
-          }`}
-        >
-          <OrbMark size={24} />
-        </button>
         {roles.map((a, i) => {
-          const active = line.speaker === a.key;
+          const isActive = active.key === a.key;
           return (
             <button
               key={a.key}
               type="button"
-              onClick={() => goto(2 + i)}
+              onClick={() => goto(i)}
               aria-label={a.handle}
-              aria-pressed={active}
+              aria-pressed={isActive}
               className={`pressable overflow-hidden rounded-xl border-[1.5px] transition-all ${
-                active
+                isActive
                   ? "scale-110"
                   : "border-border opacity-55 saturate-[0.7] hover:opacity-100 hover:saturate-100"
               }`}
-              style={active ? { borderColor: `var(--agent-${a.color})` } : undefined}
+              style={isActive ? { borderColor: `var(--agent-${a.color})` } : undefined}
             >
               <RoleAvatar roleKey={a.key} color={a.color} size={46} rounded="rounded-[10px]" />
             </button>
           );
         })}
+      </div>
+
+      <div className="mt-8 flex justify-center">
+        <button
+          type="button"
+          onClick={onCta}
+          className="pressable is-shadowed inline-flex items-center gap-2 rounded-xl border-[1.5px] border-foreground bg-primary px-5 py-2.5 font-pixel text-sm text-primary-foreground"
+          style={{ boxShadow: "3px 3px 0 0 var(--foreground)" }}
+        >
+          <PlayCircle size={16} weight="fill" />
+          {t("storyCta")}
+        </button>
       </div>
     </section>
   );

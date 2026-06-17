@@ -174,7 +174,7 @@ const en = {
   heroTitle: "Brief your team.",
   heroAccent: "Ship it.",
   heroTagline:
-    "An analyst, a PM, a designer and QA — all in one chat. You steer; they plan, debate, and build it with you.",
+    "An analyst, a PM, a designer and QA, all in one chat. You steer; they plan, debate, and build it with you.",
   heroBadge: "Your AI product team",
   islandReady: "Party ready",
   islandRouting: "Onit is routing…",
@@ -417,7 +417,7 @@ const tr: Record<I18nKey, string> = {
   heroTitle: "Fikrini söyle.",
   heroAccent: "Ekibin üretsin.",
   heroTagline:
-    "Analist, ürün yöneticisi, tasarımcı ve QA — hepsi tek sohbette. Sen yönlendir; onlar planlasın, tartışsın, üretsin.",
+    "Analist, ürün yöneticisi, tasarımcı ve QA: hepsi tek sohbette. Sen yönlendir, onlar planlasın, tartışsın, üretsin.",
   heroBadge: "Yapay zeka ürün ekibin",
   islandReady: "Takım hazır",
   islandRouting: "Onit yönlendiriyor…",

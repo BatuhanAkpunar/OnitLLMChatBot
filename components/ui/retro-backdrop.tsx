@@ -25,8 +25,8 @@ export function RetroBackdrop({
       )}
       aria-hidden
     >
-      {/* role-colored aurora wash */}
-      <div className="onit-aurora absolute inset-0 opacity-70" />
+      {/* role-colored aurora wash (a touch stronger in light mode) */}
+      <div className="onit-aurora absolute inset-0 opacity-[0.8] dark:opacity-70" />
       {/* paper / CRT dot grid */}
       <div className="dot-grid absolute inset-0 opacity-[0.5] dark:opacity-[0.35]" />
       {/* perspective horizon */}

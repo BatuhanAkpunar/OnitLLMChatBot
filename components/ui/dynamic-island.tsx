@@ -7,7 +7,7 @@ import { OrbMark } from "@/components/brand/orb";
 import { cn } from "@/lib/utils";
 
 /**
- * Dynamic Island — the signature status core (Apple-inspired). A single black
+ * Dynamic Island - the signature status core (Apple-inspired). A single black
  * capsule pinned top-center that morphs its width/height as the team's state
  * changes: routing → thinking → streaming → done. Never a dead spinner; it
  * narrates who is doing what. Lives above the chat, controlled by chat state.

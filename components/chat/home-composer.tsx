@@ -273,7 +273,7 @@ export function HomeComposer({
               {t("welcomeBack", { name: firstName })}
             </span>
           ) : null}
-          <h1 className="text-balance text-[3.4rem] font-extrabold leading-[0.98] tracking-[-0.02em] sm:text-[4.4rem]">
+          <h1 className="font-pixel text-balance text-[2.9rem] leading-[1.05] tracking-tight sm:text-[3.9rem]">
             <span className="text-foreground">{t("heroTitle")}</span>
             <br />
             <span
@@ -287,7 +287,7 @@ export function HomeComposer({
               {t("heroAccent")}
             </span>
           </h1>
-          <p className="mt-6 max-w-lg text-balance text-[16px] leading-relaxed text-muted-foreground">
+          <p className="mt-6 max-w-xl text-balance font-pixel text-[15px] leading-[1.7] text-muted-foreground sm:text-base">
             {t("heroTagline")}
           </p>
         </div>
@@ -304,8 +304,8 @@ export function HomeComposer({
               placeholder={t("askAnything")}
               className="relative z-10 max-h-56 min-h-[52px] w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none"
             />
-            <div className="relative z-10 flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
-              <div className="flex items-center gap-1.5">
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
                 <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
                   {(["build", "plan", "discuss"] as Mode[]).map((m) => (
@@ -313,7 +313,7 @@ export function HomeComposer({
                       key={m}
                       type="button"
                       onClick={() => setMode(m)}
-                      className={`pressable rounded-md px-2.5 py-1 font-pixel text-[12px] tracking-wide transition-colors ${
+                      className={`pressable rounded-md px-2.5 py-1 text-[13px] font-semibold transition-colors ${
                         mode === m
                           ? "bg-foreground text-background"
                           : "text-muted-foreground hover:text-foreground"
@@ -351,7 +351,8 @@ export function HomeComposer({
               key={s.label}
               type="button"
               onClick={() => pickStarter(s.prompt)}
-              className="pressable rounded-lg border-[1.5px] border-border bg-card/70 px-3 py-1.5 text-[13px] font-medium text-foreground/75 backdrop-blur transition-colors hover:border-violet-500/45 hover:bg-violet-500/[0.07] hover:text-foreground"
+              className="pressable is-shadowed rounded-lg border-2 border-foreground/80 bg-card px-3 py-1.5 font-pixel text-[13px] text-foreground/85 transition-colors hover:bg-accent dark:border-border"
+              style={{ boxShadow: "2px 2px 0 0 color-mix(in oklab, var(--foreground) 35%, transparent)" }}
             >
               {s.label}
             </button>

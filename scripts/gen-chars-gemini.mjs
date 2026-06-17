@@ -11,48 +11,48 @@ import { writeFile, mkdir } from "node:fs/promises";
 const KEY = process.env.GEMINI_API_KEY;
 const MODEL = "gemini-2.5-flash-image";
 const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${KEY}`;
-const OUT = "/tmp/chars4";
+const OUT = "/tmp/chars5";
 
 const STYLE =
-  "An authentic Street Fighter II / Capcom CPS arcade CHARACTER-SELECT PORTRAIT, 16-bit pixel art: WARM dramatic arcade lighting with a glowing warm rim light, rich saturated colors, deep contrast, bold black outlines, expressive friendly face, heroic confident energy (like a fighter portrait). Visible chunky pixels and limited retro palette — it must read as a real SNES game portrait, NOT a smooth modern cartoon, NOT vector, NOT 3D. Head-and-shoulders bust, centered, facing 3/4, warm and likable. SOLID FLAT background in {BG} (no gradient, no scene). ABSOLUTELY NO text, no letters, no numbers, no watermark, no logo, no UI, no border.";
+  "An authentic Street Fighter II / Capcom CPS arcade CHARACTER-SELECT PORTRAIT, 16-bit pixel art: WARM dramatic arcade lighting with a glowing warm rim light, rich saturated colors, deep contrast, bold black outlines, expressive friendly face, heroic confident energy (like a fighter portrait). Visible chunky pixels and a limited retro palette: it must read as a real SNES game portrait, NOT a smooth modern cartoon, NOT vector, NOT 3D. CLEARLY TURKISH / Anatolian features (warm Mediterranean skin, dark brown or black hair and brows, expressive dark eyes). FROM THE CHEST UP, centered, facing 3/4, warm and likable. The character's HANDS ARE EMPTY, holding NOTHING, no objects, no props, no tools whatsoever. SOLID FLAT background in {BG} (no gradient, no scene). ABSOLUTELY NO text, no letters, no numbers, no watermark, no logo, no UI, no border.";
 
 const CREW = [
   {
     key: "analyst",
     bg: "warm cobalt blue",
     persona:
-      "Mert, a warm friendly Turkish data analyst man, late 20s, warm olive skin, short dark wavy hair, light stubble, round glasses, casual blue hoodie over a tee, holding a steaming coffee mug — the data nerd who lives in dashboards, curious and likable",
+      "Mert, a warm friendly Turkish data analyst man, 25 years old (young, fresh faced), warm Mediterranean skin, short dark brown wavy hair, clean shaven or very light stubble, round glasses, casual blue tee or hoodie. Empty hands.",
     gesture:
-      "lifting his coffee mug slightly and raising his index finger as if struck by a bright insight, warm grin",
+      "raising his index finger as if struck by a bright insight, warm grin (hands otherwise empty)",
   },
   {
     key: "product_manager",
     bg: "warm violet purple",
     persona:
-      "Elif, a warm confident Turkish product manager woman, early 30s, warm fair skin, shoulder-length auburn hair, smart-casual blazer over a tee, a couple of colorful sticky notes stuck on her shoulder — decisive and friendly",
-    gesture: "giving a warm confident thumbs-up with an encouraging smile",
+      "Elif, a warm confident Turkish product manager woman, 35 years old (poised, experienced), warm olive skin, shoulder-length dark brown hair, smart-casual blazer over a tee. Empty hands.",
+    gesture: "giving a warm confident thumbs-up with an encouraging smile (empty hands)",
   },
   {
     key: "project_manager",
     bg: "warm emerald green",
     persona:
-      "Kerem, a warm dependable Turkish project manager man, early 30s, warm tan skin, neat dark hair with a friendly trimmed mustache, casual plaid shirt, holding a small clipboard with sticky notes — the calm organizer everyone trusts",
-    gesture: "making a friendly OK hand sign near his shoulder with a warm reassuring nod",
+      "Kerem, a warm dependable Turkish project manager man, 35 years old (seasoned, calm), warm tan skin, neat dark hair with a friendly trimmed black mustache, casual collared shirt. Empty hands.",
+    gesture: "making a friendly OK hand sign near his shoulder with a warm nod (empty hands)",
   },
   {
     key: "product_designer",
     bg: "warm hot pink magenta",
     persona:
-      "Zeynep, a warm playful Turkish product designer woman, late 20s, warm brown skin, a cozy beanie over a dark bob with a magenta streak, big over-ear headphones, holding a stylus by a tablet — creative and bubbly",
-    gesture: "flashing a warm cheeky peace / victory sign with a playful wink",
+      "Zeynep, a warm playful Turkish product designer woman, 28 years old, warm light-brown skin, stylish dark bob with a subtle magenta streak, creative spark. Empty hands, no headphones, no props.",
+    gesture: "flashing a warm cheeky peace / victory sign with a playful wink (empty hands)",
   },
   {
     key: "qa",
     bg: "warm teal",
     persona:
-      "Can, a warm sharp-eyed Turkish QA engineer man, late 20s, warm deep-tan skin, short cropped hair and light stubble, comfy teal hoodie, holding a magnifying glass over a tiny cute bug — the friendly bug hunter",
+      "Can, a warm sharp-eyed Turkish QA engineer man, 28 years old, warm deep-tan skin, short cropped dark hair and light stubble, comfy teal tee or hoodie. Empty hands.",
     gesture:
-      "holding up his magnifying glass and pointing forward with a warm confident grin, like he just caught a bug",
+      "pointing forward with one finger and a warm confident grin, like he just spotted something (empty hands)",
   },
 ];
 

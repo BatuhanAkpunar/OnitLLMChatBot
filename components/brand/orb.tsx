@@ -1,5 +1,5 @@
 /**
- * The Onit core — a small living orb that anchors the brand. Micro-animated
+ * The Onit core - a small living orb that anchors the brand. Micro-animated
  * (gentle float, a glow that breathes, and an occasional shine "blink") so it
  * feels alive next to the arcade crew. Pure CSS; set `animated={false}` for
  * fully static spots. Matches the FluidOrb plasma palette.
@@ -26,7 +26,7 @@ export function OrbMark({
             "0 0 14px rgba(56,189,248,0.5), inset 0 -2px 6px rgba(67,56,202,0.55), inset 0 2px 5px rgba(255,255,255,0.45)",
         }}
       />
-      {/* specular highlight that sweeps — the "blink" */}
+      {/* specular highlight that sweeps - the "blink" */}
       <span
         className={`absolute rounded-full bg-white/85 ${animated ? "onit-orb-spark" : ""}`}
         style={{ width: size * 0.18, height: size * 0.18, left: "26%", top: "24%" }}

@@ -256,7 +256,7 @@ export async function POST(req: Request) {
       let usedModel = agentModel;
 
       try {
-        // The team answers directly — thinking bubbles were removed (the user
+        // The team answers directly - thinking bubbles were removed (the user
         // doesn't want to see them), which also saves a model call per reply.
         const planNote =
           mode === "plan"

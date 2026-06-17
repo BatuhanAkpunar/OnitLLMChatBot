@@ -46,7 +46,7 @@ export function RoutingControl({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="pressable inline-flex items-center gap-1.5 rounded-lg border-[1.5px] border-border bg-card px-2.5 py-1.5 font-pixel text-[12px] tracking-wide transition-colors hover:bg-accent"
+        className="pressable inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border-[1.5px] border-foreground/70 bg-card px-2.5 py-1.5 text-[13px] font-semibold transition-colors hover:bg-accent dark:border-border"
         title={t("whoHandles")}
       >
         {pinned.length === 0 ? (
@@ -75,7 +75,7 @@ export function RoutingControl({
 
       {open ? (
         <div
-          className={`pixel-panel absolute left-0 z-30 w-72 overflow-hidden bg-popover p-1 ${
+          className={`pixel-panel absolute left-0 z-30 w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden bg-popover p-1 ${
             up ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >

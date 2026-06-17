@@ -44,13 +44,13 @@ export function rolePersona(key: string, fallback?: string | null): string {
 export type SpriteState = "static" | "idle" | "speaking";
 
 /**
- * RoleAvatar — a character's Street Fighter II-style framed portrait. The
+ * RoleAvatar - a character's Street Fighter II-style framed portrait. The
  * source is a high-resolution 16-bit pixel-art bust with a baked role-colored
  * backdrop, rendered SMOOTH so it stays crisp at every size (the old "blurry
  * when small" culprit was forced pixelation on low-res art).
  *
  * Two frames per character: `<key>.webp` (neutral) and `<key>_wave.webp` (a
- * hand gesture). The ONLY motion is the character doing its own gesture — on
+ * hand gesture). The ONLY motion is the character doing its own gesture - on
  * hover, and on a slow interval while idle or speaking. No bobbing, no
  * equalizer (that read like "dancing to music"). Falls back to a role-tinted
  * icon disc if the asset is missing.
@@ -82,7 +82,7 @@ export function RoleAvatar({
   }, [roleKey]);
 
   // While idle (home party) or speaking (chat), the character throws its own
-  // gesture every few seconds — speaking does it a bit more often.
+  // gesture every few seconds - speaking does it a bit more often.
   useEffect(() => {
     if (state === "static") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;

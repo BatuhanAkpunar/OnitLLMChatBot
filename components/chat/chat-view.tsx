@@ -33,11 +33,6 @@ import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
-import {
-  DynamicIsland,
-  type IslandState,
-  type IslandAgent,
-} from "@/components/ui/dynamic-island";
 import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
@@ -997,41 +992,9 @@ export function ChatView({
     </>
   );
 
-  // Dynamic Island: narrate what the team is doing right now. Derived from the
-  // routing flag and the last streaming agent message.
-  const streamingMsg = [...messages].reverse().find((m) => m.status === "streaming");
-  const islandAgent = streamingMsg?.agent_key
-    ? agents.find((a) => a.key === streamingMsg.agent_key)
-    : null;
-  const island: { state: IslandState; label: string; agent?: IslandAgent | null } =
-    routing
-      ? { state: "routing", label: t("islandRouting") }
-      : streamingMsg
-        ? streamingMsg.content
-          ? {
-              state: "streaming",
-              label: islandAgent
-                ? translate(uiLang, "islandWriting", { name: islandAgent.display_name })
-                : t("islandWorking"),
-              agent: islandAgent
-                ? { key: islandAgent.key, color: islandAgent.color, name: islandAgent.display_name }
-                : null,
-            }
-          : {
-              state: "thinking",
-              label: islandAgent
-                ? translate(uiLang, "islandThinking", { name: islandAgent.display_name })
-                : t("islandWorking"),
-              agent: islandAgent
-                ? { key: islandAgent.key, color: islandAgent.color, name: islandAgent.display_name }
-                : null,
-            }
-        : { state: "hidden", label: "" };
-
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RetroBackdrop grid={false} className="opacity-70" />
-      <DynamicIsland state={island.state} label={island.label} agent={island.agent} />
       <TopBar user={user} projects={projects} title={title} tools={chatTools} />
 
       {board
@@ -1654,7 +1617,7 @@ export function ChatView({
                         key={m}
                         type="button"
                         onClick={() => pickMode(m)}
-                        className={`pressable rounded-md px-2.5 py-1 font-pixel text-[12px] tracking-wide transition-colors ${
+                        className={`pressable rounded-md px-2.5 py-1 text-[13px] font-semibold transition-colors ${
                           mode === m
                             ? "bg-foreground text-background"
                             : "text-muted-foreground hover:text-foreground"
@@ -1905,12 +1868,13 @@ function MessageRow({
         </div>
 
         {waiting ? (
-          <span className="inline-flex w-fit items-center py-1 text-muted-foreground">
+          <span className="thinking-pill scanlines inline-flex w-fit items-center gap-2 rounded-full border-[1.5px] border-border bg-card px-3 py-1.5 text-[12px] text-muted-foreground">
             <span className="typing-dots" aria-hidden>
               <span />
               <span />
               <span />
             </span>
+            <span className="font-pixel tracking-wide">{t("thinking")}</span>
           </span>
         ) : null}
 
