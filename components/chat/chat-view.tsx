@@ -23,7 +23,12 @@ import {
   ThumbsDown,
   X,
 } from "@phosphor-icons/react";
-import { toast } from "sonner";
+// Toasts are intentionally disabled on the chat screen (user preference): the
+// thread stays quiet. This no-op keeps every call site working without churn.
+const toast = Object.assign((..._a: unknown[]) => {}, {
+  success: (..._a: unknown[]) => {},
+  error: (..._a: unknown[]) => {},
+});
 import { Markdown } from "./markdown";
 import { RoutingControl } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
@@ -1821,7 +1826,7 @@ function MessageRow({
     }
     return (
       <div className="group flex flex-col items-end gap-1">
-        <div className="bubble-user max-w-[80%] whitespace-pre-wrap px-4 py-2.5 text-sm">
+        <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-muted px-4 py-2.5 text-[15px] leading-relaxed text-foreground">
           {message.content}
         </div>
         <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -1900,10 +1905,7 @@ function MessageRow({
         </div>
 
         {waiting ? (
-          <span
-            className="bubble-agent inline-flex w-fit items-center px-4 py-3.5 text-muted-foreground"
-            style={{ "--bubble-accent": color } as React.CSSProperties}
-          >
+          <span className="inline-flex w-fit items-center py-1 text-muted-foreground">
             <span className="typing-dots" aria-hidden>
               <span />
               <span />
@@ -1946,10 +1948,7 @@ function MessageRow({
               return (
                 <>
                   {body ? (
-                    <div
-                      className="bubble-agent w-fit max-w-full px-4 py-3 text-sm"
-                      style={{ "--bubble-accent": color } as React.CSSProperties}
-                    >
+                    <div className="max-w-full text-[15px] leading-relaxed text-foreground/90">
                       <Markdown>{body}</Markdown>
                     </div>
                   ) : null}

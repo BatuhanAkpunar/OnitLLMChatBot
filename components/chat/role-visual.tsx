@@ -50,9 +50,10 @@ export type SpriteState = "static" | "idle" | "speaking";
  * when small" culprit was forced pixelation on low-res art).
  *
  * Two frames per character: `<key>.webp` (neutral) and `<key>_wave.webp` (a
- * hand gesture). The gesture plays on hover, and on an interval while idle —
- * the little "el hareketi". Motion (bob/bounce/equalizer) is CSS-driven.
- * Falls back to a role-tinted icon disc if the asset is missing.
+ * hand gesture). The ONLY motion is the character doing its own gesture — on
+ * hover, and on a slow interval while idle or speaking. No bobbing, no
+ * equalizer (that read like "dancing to music"). Falls back to a role-tinted
+ * icon disc if the asset is missing.
  */
 export function RoleAvatar({
   roleKey,
@@ -80,24 +81,19 @@ export function RoleAvatar({
     img.src = `/avatars/${roleKey}_wave.webp`;
   }, [roleKey]);
 
-  // While idle (home stage/party), throw a gesture every few seconds.
+  // While idle (home party) or speaking (chat), the character throws its own
+  // gesture every few seconds — speaking does it a bit more often.
   useEffect(() => {
-    if (state !== "idle") return;
+    if (state === "static") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const period = state === "speaking" ? 2600 : 4600;
     const iv = setInterval(() => {
       if (hovering.current || !waveOk.current) return;
       setGesturing(true);
       setTimeout(() => setGesturing(false), 1100);
-    }, 4600);
+    }, period);
     return () => clearInterval(iv);
   }, [state, roleKey]);
-
-  const motionClass =
-    state === "speaking"
-      ? "sprite-speaking"
-      : state === "idle"
-        ? "sprite-idle"
-        : "";
 
   if (failed) {
     return (
@@ -105,7 +101,6 @@ export function RoleAvatar({
         className={cn(
           "grid shrink-0 place-items-center",
           rounded,
-          motionClass,
           className,
         )}
         style={{
@@ -124,12 +119,11 @@ export function RoleAvatar({
     );
   }
 
-  const eqSize = Math.max(2, Math.round(size * 0.05));
   const showWave = gesturing && waveOk.current;
 
   return (
     <span
-      className={cn("relative inline-block shrink-0", rounded, motionClass, className)}
+      className={cn("relative inline-block shrink-0", rounded, className)}
       style={{ width: size, height: size }}
       onMouseEnter={() => {
         hovering.current = true;
@@ -164,17 +158,6 @@ export function RoleAvatar({
         style={{ width: size, height: size }}
         aria-hidden
       />
-      {state === "speaking" && size >= 40 ? (
-        <span
-          className="absolute bottom-1 left-1/2 flex -translate-x-1/2 items-end gap-[2px] text-white/90"
-          style={{ height: eqSize * 3 }}
-          aria-hidden
-        >
-          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0s" }} />
-          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0.15s" }} />
-          <span className="eq-bar" style={{ width: eqSize, animationDelay: "0.3s" }} />
-        </span>
-      ) : null}
     </span>
   );
 }

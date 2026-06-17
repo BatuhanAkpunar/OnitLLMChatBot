@@ -71,7 +71,6 @@ export function DevCredit() {
           width={24}
           height={24}
           className="h-6 w-6 select-none rounded-[5px] object-cover"
-          style={{ imageRendering: "pixelated" }}
           draggable={false}
         />
         <span className="hidden text-[12px] font-medium text-muted-foreground sm:inline">
@@ -89,7 +88,7 @@ export function DevCredit() {
               width={52}
               height={52}
               className="h-13 w-13 shrink-0 select-none rounded-lg object-cover"
-              style={{ imageRendering: "pixelated", width: 52, height: 52 }}
+              style={{ width: 52, height: 52 }}
               draggable={false}
             />
             <div className="min-w-0">

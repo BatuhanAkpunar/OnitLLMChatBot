@@ -8,8 +8,8 @@ import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
-import { DynamicIsland } from "@/components/ui/dynamic-island";
 import { Party } from "@/components/hero/party";
+import { RoutingControl } from "./routing-control";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
@@ -115,29 +115,8 @@ export function HomeComposer({
   }
 
   function onChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value;
-    setInput(val);
+    setInput(e.target.value);
     autosize();
-
-    const caret = e.target.selectionStart ?? val.length;
-    const before = val.slice(0, caret);
-    const at = before.match(/(?:^|\s)@(\w*)$/);
-    const slash = before.match(/^\/(\w*)$/);
-    if (at) {
-      setPanel("agents");
-      setPanelSource("typed");
-      setFilter(at[1]);
-      setTokenStart(caret - at[1].length - 1);
-      setHighlight(0);
-    } else if (slash) {
-      setPanel("modes");
-      setPanelSource("typed");
-      setFilter(slash[1]);
-      setTokenStart(0);
-      setHighlight(0);
-    } else if (panel) {
-      closePanel();
-    }
   }
 
   function selectAgent(a: Agent) {
@@ -285,30 +264,21 @@ export function HomeComposer({
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden px-6 py-16">
-      <RetroBackdrop scanlines />
-
-      {!authed ? (
-        <DynamicIsland state="ready" label={t("islandReady")} />
-      ) : null}
+      <RetroBackdrop grid={false} />
 
       <div className="relative z-10 w-full max-w-2xl">
-        <div className="mb-8 flex flex-col items-center text-center">
+        <div className="mb-9 flex flex-col items-center text-center">
           {firstName ? (
-            <span className="mb-3 font-pixel text-xs uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
+            <span className="mb-4 font-pixel text-xs uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
               {t("welcomeBack", { name: firstName })}
             </span>
-          ) : (
-            <span className="mb-4 inline-flex items-center gap-2 rounded-full border-[1.5px] border-border bg-card/70 px-3 py-1 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
-              <span className="dyn-island-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {t("heroBadge")}
-            </span>
-          )}
-          <h1 className="font-pixel text-balance text-[2.9rem] leading-[1.02] tracking-tight sm:text-[3.7rem]">
-            <span className="shiny-text">{t("heroTitle")}</span>
+          ) : null}
+          <h1 className="text-balance text-[3.4rem] font-extrabold leading-[0.98] tracking-[-0.02em] sm:text-[4.4rem]">
+            <span className="text-foreground">{t("heroTitle")}</span>
             <br />
             <span
               style={{
-                backgroundImage: "linear-gradient(95deg, #a78bfa, #38bdf8, #34d399)",
+                backgroundImage: "linear-gradient(100deg, #8b5cf6, #38bdf8 55%, #34d399)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
@@ -317,7 +287,7 @@ export function HomeComposer({
               {t("heroAccent")}
             </span>
           </h1>
-          <p className="mt-5 max-w-xl text-balance text-[15px] font-medium leading-relaxed text-foreground/70">
+          <p className="mt-6 max-w-lg text-balance text-[16px] leading-relaxed text-muted-foreground">
             {t("heroTagline")}
           </p>
         </div>
@@ -336,55 +306,29 @@ export function HomeComposer({
             />
             <div className="relative z-10 flex items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => togglePanel("agents")}
-                  aria-expanded={panel === "agents"}
-                  className={`pressable inline-flex items-center gap-1.5 rounded-lg border-[1.5px] px-2 py-1.5 text-[13px] font-semibold transition-colors ${
-                    panel === "agents"
-                      ? "border-violet-500/60 bg-violet-500/10 text-foreground"
-                      : "border-border text-foreground/70 hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-pixel text-[11px]">
-                    @
-                  </kbd>
-                  {pinnedAgents.length === 0 ? (
-                    t("agentsChip")
-                  ) : (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="flex -space-x-1.5">
-                        {pinnedAgents.slice(0, 3).map((a) => (
-                          <RoleAvatar
-                            key={a.key}
-                            roleKey={a.key}
-                            color={a.color}
-                            size={16}
-                            rounded="rounded-full"
-                          />
-                        ))}
-                      </span>
-                      {pinnedAgents.length === 1
-                        ? stripAt(pinnedAgents[0].handle)
-                        : t("nAgents", { n: pinnedAgents.length })}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => togglePanel("modes")}
-                  aria-expanded={panel === "modes"}
-                  className={`pressable inline-flex items-center gap-1.5 rounded-lg border-[1.5px] px-2 py-1.5 text-[13px] font-semibold transition-colors ${
-                    panel === "modes"
-                      ? "border-violet-500/60 bg-violet-500/10 text-foreground"
-                      : "border-border text-foreground/70 hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  <kbd className="grid h-[18px] min-w-[18px] place-items-center rounded border border-border bg-background px-0.5 font-pixel text-[11px]">
-                    /
-                  </kbd>
-                  {t(MODE_DEFS.find((m) => m.key === mode)?.label ?? "modeBuild")}
-                </button>
+                <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
+                <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
+                  {(["build", "plan", "discuss"] as Mode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMode(m)}
+                      className={`pressable rounded-md px-2.5 py-1 font-pixel text-[12px] tracking-wide transition-colors ${
+                        mode === m
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {t(
+                        m === "build"
+                          ? "modeBuild"
+                          : m === "plan"
+                            ? "modePlan"
+                            : "modeDiscuss",
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
               <button
                 type="button"
@@ -398,72 +342,6 @@ export function HomeComposer({
             </div>
           </div>
 
-          {panel ? (
-            <div className="pixel-panel absolute left-0 right-0 top-full z-30 mt-3 overflow-hidden bg-popover p-0">
-              <div className="border-b border-border px-3.5 py-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                {panel === "agents" ? t("panelAgents") : t("panelModes")}
-              </div>
-              {panel === "agents" ? (
-                filteredAgents.length === 0 ? (
-                  <div className="px-3.5 py-3 text-xs text-muted-foreground">
-                    {t("noMatchingAgent")}
-                  </div>
-                ) : (
-                  filteredAgents.map((a, i) => (
-                    <button
-                      key={a.key}
-                      type="button"
-                      onMouseEnter={() => setHighlight(i)}
-                      onClick={() => selectAgent(a)}
-                      className={`flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors ${
-                        i === highlight ? "bg-accent" : ""
-                      }`}
-                    >
-                      <RoleAvatar roleKey={a.key} color={a.color} size={38} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">{a.handle}</span>
-                        <span className="block truncate text-[13px] text-foreground/65">
-                          {rolePersona(a.key, a.description)}
-                        </span>
-                      </span>
-                      {pinned.includes(a.key) ? (
-                        <Check size={14} weight="bold" className="shrink-0 text-violet-500 dark:text-violet-300" />
-                      ) : null}
-                    </button>
-                  ))
-                )
-              ) : filteredModes.length === 0 ? (
-                <div className="px-3.5 py-3 text-xs text-muted-foreground">
-                  {t("noMatchingMode")}
-                </div>
-              ) : (
-                filteredModes.map((m, i) => (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onMouseEnter={() => setHighlight(i)}
-                    onClick={() => selectMode(m.key)}
-                    className={`flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors ${
-                      i === highlight ? "bg-accent" : ""
-                    }`}
-                  >
-                    <kbd className="grid h-6 w-6 shrink-0 place-items-center rounded-md border border-border bg-background font-mono text-[11px]">
-                      /
-                    </kbd>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{t(m.label)}</span>
-                      <span className="block truncate text-[13px] text-foreground/65">
-                        {t(m.tip)}
-                      </span>
-                    </span>
-                    {mode === m.key ? (
-                      <Check size={14} weight="bold" className="shrink-0 text-violet-500 dark:text-violet-300" />
-                    ) : null}
-                  </button>
-                ))
-              )}
-            </div>
-          ) : null}
         </div>
 
         {/* Quick quests: show what the team can do, one tap to begin. */}

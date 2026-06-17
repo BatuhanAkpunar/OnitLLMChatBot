@@ -171,10 +171,10 @@ const en = {
 
   // home / landing
   welcomeBack: "Welcome back, {name}",
-  heroTitle: "Your AI product team.",
-  heroAccent: "On it.",
+  heroTitle: "Brief your team.",
+  heroAccent: "Ship it.",
   heroTagline:
-    "Most AI tools answer questions. Onit owns the work: it plans, debates, and builds with you.",
+    "An analyst, a PM, a designer and QA — all in one chat. You steer; they plan, debate, and build it with you.",
   heroBadge: "Your AI product team",
   islandReady: "Party ready",
   islandRouting: "Onit is routing…",
@@ -414,10 +414,10 @@ const tr: Record<I18nKey, string> = {
   msgUpdateFailed: "Düzenleme kaydedilemedi.",
 
   welcomeBack: "Tekrar hoş geldin, {name}",
-  heroTitle: "Yapay zekâ ürün ekibin.",
-  heroAccent: "On it.",
+  heroTitle: "Fikrini söyle.",
+  heroAccent: "Ekibin üretsin.",
   heroTagline:
-    "Çoğu yapay zeka aracı soruları yanıtlar. Onit işi sahiplenir: seninle planlar, tartışır, üretir.",
+    "Analist, ürün yöneticisi, tasarımcı ve QA — hepsi tek sohbette. Sen yönlendir; onlar planlasın, tartışsın, üretsin.",
   heroBadge: "Yapay zeka ürün ekibin",
   islandReady: "Takım hazır",
   islandRouting: "Onit yönlendiriyor…",

@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Command } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import { OrbMark } from "@/components/brand/orb";
 import { ProfilePanel } from "@/components/profile/profile-panel";
 import { HistoryButton, type ProjectListItem } from "./history-button";
-import { CommandPalette } from "./command-palette";
 import { createProject } from "@/app/(app)/actions";
 import { useI18n } from "@/components/i18n-provider";
 import type { CurrentUser } from "@/lib/auth/user";
@@ -57,20 +56,6 @@ export function TopBar({
 
       <div className="ml-auto flex shrink-0 items-center gap-1.5">
         {tools}
-        <CommandPalette projects={projects} />
-        <button
-          type="button"
-          onClick={() =>
-            window.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "k", metaKey: true }),
-            )
-          }
-          title="⌘K"
-          className="pressable hidden h-9 items-center gap-1.5 rounded-lg border-[1.5px] border-border bg-card px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:inline-flex"
-        >
-          <Command size={13} weight="bold" />
-          <span className="font-pixel">K</span>
-        </button>
         <form action={createProject}>
           <button
             type="submit"
