@@ -30,7 +30,7 @@ const toast = Object.assign((..._a: unknown[]) => {}, {
   error: (..._a: unknown[]) => {},
 });
 import { Markdown } from "./markdown";
-import { RoutingControl } from "./routing-control";
+import { RoutingControl, AgentMenu } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { getStarters } from "./starters";
@@ -124,7 +124,20 @@ export function ChatView({
   );
   const [agentKey, setAgentKey] = useState(defaultAgentKey);
   const [pinned, setPinned] = useState<string[]>([]);
+  const [agentOpen, setAgentOpen] = useState(false);
+  const composerBoxRef = useRef<HTMLDivElement>(null);
   const [routing, setRouting] = useState(false);
+
+  useEffect(() => {
+    if (!agentOpen) return;
+    const close = (e: MouseEvent) => {
+      if (composerBoxRef.current && !composerBoxRef.current.contains(e.target as Node)) {
+        setAgentOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [agentOpen]);
   const [synthesizing, setSynthesizing] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<{
     tasks: { role: string; task: string; done: string; skill: string }[];
@@ -1598,7 +1611,7 @@ export function ChatView({
               </div>
             ) : null}
 
-            <div className="pixel-panel p-2">
+            <div ref={composerBoxRef} className="pixel-panel p-2">
               <textarea
                 ref={taRef}
                 value={input}
@@ -1609,8 +1622,13 @@ export function ChatView({
                 className="max-h-48 min-h-[28px] w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none"
               />
               <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <RoutingControl
+                    agents={agents}
+                    pinned={pinned}
+                    open={agentOpen}
+                    onToggle={() => setAgentOpen((o) => !o)}
+                  />
                   <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
                     {(["build", "plan", "discuss"] as Mode[]).map((m) => (
                       <button
@@ -1655,6 +1673,9 @@ export function ChatView({
                   </button>
                 )}
               </div>
+              {agentOpen ? (
+                <AgentMenu agents={agents} pinned={pinned} onChange={setPinned} />
+              ) : null}
             </div>
           </div>
         </div>

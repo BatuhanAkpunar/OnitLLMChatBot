@@ -9,7 +9,7 @@ import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { Party } from "@/components/hero/party";
-import { RoutingControl } from "./routing-control";
+import { RoutingControl, AgentMenu } from "./routing-control";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
@@ -47,6 +47,7 @@ export function HomeComposer({
   const [mode, setMode] = useState<Mode>("build");
   const [busy, setBusy] = useState(false);
   const [pinned, setPinned] = useState<string[]>([]);
+  const [agentOpen, setAgentOpen] = useState(false);
   // Full-screen handoff overlay: sign-in redirect, post-login resume, or
   // project creation. Without it those gaps look like a broken, dead page.
   const [transition, setTransition] = useState<{
@@ -210,16 +211,15 @@ export function HomeComposer({
   }, [authed]);
 
   useEffect(() => {
-    if (!panel) return;
+    if (!agentOpen) return;
     const close = (e: MouseEvent) => {
       if (composerRef.current && !composerRef.current.contains(e.target as Node)) {
-        closePanel();
+        setAgentOpen(false);
       }
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panel]);
+  }, [agentOpen]);
 
   function pickStarter(prompt: string) {
     closePanel();
@@ -306,7 +306,12 @@ export function HomeComposer({
             />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} up={false} />
+                <RoutingControl
+                  agents={agents}
+                  pinned={pinned}
+                  open={agentOpen}
+                  onToggle={() => setAgentOpen((o) => !o)}
+                />
                 <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
                   {(["build", "plan", "discuss"] as Mode[]).map((m) => (
                     <button
@@ -340,6 +345,9 @@ export function HomeComposer({
                 <PaperPlaneRight size={16} weight="fill" />
               </button>
             </div>
+            {agentOpen ? (
+              <AgentMenu agents={agents} pinned={pinned} onChange={setPinned} />
+            ) : null}
           </div>
 
         </div>
