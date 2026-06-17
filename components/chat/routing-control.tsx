@@ -41,8 +41,11 @@ export function RoutingControl({
     );
   }
 
+  // No `relative` here on purpose: the dropdown then anchors to the composer
+  // card (the nearest positioned ancestor, .pixel-panel), so `left-0 right-0`
+  // makes it span the full composer width and sit flush against it.
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -75,8 +78,8 @@ export function RoutingControl({
 
       {open ? (
         <div
-          className={`pixel-panel absolute left-0 z-30 w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden bg-popover p-1 ${
-            up ? "bottom-full mb-2" : "top-full mt-2"
+          className={`pixel-panel absolute inset-x-0 z-30 overflow-hidden bg-popover p-1 ${
+            up ? "bottom-full mb-1.5" : "top-full mt-1.5"
           }`}
         >
           <button

@@ -306,7 +306,7 @@ export function HomeComposer({
             />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 px-0.5 pb-0.5 pt-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} />
+                <RoutingControl agents={agents} pinned={pinned} onChange={setPinned} up={false} />
                 <div className="inline-flex items-center gap-0.5 rounded-lg border-[1.5px] border-border bg-background/50 p-0.5">
                   {(["build", "plan", "discuss"] as Mode[]).map((m) => (
                     <button
