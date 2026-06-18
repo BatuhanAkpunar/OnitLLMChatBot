@@ -44,6 +44,12 @@ const WHY_POINTS: { icon: Icon; title: I18nKey; body: I18nKey }[] = [
   { icon: Brain, title: "why3Title", body: "why3Body" },
 ];
 
+const EXAMPLES: { label: I18nKey; prompt: I18nKey }[] = [
+  { label: "ex1Label", prompt: "ex1Prompt" },
+  { label: "ex2Label", prompt: "ex2Prompt" },
+  { label: "ex3Label", prompt: "ex3Prompt" },
+];
+
 function stripAt(handle: string) {
   return handle.startsWith("@") ? handle.slice(1) : handle;
 }
@@ -385,6 +391,27 @@ export function HomeComposer({
             </button>
           ))}
         </div>
+
+        {/* Onboarding: one tap fills a full example brief, ready to send. */}
+        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[12.5px] text-muted-foreground">
+          <span>{t("exampleLead")}</span>
+          {EXAMPLES.map((ex, i) => (
+            <span key={ex.label} className="inline-flex items-center gap-2">
+              {i > 0 ? (
+                <span aria-hidden className="text-muted-foreground/40">
+                  ·
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => pickStarter(t(ex.prompt))}
+                className="font-medium text-foreground/80 underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground"
+              >
+                {t(ex.label)}
+              </button>
+            </span>
+          ))}
+        </p>
 
         {/* How it works */}
         <section className="mt-20">

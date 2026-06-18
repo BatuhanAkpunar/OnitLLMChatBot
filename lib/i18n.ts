@@ -191,6 +191,16 @@ const en = {
   why3Title: "It remembers your project",
   why3Body:
     "Decisions, tasks and rules stay with the project and shape every answer.",
+  exampleLead: "New here? Try:",
+  ex1Label: "Meal-prep app",
+  ex1Prompt:
+    "A meal-prep app that plans a week of dinners for busy parents and builds the grocery list.",
+  ex2Label: "Habit tracker",
+  ex2Prompt:
+    "A habit tracker that nudges you at the right moment instead of just logging streaks.",
+  ex3Label: "Tutor marketplace",
+  ex3Prompt:
+    "A marketplace that matches high-school students with affordable online tutors.",
   askAnything: "Ask your team anything…",
   agentsChip: "agents",
   nAgents: "{n} agents",
@@ -419,6 +429,16 @@ const tr: Record<I18nKey, string> = {
   why3Title: "Projeni hatırlar",
   why3Body:
     "Kararlar, görevler ve kurallar projeyle kalır ve her yanıtı şekillendirir.",
+  exampleLead: "Buralı değil misin? Şunu dene:",
+  ex1Label: "Yemek planlama",
+  ex1Prompt:
+    "Yoğun ebeveynler için bir haftalık akşam yemeklerini planlayan ve market listesi çıkaran bir uygulama.",
+  ex2Label: "Alışkanlık takibi",
+  ex2Prompt:
+    "Sadece seri tutmak yerine doğru anda dürten bir alışkanlık takip uygulaması.",
+  ex3Label: "Özel ders pazarı",
+  ex3Prompt:
+    "Lise öğrencilerini uygun fiyatlı online özel öğretmenlerle eşleştiren bir pazar yeri.",
   askAnything: "Ekibine ne istersen sor…",
   agentsChip: "ajanlar",
   nAgents: "{n} ajan",

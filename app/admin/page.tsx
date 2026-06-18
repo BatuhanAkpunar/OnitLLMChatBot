@@ -1,8 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-
-// Rough gpt-4o-mini pricing (USD per 1M tokens) for the estimate.
-const PRICE_IN = 0.15;
-const PRICE_OUT = 0.6;
+import { modelCost } from "@/lib/ai/model-prices";
 
 function startOfMonthISO() {
   const d = new Date();
@@ -11,6 +8,10 @@ function startOfMonthISO() {
 
 function fmt(n: number) {
   return n.toLocaleString("en-US");
+}
+
+function pct(n: number) {
+  return `${Math.round(n * 100)}%`;
 }
 
 // Compute time-dependent values outside the component render to keep it pure.
@@ -33,20 +34,47 @@ export default async function AdminDashboard() {
   const admin = createAdminClient();
   const win = sevenDayWindow();
 
-  const [users, projects, usage, recentMsgs] = await Promise.all([
-    admin.from("profiles").select("id", { count: "exact", head: true }),
-    admin.from("projects").select("id", { count: "exact", head: true }),
-    admin
-      .from("usage_logs")
-      .select("prompt_tokens, completion_tokens")
-      .gte("created_at", startOfMonthISO()),
-    admin.from("messages").select("created_at").gte("created_at", win.since),
-  ]);
+  const [users, projectRows, active7dRows, answers, usage, recentMsgs] =
+    await Promise.all([
+      admin.from("profiles").select("id", { count: "exact", head: true }),
+      admin.from("projects").select("owner_id"),
+      admin
+        .from("projects")
+        .select("owner_id")
+        .gte("last_message_at", win.since),
+      admin
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "agent")
+        .eq("status", "complete"),
+      admin
+        .from("usage_logs")
+        .select("model, prompt_tokens, completion_tokens")
+        .gte("created_at", startOfMonthISO()),
+      admin.from("messages").select("created_at").gte("created_at", win.since),
+    ]);
 
-  const promptTokens = (usage.data ?? []).reduce((s, u) => s + (u.prompt_tokens ?? 0), 0);
-  const completionTokens = (usage.data ?? []).reduce((s, u) => s + (u.completion_tokens ?? 0), 0);
-  const totalTokens = promptTokens + completionTokens;
-  const estCost = (promptTokens / 1e6) * PRICE_IN + (completionTokens / 1e6) * PRICE_OUT;
+  const totalUsers = users.count ?? 0;
+  const totalProjects = (projectRows.data ?? []).length;
+  const activatedUsers = new Set(
+    (projectRows.data ?? []).map((p) => p.owner_id),
+  ).size;
+  const activationRate = totalUsers ? activatedUsers / totalUsers : 0;
+  const active7d = new Set(
+    (active7dRows.data ?? []).map((p) => p.owner_id),
+  ).size;
+  const answersDelivered = answers.count ?? 0;
+
+  const usageRows = usage.data ?? [];
+  const totalTokens = usageRows.reduce(
+    (s, u) => s + (u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0),
+    0,
+  );
+  const estCost = usageRows.reduce(
+    (s, u) =>
+      s + modelCost(u.model ?? "", u.prompt_tokens ?? 0, u.completion_tokens ?? 0),
+    0,
+  );
 
   const days = win.days;
   for (const m of recentMsgs.data ?? []) {
@@ -55,9 +83,16 @@ export default async function AdminDashboard() {
   }
   const maxCount = Math.max(1, ...days.map((d) => d.count));
 
-  const cards = [
-    { label: "Total users", value: fmt(users.count ?? 0) },
-    { label: "Total projects", value: fmt(projects.count ?? 0) },
+  const cards: { label: string; value: string; sub?: string }[] = [
+    { label: "Total users", value: fmt(totalUsers) },
+    {
+      label: "Activated users",
+      value: fmt(activatedUsers),
+      sub: `${pct(activationRate)} of users created a project`,
+    },
+    { label: "Active users · 7d", value: fmt(active7d) },
+    { label: "Total projects", value: fmt(totalProjects) },
+    { label: "Answers delivered", value: fmt(answersDelivered) },
     { label: "Tokens this month", value: fmt(totalTokens) },
     { label: "Est. cost this month", value: `$${estCost.toFixed(2)}` },
   ];
@@ -67,7 +102,8 @@ export default async function AdminDashboard() {
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Overview of usage across the platform.
+          Activation and usage across the platform. Activation = a user who
+          created at least one project.
         </p>
       </div>
 
@@ -76,6 +112,9 @@ export default async function AdminDashboard() {
           <div key={c.label} className="rounded-xl border border-border bg-card p-4">
             <div className="text-xs text-muted-foreground">{c.label}</div>
             <div className="mt-1.5 text-2xl font-semibold tracking-tight">{c.value}</div>
+            {c.sub ? (
+              <div className="mt-1 text-[11px] text-muted-foreground">{c.sub}</div>
+            ) : null}
           </div>
         ))}
       </div>
