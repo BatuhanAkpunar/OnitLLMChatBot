@@ -3,12 +3,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------------------------------------------------------------------------
-   Design tokens — premium, restrained (Linear / Notion / Raycast inspired)
+   Design tokens - premium, restrained (Linear / Notion / Raycast inspired)
 --------------------------------------------------------------------------- */
 :root {
   --radius: 0.625rem;
 
-  /* "Arcade Daylight" — warm paper, crisp ink, role colors as the only sat. */
+  /* "Arcade Daylight" - warm paper, crisp ink, role colors as the only sat. */
   --background: #faf9f5;
   --foreground: #1a1a22;
 
@@ -58,7 +58,7 @@
 }
 
 .dark {
-  /* "CRT Midnight" — deep blue-black, phosphor text, glowing role accents. */
+  /* "CRT Midnight" - deep blue-black, phosphor text, glowing role accents. */
   --background: #0a0a12;
   --foreground: #ededf2;
 
@@ -304,7 +304,7 @@
 }
 
 /* ---------------------------------------------------------------------------
-   BorderGlow — subtle, always-on animated composer border
+   BorderGlow - subtle, always-on animated composer border
 --------------------------------------------------------------------------- */
 @keyframes onit-border-spin {
   to {
@@ -624,12 +624,12 @@
 }
 
 /* ===========================================================================
-   PIXEL ATELIER — neo-retro design system (R14)
+   PIXEL ATELIER - neo-retro design system (R14)
    A 16-bit arcade soul in modern, premium clothing. Light = "Arcade Daylight",
    dark = "CRT Midnight". Retro lives in the chrome, never in the legibility.
    =========================================================================== */
 
-/* Pixel display font — accents only (word-marks, name plates, kickers). */
+/* Pixel display font - accents only (word-marks, name plates, kickers). */
 .font-pixel {
   font-family: var(--font-pixel), ui-monospace, monospace;
   letter-spacing: 0.01em;
