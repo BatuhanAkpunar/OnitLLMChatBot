@@ -5,6 +5,15 @@ ai-driven-ab-testing, builder-ai, claude-team-os. Each item lists where the idea
 came from and why it fits Onit. Priorities: P1 = high impact / low effort,
 P2 = high impact / medium effort, P3 = nice to have.
 
+## Decisions (June 2026)
+
+- **Core team = 5 product roles**: Analyst, Product Manager, Designer, Project
+  Manager, QA. A short-lived Growth and Red Team experiment was reverted; the
+  Developer role was retired. Premortem and red-team are kept as team behaviours
+  (Product OS prompt layer + the premortem method), not as standing roles.
+- **LLM = Gemini, single model** (`gemini-3.5-flash`) for chat, summaries and
+  fallback. Runs free on the owner's Google AI Studio key; no other provider.
+
 ## P1: quick wins
 
 - [ ] **Project Team Rules (constitution)** (claude-team-os `CLAUDE.md`)

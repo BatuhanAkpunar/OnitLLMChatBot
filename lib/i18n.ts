@@ -230,17 +230,11 @@ const en = {
     "I turn ideas into requirements and user stories. Nothing vague gets past me.",
   storyProductManager:
     "I own the roadmap. I decide what we build next, and I can tell you why.",
-  storyDeveloper:
-    "I design the architecture and write the code. Reviewed, tested, shipped.",
   storyProjectManager:
     "I plan the sprints and clear the blockers. We ship on time.",
   storyProductDesigner:
     "I map the flows and design interfaces people actually enjoy.",
   storyQa: "I break things before your users do. Bugs fear me.",
-  storyGrowth:
-    "I find your first real users and the loop that brings the next thousand.",
-  storyRedTeam:
-    "I try to break your idea now, so the market cannot break it later.",
   storyOutro: "One brief is enough. Write it. We're on it.",
 
   signinTitle: "Taking you to sign in",
@@ -263,10 +257,6 @@ const en = {
     "Design the cheapest probe to test this assumption before we build: ",
   starterSprintLabel: "Plan a sprint",
   starterSprintPrompt: "Plan a two week sprint for ",
-  starterGtmLabel: "Plan a go-to-market",
-  starterGtmPrompt: "Plan how to reach the first 100 users for ",
-  starterPremortemLabel: "Run a premortem",
-  starterPremortemPrompt: "Run a premortem and red-team this idea: ",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -476,17 +466,11 @@ const tr: Record<I18nKey, string> = {
     "Fikirleri gereksinimlere ve kullanıcı hikayelerine çeviririm. Benden muğlak iş geçmez.",
   storyProductManager:
     "Yol haritası bende. Sırada ne üreteceğimize karar verir, nedenini de söylerim.",
-  storyDeveloper:
-    "Mimariyi kurar, kodu yazarım. İncelenmiş, test edilmiş, yayında.",
   storyProjectManager:
     "Sprintleri planlar, engelleri kaldırırım. Zamanında teslim ederiz.",
   storyProductDesigner:
     "Akışları haritalar, insanların gerçekten sevdiği arayüzler tasarlarım.",
   storyQa: "Kullanıcıların bulmadan önce ben bozarım. Buglar benden korkar.",
-  storyGrowth:
-    "İlk gerçek kullanıcılarını ve sonraki bini getirecek döngüyü ben bulurum.",
-  storyRedTeam:
-    "Fikrini şimdi ben kırmaya çalışırım ki pazar sonra kıramasın.",
   storyOutro: "Tek bir brief yeter. Yaz. Gerisi bizde.",
 
   signinTitle: "Girişe yönlendiriliyorsun",
@@ -509,10 +493,6 @@ const tr: Record<I18nKey, string> = {
     "Üretmeden önce şu varsayımı test edecek en ucuz deneyi tasarla: ",
   starterSprintLabel: "Sprint planla",
   starterSprintPrompt: "Şunun için iki haftalık bir sprint planla: ",
-  starterGtmLabel: "Pazara çıkış planla",
-  starterGtmPrompt: "Şunun için ilk 100 kullanıcıya nasıl ulaşırız planla: ",
-  starterPremortemLabel: "Premortem çalıştır",
-  starterPremortemPrompt: "Bu fikre premortem ve red-team uygula: ",
 };
 
 const DICTS: Record<AppLanguage, Record<I18nKey, string>> = { en, tr };

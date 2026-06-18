@@ -11,13 +11,13 @@ export const google = createGoogleGenerativeAI({
 export const DEFAULT_MODEL =
   process.env.GEMINI_DEFAULT_MODEL ?? "gemini-3.5-flash";
 
-/** Cheap non-reasoning model for thinking bubbles, titles and summaries. */
+/** Lightweight model for thinking bubbles, titles and summaries. */
 export const SUMMARY_MODEL =
-  process.env.GEMINI_SUMMARY_MODEL ?? "gemini-2.5-flash-lite";
+  process.env.GEMINI_SUMMARY_MODEL ?? "gemini-3.5-flash";
 
 /** Used when the primary model errors or times out mid-request. */
 export const FALLBACK_MODEL =
-  process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-flash";
+  process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash";
 
 /** Legacy agent rows may still hold OpenRouter ids ("openai/gpt-4o-mini"). */
 export function llm(model: string) {
