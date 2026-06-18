@@ -167,6 +167,22 @@ const en = {
   msgUpdated: "Saved. The team will work from your edited version.",
   msgUpdateFailed: "Could not save your edit.",
 
+  // billing / plan
+  upgradeTitle: "Upgrade to Pro",
+  upgradeLimit:
+    "You have used your {n} free messages for today. Upgrade to Pro for unlimited.",
+  upgradeBlurb: "More room to think with your team, every day.",
+  proPrice: "${price}/mo",
+  proBenefit1: "Unlimited messages, every day",
+  proBenefit2: "The full product team, no daily cap",
+  proBenefit3: "Early access to new features",
+  upgradeCta: "Upgrade to Pro",
+  upgradeSoon: "Checkout is coming soon. Thanks for the interest.",
+  upgradeMaybe: "Maybe later",
+  upgradeProfile: "Upgrade to Pro",
+  planFree: "Free",
+  planPro: "Pro",
+
   // home / landing
   welcomeBack: "Welcome back, {name}",
   heroTitle: "Brief your team.",
@@ -405,6 +421,22 @@ const tr: Record<I18nKey, string> = {
   pushMessage: "Yukarıdaki plan bu haliyle onaylandı. Üretime geçin ve uygulayın.",
   msgUpdated: "Kaydedildi. Ekip senin düzenlediğin sürümle çalışacak.",
   msgUpdateFailed: "Düzenleme kaydedilemedi.",
+
+  // billing / plan
+  upgradeTitle: "Pro'ya geç",
+  upgradeLimit:
+    "Bugünkü {n} ücretsiz mesajını kullandın. Sınırsız için Pro'ya geç.",
+  upgradeBlurb: "Ekibinle düşünmek için her gün daha çok alan.",
+  proPrice: "${price}/ay",
+  proBenefit1: "Her gün sınırsız mesaj",
+  proBenefit2: "Tam ürün ekibi, günlük limit yok",
+  proBenefit3: "Yeni özelliklere erken erişim",
+  upgradeCta: "Pro'ya geç",
+  upgradeSoon: "Ödeme yakında. İlgin için teşekkürler.",
+  upgradeMaybe: "Belki sonra",
+  upgradeProfile: "Pro'ya geç",
+  planFree: "Free",
+  planPro: "Pro",
 
   welcomeBack: "Tekrar hoş geldin, {name}",
   heroTitle: "Fikrini söyle.",

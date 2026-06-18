@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { UpgradeDialog } from "@/components/billing/upgrade-dialog";
 import {
   PaperPlaneRight,
   Stop,
@@ -159,6 +160,7 @@ export function ChatView({
   const [mode, setMode] = useState<Mode>(initialMode);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -454,12 +456,22 @@ export function ChatView({
 
     const inline = parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
 
+    const tmpUserId = `tmp-u-${Date.now()}`;
     setMessages((m) => [
       ...m,
-      { id: `tmp-u-${Date.now()}`, role: "user", agent_key: null, content: text, status: "complete" },
+      { id: tmpUserId, role: "user", agent_key: null, content: text, status: "complete" },
     ]);
     setAtBottom(true);
-    await sendUserMessage(projectId, text);
+    const sent = await sendUserMessage(projectId, text);
+    if (sent.limit) {
+      // Daily free cap reached: roll back the optimistic bubble, restore the
+      // text so nothing is lost, and offer the upgrade.
+      setMessages((m) => m.filter((x) => x.id !== tmpUserId));
+      setInput(text);
+      setBusy(false);
+      setUpgradeOpen(true);
+      return;
+    }
 
     const handleOf = (key: string) =>
       agents.find((a) => a.key === key)?.handle ?? key;
@@ -1009,6 +1021,11 @@ export function ChatView({
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RetroBackdrop grid={false} className="opacity-70" />
       <TopBar user={user} projects={projects} title={title} tools={chatTools} />
+      <UpgradeDialog
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        reason="limit"
+      />
 
       {board
         ? createPortal(

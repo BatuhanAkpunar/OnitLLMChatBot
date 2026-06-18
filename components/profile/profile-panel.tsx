@@ -13,8 +13,10 @@ import {
   SignOut as SignOutIcon,
   X,
   CaretRight,
+  Lightning,
 } from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
+import { UpgradeDialog } from "@/components/billing/upgrade-dialog";
 import {
   getUserStats,
   getLanguageSettings,
@@ -52,6 +54,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
   const { t } = useI18n();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const [stats, setStats] = useState<{
@@ -129,6 +132,8 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
         <Avatar url={user?.avatarUrl} initial={initial} className="h-9 w-9" />
       </button>
 
+      <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+
       {open && mounted
         ? createPortal(
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -172,6 +177,25 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                     ) : null}
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setUpgradeOpen(true)}
+                  className="pressable mt-4 flex w-full items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/[0.06] px-3.5 py-3 text-left transition-colors hover:bg-violet-500/[0.1]"
+                >
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-300">
+                    <Lightning size={16} weight="fill" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13.5px] font-semibold">
+                      {t("upgradeProfile")}
+                    </span>
+                    <span className="block text-[12px] text-muted-foreground">
+                      {t("proBenefit1")}
+                    </span>
+                  </span>
+                  <CaretRight size={15} className="shrink-0 text-muted-foreground" />
+                </button>
 
                 {/* preferences: aligned label + segmented control rows */}
                 <div className="mt-5 space-y-1">
