@@ -1,10 +1,9 @@
-import { streamText, type ToolSet } from "ai";
+import { streamText } from "ai";
 import { createClient as createSbClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/user";
 import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  google,
   llm,
   DEFAULT_MODEL,
   SUMMARY_MODEL,
@@ -41,7 +40,6 @@ export async function POST(req: Request) {
     agentKey?: string;
     mode?: string;
     task?: string;
-    web?: boolean;
     skill?: string;
   };
   try {
@@ -49,7 +47,6 @@ export async function POST(req: Request) {
   } catch {
     return new Response("Invalid request body.", { status: 400 });
   }
-  const webSearch = body.web === true;
 
   const projectId = body.projectId?.trim();
   const agentKey = body.agentKey?.trim();
@@ -124,12 +121,6 @@ export async function POST(req: Request) {
       }
     }
   }
-  // Web search: Gemini's provider-executed grounding tool. The cast bridges
-  // the provider factory's generics to streamText's ToolSet (no executors
-  // here; Google runs the search server-side).
-  const webTools = webSearch
-    ? ({ google_search: google.tools.googleSearch({}) } as ToolSet)
-    : undefined;
   const agentNames: Record<string, string> = Object.fromEntries(
     agents.map((a) => [a.key, a.display_name]),
   );
@@ -269,7 +260,6 @@ export async function POST(req: Request) {
         async function runAnswer(model: string) {
           const s = streamText({
             model: llm(model),
-            tools: webTools,
             system: sysFull,
             messages: ctx,
             abortSignal: timeout.signal,

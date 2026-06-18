@@ -138,8 +138,6 @@ const en = {
   emptyBody:
     "Describe what you need and Onit hands it to the right specialists, or @mention a role to pick yourself.",
   composerPlaceholder: "Describe what you need. Onit routes it, or @mention a role…",
-  webOn: "Web search on",
-  webOff: "Let agents search the web",
   stopLabel: "Stop",
   sendLabel: "Send",
   scrollBottom: "Scroll to bottom",
@@ -175,22 +173,6 @@ const en = {
   heroAccent: "Ship it.",
   heroTagline:
     "An analyst, a PM, a designer and QA, all in one chat. You steer; they plan, debate, and build it with you.",
-  heroBadge: "Your AI product team",
-  islandReady: "Party ready",
-  islandRouting: "Onit is routing…",
-  islandWorking: "The team is working…",
-  islandThinking: "{name} is thinking…",
-  islandWriting: "{name} is writing…",
-
-  // command palette
-  cmdPlaceholder: "Type a command or search chats…",
-  cmdEmpty: "No results.",
-  cmdActions: "Actions",
-  cmdChats: "Chats",
-  cmdNewChat: "New chat",
-  cmdHome: "Go home",
-  cmdTheme: "Toggle theme",
-  cmdLanguage: "Switch language",
   askAnything: "Ask your team anything…",
   agentsChip: "agents",
   nAgents: "{n} agents",
@@ -205,19 +187,6 @@ const en = {
   devChip: "Built by",
   devAria: "About the developer",
   devRole: "Product Manager & Builder",
-
-  // vision pillars
-  // Pre-uppercased: CSS uppercase would turn "i" into "İ" under lang="tr".
-  visionKicker: "WHY ONIT",
-  pillar1Title: "One brief, six specialists",
-  pillar1Body:
-    "Onit reads your request and routes it to the right roles, or you @mention them yourself.",
-  pillar2Title: "Plan first, then build",
-  pillar2Body:
-    "Plans are documents you edit. When it reads right, push it to build.",
-  pillar3Title: "A team that remembers",
-  pillar3Body:
-    "Decisions, tasks and rules stay with the project and shape every answer.",
 
   // retro team story
   storyKicker: "Meet the team",
@@ -382,8 +351,6 @@ const tr: Record<I18nKey, string> = {
   emptyBody:
     "İhtiyacını anlat, Onit doğru uzmanlara iletsin; ya da @ ile rolü kendin seç.",
   composerPlaceholder: "İhtiyacını anlat. Onit yönlendirsin ya da @ ile rol seç…",
-  webOn: "Web araması açık",
-  webOff: "Ajanlar web'de arayabilsin",
   stopLabel: "Durdur",
   sendLabel: "Gönder",
   scrollBottom: "En alta in",
@@ -416,21 +383,6 @@ const tr: Record<I18nKey, string> = {
   heroAccent: "Ekibin üretsin.",
   heroTagline:
     "Analist, ürün yöneticisi, tasarımcı ve QA: hepsi tek sohbette. Sen yönlendir, onlar planlasın, tartışsın, üretsin.",
-  heroBadge: "Yapay zeka ürün ekibin",
-  islandReady: "Takım hazır",
-  islandRouting: "Onit yönlendiriyor…",
-  islandWorking: "Ekip çalışıyor…",
-  islandThinking: "{name} düşünüyor…",
-  islandWriting: "{name} yazıyor…",
-
-  cmdPlaceholder: "Komut yaz ya da sohbetlerde ara…",
-  cmdEmpty: "Sonuç yok.",
-  cmdActions: "Eylemler",
-  cmdChats: "Sohbetler",
-  cmdNewChat: "Yeni sohbet",
-  cmdHome: "Anasayfa",
-  cmdTheme: "Temayı değiştir",
-  cmdLanguage: "Dili değiştir",
   askAnything: "Ekibine ne istersen sor…",
   agentsChip: "ajanlar",
   nAgents: "{n} ajan",
@@ -444,17 +396,6 @@ const tr: Record<I18nKey, string> = {
   devChip: "Geliştiren",
   devAria: "Geliştirici hakkında",
   devRole: "Ürün Yöneticisi & Geliştirici",
-
-  visionKicker: "NEDEN ONIT",
-  pillar1Title: "Tek brief, altı uzman",
-  pillar1Body:
-    "Onit isteğini okur ve doğru rollere dağıtır; istersen @ ile kendin seçersin.",
-  pillar2Title: "Önce plan, sonra üretim",
-  pillar2Body:
-    "Planlar düzenleyebildiğin dokümanlardır. Hazır olunca üretime gönderirsin.",
-  pillar3Title: "Hatırlayan bir ekip",
-  pillar3Body:
-    "Kararlar, görevler ve kurallar projeyle yaşar; her yanıtı şekillendirir.",
 
   storyKicker: "Takımla tanış",
   storyNext: "Devam",
