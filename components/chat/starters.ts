@@ -16,5 +16,7 @@ export function getStarters(lang: AppLanguage): Starter[] {
     { label: t("starterTestsLabel"), prompt: t("starterTestsPrompt") },
     { label: t("starterAssumptionLabel"), prompt: t("starterAssumptionPrompt") },
     { label: t("starterSprintLabel"), prompt: t("starterSprintPrompt") },
+    { label: t("starterGtmLabel"), prompt: t("starterGtmPrompt") },
+    { label: t("starterPremortemLabel"), prompt: t("starterPremortemPrompt") },
   ];
 }

@@ -20,6 +20,8 @@ const STORY_KEYS: Record<string, I18nKey> = {
   project_manager: "storyProjectManager",
   product_designer: "storyProductDesigner",
   qa: "storyQa",
+  growth: "storyGrowth",
+  red_team: "storyRedTeam",
 };
 
 const TYPE_MS = 18;
@@ -35,7 +37,7 @@ export function Party({
   const { t } = useI18n();
 
   const roles = useMemo(
-    () => agents.filter((a) => STORY_KEYS[a.key]).slice(0, 6),
+    () => agents.filter((a) => STORY_KEYS[a.key]).slice(0, 8),
     [agents],
   );
 

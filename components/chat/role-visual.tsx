@@ -7,6 +7,8 @@ import {
   Kanban,
   PenNib,
   Bug,
+  TrendUp,
+  ShieldWarning,
   UsersThree,
   type Icon,
 } from "@phosphor-icons/react";
@@ -18,6 +20,8 @@ const ICONS: Record<string, Icon> = {
   project_manager: Kanban,
   product_designer: PenNib,
   qa: Bug,
+  growth: TrendUp,
+  red_team: ShieldWarning,
 };
 
 // First-person personas: accurate to what each role actually does on a team.
@@ -31,6 +35,10 @@ const PERSONAS: Record<string, string> = {
   product_designer:
     "I research users, map the flows, and design the interfaces we build.",
   qa: "I write test plans, automate checks, and catch bugs before release.",
+  growth:
+    "I find your first 100 users, get them to value fast, and build loops that bring more.",
+  red_team:
+    "I try to kill the idea while it is cheap to fix, then hand back the risks worth testing.",
 };
 
 export function roleIcon(key: string): Icon {
