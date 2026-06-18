@@ -1865,7 +1865,7 @@ function MessageRow({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-center gap-2">
           <span
-            className="font-pixel text-[13px] tracking-wide"
+            className="text-[13px] font-semibold tracking-wide"
             style={{ color }}
           >
             {name}

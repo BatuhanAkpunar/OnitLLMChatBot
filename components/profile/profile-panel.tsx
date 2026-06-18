@@ -175,7 +175,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
 
                 {/* preferences: aligned label + segmented control rows */}
                 <div className="mt-5 space-y-1">
-                  <div className="mb-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {t("preferences")}
                   </div>
 
@@ -247,7 +247,7 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
 
                 {/* usage: one quiet strip, not four boxes */}
                 <div className="mt-5">
-                  <div className="mb-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {t("usage")}
                   </div>
                   <div className="grid grid-cols-4 divide-x divide-border rounded-xl border-[1.5px] border-border bg-muted/30 py-2.5">
@@ -356,7 +356,7 @@ function SegBtn({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`pressable inline-flex items-center gap-1 rounded-md px-2 py-1 font-pixel text-[11px] transition-colors disabled:opacity-50 ${
+      className={`pressable inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
         active
           ? "bg-foreground text-background"
           : "text-muted-foreground hover:text-foreground"

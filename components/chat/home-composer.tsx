@@ -306,7 +306,7 @@ export function HomeComposer({
               {t("heroAccent")}
             </span>
           </h1>
-          <p className="mt-6 max-w-xl text-balance font-pixel text-[15px] leading-[1.7] text-muted-foreground sm:text-base">
+          <p className="mt-6 max-w-xl text-balance text-[15px] leading-[1.7] text-muted-foreground sm:text-base">
             {t("heroTagline")}
           </p>
         </div>
@@ -378,7 +378,7 @@ export function HomeComposer({
               key={s.label}
               type="button"
               onClick={() => pickStarter(s.prompt)}
-              className="pressable is-shadowed rounded-lg border-2 border-foreground/80 bg-card px-3 py-1.5 font-pixel text-[13px] text-foreground/85 transition-colors hover:bg-accent dark:border-border"
+              className="pressable is-shadowed rounded-lg border-2 border-foreground/80 bg-card px-3 py-1.5 text-[13px] font-medium text-foreground/85 transition-colors hover:bg-accent dark:border-border"
               style={{ boxShadow: "2px 2px 0 0 color-mix(in oklab, var(--foreground) 35%, transparent)" }}
             >
               {s.label}
@@ -397,7 +397,7 @@ export function HomeComposer({
                 <span className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-foreground bg-card font-pixel text-sm text-foreground">
                   {s.n}
                 </span>
-                <h3 className="font-pixel text-[15px] leading-snug text-foreground">
+                <h3 className="text-[15px] font-semibold leading-snug text-foreground">
                   {t(s.title)}
                 </h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
@@ -427,7 +427,7 @@ export function HomeComposer({
               return (
                 <div key={p.title} className="pixel-panel p-5">
                   <PointIcon size={22} weight="bold" className="mb-3 text-foreground" />
-                  <h3 className="font-pixel text-[15px] leading-snug text-foreground">
+                  <h3 className="text-[15px] font-semibold leading-snug text-foreground">
                     {t(p.title)}
                   </h3>
                   <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">

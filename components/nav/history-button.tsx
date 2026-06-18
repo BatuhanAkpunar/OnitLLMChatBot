@@ -275,7 +275,7 @@ export function HistoryButton({ projects = [] }: { projects?: ProjectListItem[] 
                       if (items.length === 0) return null;
                       return (
                         <div key={g} className="mb-3">
-                          <div className="px-3 pb-1.5 pt-2 font-pixel text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                          <div className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                             {t(g)}
                           </div>
                           <ul className="space-y-0.5">

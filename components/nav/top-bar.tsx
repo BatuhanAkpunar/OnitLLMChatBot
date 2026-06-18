@@ -48,7 +48,7 @@ export function TopBar({
       {title ? (
         <>
           <span className="h-5 w-[2px] shrink-0 bg-border" aria-hidden />
-          <h1 className="min-w-0 truncate font-pixel text-[13px] tracking-tight text-foreground/85">
+          <h1 className="min-w-0 truncate text-[13px] font-medium tracking-tight text-foreground/85">
             {title}
           </h1>
         </>
@@ -63,7 +63,7 @@ export function TopBar({
             className="pressable inline-flex h-9 items-center gap-1.5 rounded-lg border-[1.5px] border-foreground bg-primary px-2.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
           >
             <Plus size={18} weight="bold" />
-            <span className="hidden font-pixel sm:inline">{t("newChat")}</span>
+            <span className="hidden sm:inline">{t("newChat")}</span>
           </button>
         </form>
         <HistoryButton projects={projects} />
