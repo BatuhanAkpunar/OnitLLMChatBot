@@ -172,7 +172,25 @@ const en = {
   heroTitle: "Brief your team.",
   heroAccent: "Ship it.",
   heroTagline:
-    "An analyst, a PM, a designer and QA, all in one chat. You steer; they plan, debate, and build it with you.",
+    "Describe your idea once. A full AI product team challenges it, shapes it, and turns it into a plan you can build on.",
+  howKicker: "How it works",
+  how1Title: "Write one brief",
+  how1Body: "Describe your idea or problem in plain words. No forms, no setup.",
+  how2Title: "The team takes it apart",
+  how2Body:
+    "Onit routes it to the right specialists. They challenge the idea, surface the risks, and shape a plan.",
+  how3Title: "Refine and build",
+  how3Body: "Edit the plan until it reads right, then push it to build.",
+  whyKicker: "Why Onit",
+  why1Title: "It challenges your idea",
+  why1Body:
+    "Onit pushes back and surfaces the blind spots you did not raise, instead of just agreeing.",
+  why2Title: "It never invents data",
+  why2Body:
+    "It separates what is known from what is assumed, and never fabricates numbers.",
+  why3Title: "It remembers your project",
+  why3Body:
+    "Decisions, tasks and rules stay with the project and shape every answer.",
   askAnything: "Ask your team anything…",
   agentsChip: "agents",
   nAgents: "{n} agents",
@@ -382,7 +400,25 @@ const tr: Record<I18nKey, string> = {
   heroTitle: "Fikrini söyle.",
   heroAccent: "Ekibin üretsin.",
   heroTagline:
-    "Analist, ürün yöneticisi, tasarımcı ve QA: hepsi tek sohbette. Sen yönlendir, onlar planlasın, tartışsın, üretsin.",
+    "Fikrini bir kez anlat. Tam bir yapay zeka ürün ekibi onu sorgular, biçimlendirir ve üzerine inşa edebileceğin bir plana dönüştürür.",
+  howKicker: "Nasıl çalışır",
+  how1Title: "Tek bir brief yaz",
+  how1Body: "Fikrini ya da problemini sade kelimelerle anlat. Form yok, kurulum yok.",
+  how2Title: "Ekip onu didikler",
+  how2Body:
+    "Onit doğru uzmanlara dağıtır. Fikre meydan okur, riskleri çıkarır ve bir plan biçimlendirir.",
+  how3Title: "İnce ayar ve üretim",
+  how3Body: "Planı doğru olana dek düzenle, sonra üretime gönder.",
+  whyKicker: "Neden Onit",
+  why1Title: "Fikrine meydan okur",
+  why1Body:
+    "Onit sadece onaylamaz; senin görmediğin kör noktaları çıkarır, gerektiğinde itiraz eder.",
+  why2Title: "Veri uydurmaz",
+  why2Body:
+    "Bilineni varsayılandan ayırır ve asla uydurma sayı üretmez.",
+  why3Title: "Projeni hatırlar",
+  why3Body:
+    "Kararlar, görevler ve kurallar projeyle kalır ve her yanıtı şekillendirir.",
   askAnything: "Ekibine ne istersen sor…",
   agentsChip: "ajanlar",
   nAgents: "{n} ajan",

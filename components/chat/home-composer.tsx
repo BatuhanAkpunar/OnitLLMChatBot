@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { PaperPlaneRight, Check } from "@phosphor-icons/react";
+import {
+  PaperPlaneRight,
+  Check,
+  Target,
+  ShieldCheck,
+  Brain,
+  type Icon,
+} from "@phosphor-icons/react";
 import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
@@ -23,6 +30,18 @@ const MODE_DEFS: { key: Mode; label: I18nKey; tip: I18nKey }[] = [
   { key: "build", label: "modeBuild", tip: "tipBuild" },
   { key: "plan", label: "modePlan", tip: "tipPlan" },
   { key: "discuss", label: "modeDiscuss", tip: "tipDiscuss" },
+];
+
+const HOW_STEPS: { n: number; title: I18nKey; body: I18nKey }[] = [
+  { n: 1, title: "how1Title", body: "how1Body" },
+  { n: 2, title: "how2Title", body: "how2Body" },
+  { n: 3, title: "how3Title", body: "how3Body" },
+];
+
+const WHY_POINTS: { icon: Icon; title: I18nKey; body: I18nKey }[] = [
+  { icon: Target, title: "why1Title", body: "why1Body" },
+  { icon: ShieldCheck, title: "why2Title", body: "why2Body" },
+  { icon: Brain, title: "why3Title", body: "why3Body" },
 ];
 
 function stripAt(handle: string) {
@@ -367,6 +386,28 @@ export function HomeComposer({
           ))}
         </div>
 
+        {/* How it works */}
+        <section className="mt-20">
+          <h2 className="mb-7 text-center font-pixel text-2xl tracking-tight text-foreground sm:text-3xl">
+            {t("howKicker")}
+          </h2>
+          <ol className="grid gap-4 sm:grid-cols-3">
+            {HOW_STEPS.map((s) => (
+              <li key={s.n} className="pixel-panel p-5">
+                <span className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-foreground bg-card font-pixel text-sm text-foreground">
+                  {s.n}
+                </span>
+                <h3 className="font-pixel text-[15px] leading-snug text-foreground">
+                  {t(s.title)}
+                </h3>
+                <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
+                  {t(s.body)}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         <Party
           agents={agents}
           onCta={() => {
@@ -374,6 +415,29 @@ export function HomeComposer({
             taRef.current?.focus();
           }}
         />
+
+        {/* Why Onit */}
+        <section className="mt-16">
+          <h2 className="mb-7 text-center font-pixel text-2xl tracking-tight text-foreground sm:text-3xl">
+            {t("whyKicker")}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {WHY_POINTS.map((p) => {
+              const PointIcon = p.icon;
+              return (
+                <div key={p.title} className="pixel-panel p-5">
+                  <PointIcon size={22} weight="bold" className="mb-3 text-foreground" />
+                  <h3 className="font-pixel text-[15px] leading-snug text-foreground">
+                    {t(p.title)}
+                  </h3>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
+                    {t(p.body)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
       {transition
