@@ -5,6 +5,8 @@ import { countTokens, enforceTokenBudget } from "@/lib/tokens";
 import { detectInjectionAttempt, sanitizeOutput } from "@/lib/security";
 import { splitOptions } from "@/lib/options";
 import { modelCost } from "@/lib/ai/model-prices";
+import { parseOrchestration } from "@/lib/ai/orchestration";
+import { exceedsFreeDailyLimit } from "@/lib/billing";
 
 const agents = [
   { key: "analyst", handle: "@Analyst" },
@@ -136,6 +138,103 @@ describe("modelCost", () => {
 
   it("returns 0 for an unknown model so logging never breaks", () => {
     expect(modelCost("some-retired-model", 1_000_000, 1_000_000)).toBe(0);
+  });
+});
+
+describe("parseOrchestration", () => {
+  const opts = {
+    roleKeys: ["analyst", "product_manager", "qa", "designer"],
+    skillKeys: ["prd", "user_story"],
+    fallbackText: "build a login screen",
+  };
+
+  it("parses a clarify decision and trims the question", () => {
+    expect(parseOrchestration('{"action":"clarify","question":"  Which platform?  "}', opts)).toEqual({
+      action: "clarify",
+      question: "Which platform?",
+    });
+  });
+
+  it("extracts the JSON object even when the model wraps it in prose", () => {
+    // The model is told to return only JSON but often adds chatter; routing must
+    // still recover the object instead of falling back.
+    const out = 'Sure, here you go: {"action":"clarify","question":"What is the goal?"} hope that helps!';
+    expect(parseOrchestration(out, opts)).toEqual({
+      action: "clarify",
+      question: "What is the goal?",
+    });
+  });
+
+  it("drops unknown roles, de-dupes, and keeps the first three", () => {
+    const out = JSON.stringify({
+      action: "work",
+      rationale: "split the work",
+      tasks: [
+        { role: "analyst", task: "frame the problem" },
+        { role: "ceo", task: "approve budget" }, // unknown -> dropped
+        { role: "analyst", task: "again" }, // duplicate -> skipped
+        { role: "product_manager", task: "write the PRD" },
+        { role: "qa", task: "list test cases" },
+        { role: "designer", task: "mock the screen" }, // 4th valid -> over the cap
+      ],
+    });
+    const result = parseOrchestration(out, opts);
+    expect(result.action).toBe("work");
+    if (result.action !== "work") throw new Error("expected work");
+    expect(result.tasks.map((t) => t.role)).toEqual(["analyst", "product_manager", "qa"]);
+  });
+
+  it("falls back to the request text and clears an unknown skill", () => {
+    const out = JSON.stringify({
+      action: "work",
+      tasks: [{ role: "qa", skill: "made_up_method" }],
+    });
+    const result = parseOrchestration(out, opts);
+    if (result.action !== "work") throw new Error("expected work");
+    expect(result.tasks[0]).toEqual({
+      role: "qa",
+      task: "build a login screen", // the omitted task becomes the fallback
+      done: "",
+      skill: "", // unknown skill downgraded
+    });
+  });
+
+  it("keeps a valid skill key", () => {
+    const out = JSON.stringify({ action: "work", tasks: [{ role: "analyst", task: "x", skill: "prd" }] });
+    const result = parseOrchestration(out, opts);
+    if (result.action !== "work") throw new Error("expected work");
+    expect(result.tasks[0]?.skill).toBe("prd");
+  });
+
+  it("throws when there is no JSON object to route on", () => {
+    expect(() => parseOrchestration("I cannot help with that.", opts)).toThrow();
+  });
+
+  it("throws when every task names an invalid role", () => {
+    const out = JSON.stringify({ action: "work", tasks: [{ role: "ceo", task: "decide" }] });
+    expect(() => parseOrchestration(out, opts)).toThrow();
+  });
+
+  it("throws on a clarify decision with a blank question", () => {
+    expect(() => parseOrchestration('{"action":"clarify","question":"   "}', opts)).toThrow();
+  });
+});
+
+describe("exceedsFreeDailyLimit", () => {
+  it("never caps a Pro user, no matter the count", () => {
+    expect(exceedsFreeDailyLimit("pro", 9999)).toBe(false);
+  });
+
+  it("blocks a Free user exactly at the cap", () => {
+    // Boundary: the cap is 20 and the check is inclusive, so the 21st send (20
+    // already sent today) is the one that gets blocked.
+    expect(exceedsFreeDailyLimit("free", 20)).toBe(true);
+    expect(exceedsFreeDailyLimit("free", 19)).toBe(false);
+  });
+
+  it("treats a missing or null plan as Free", () => {
+    expect(exceedsFreeDailyLimit(null, 20)).toBe(true);
+    expect(exceedsFreeDailyLimit(undefined, 5)).toBe(false);
   });
 });
 

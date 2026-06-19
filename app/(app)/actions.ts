@@ -10,7 +10,12 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { llm, SUMMARY_MODEL, NO_THINKING } from "@/lib/ai/llm";
 import { modelCost } from "@/lib/ai/model-prices";
-import { FREE_DAILY_MESSAGES, startOfDayISO } from "@/lib/billing";
+import { exceedsFreeDailyLimit, startOfDayISO } from "@/lib/billing";
+import {
+  parseOrchestration,
+  type OrchestrateTask,
+  type OrchestrateResult,
+} from "@/lib/ai/orchestration";
 import {
   coordinatorLanguageRule,
   type PreferredLanguage,
@@ -61,16 +66,7 @@ async function logUsage(
   }
 }
 
-export type OrchestrateTask = {
-  role: string;
-  task: string;
-  done: string;
-  /** Optional method-library key the role should apply for this task. */
-  skill: string;
-};
-export type OrchestrateResult =
-  | { action: "clarify"; question: string }
-  | { action: "work"; rationale: string; tasks: OrchestrateTask[] };
+export type { OrchestrateTask, OrchestrateResult };
 
 /**
  * Smart orchestrator: reads the request (with recent context) and either asks
@@ -233,59 +229,12 @@ Roles:
 ${roster}${skillCatalog ? `\nMethod library (optional, pick at most one per task):\n${skillCatalog}` : ""}${memory}${learned}${rules ? `\nProject team rules (always respect these):\n${rules.slice(0, 800)}` : ""}${decisionsCtx ? `\nAdopted team decisions (standing constraints; new work must not contradict them):\n${decisionsCtx}` : ""}${backlog ? `\nOpen backlog for this project (relate new work to it when relevant):\n${backlog}` : ""}`;
   const userPrompt = `${ctx ? `Recent conversation:\n${ctx}\n\n` : ""}Latest request: ${text}\n\nJSON:`;
 
-  /** Parses and validates a decision; throws with a precise reason. */
-  function parseDecision(out: string): OrchestrateResult {
-    const start = out.indexOf("{");
-    const end = out.lastIndexOf("}");
-    if (start < 0 || end <= start) throw new Error("no JSON object found");
-    const json = JSON.parse(out.slice(start, end + 1));
-    if (json.action === "clarify") {
-      if (typeof json.question !== "string" || !json.question.trim()) {
-        throw new Error('action "clarify" requires a non-empty "question" string');
-      }
-      return { action: "clarify", question: json.question.trim() };
-    }
-    if (json.action !== "work") {
-      throw new Error('"action" must be "clarify" or "work"');
-    }
-    const valid = new Set(list.map((a) => a.key));
-    const validSkills = new Set(skills.map((s) => s.key));
-    if (!Array.isArray(json.tasks) || json.tasks.length === 0) {
-      throw new Error('"tasks" must be a non-empty array');
-    }
-    const tasks: OrchestrateTask[] = [];
-    const seen = new Set<string>();
-    for (const t of json.tasks as unknown[]) {
-      const o = t as {
-        role?: unknown;
-        task?: unknown;
-        done?: unknown;
-        skill?: unknown;
-      };
-      const role = String(o.role ?? "").toLowerCase().trim();
-      const task = String(o.task ?? "").trim();
-      const done = String(o.done ?? "").trim();
-      const skillKey = String(o.skill ?? "").toLowerCase().trim();
-      if (!valid.has(role)) continue;
-      if (seen.has(role)) continue;
-      seen.add(role);
-      tasks.push({
-        role,
-        task: task || text,
-        done,
-        skill: validSkills.has(skillKey) ? skillKey : "",
-      });
-      if (tasks.length >= 3) break;
-    }
-    if (!tasks.length) {
-      throw new Error(`no valid role keys; valid keys: ${[...valid].join(", ")}`);
-    }
-    return {
-      action: "work",
-      rationale: typeof json.rationale === "string" ? json.rationale : "",
-      tasks,
-    };
-  }
+  const parseDecision = (out: string): OrchestrateResult =>
+    parseOrchestration(out, {
+      roleKeys: list.map((a) => a.key),
+      skillKeys: skills.map((s) => s.key),
+      fallbackText: text,
+    });
 
   try {
     let lastErr = "";
@@ -483,7 +432,9 @@ export async function sendUserMessage(
       .eq("owner_id", user.id)
       .eq("role", "user")
       .gte("created_at", startOfDayISO());
-    if ((count ?? 0) >= FREE_DAILY_MESSAGES) return { ok: false, limit: true };
+    if (exceedsFreeDailyLimit(prof?.plan, count ?? 0)) {
+      return { ok: false, limit: true };
+    }
   }
 
   const { error } = await supabase.from("messages").insert({

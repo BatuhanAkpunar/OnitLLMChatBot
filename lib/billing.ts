@@ -14,3 +14,15 @@ export function startOfDayISO(): string {
   d.setUTCHours(0, 0, 0, 0);
   return d.toISOString();
 }
+
+/**
+ * Whether a user has hit the Free daily message cap and should be blocked.
+ * Pro is never capped; an unknown or missing plan is treated as Free.
+ */
+export function exceedsFreeDailyLimit(
+  plan: string | null | undefined,
+  sentToday: number,
+): boolean {
+  if ((plan ?? "free") === "pro") return false;
+  return sentToday >= FREE_DAILY_MESSAGES;
+}
