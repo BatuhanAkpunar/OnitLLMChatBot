@@ -199,11 +199,13 @@ export function ChatView({
     } catch {}
   }, [projectId]);
 
+  const isStreaming = messages.some((m) => m.status === "streaming");
+
   useEffect(() => {
-    if (atBottom) {
+    if (atBottom || isStreaming) {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
     }
-  }, [messages, atBottom]);
+  }, [messages, atBottom, isStreaming]);
 
   // auto-grow the composer textarea
   useEffect(() => {
