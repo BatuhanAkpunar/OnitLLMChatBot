@@ -12,6 +12,7 @@ import { Markdown } from "./markdown";
 import { RoleAvatar } from "./role-visual";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
+import { splitOptions } from "@/lib/options";
 import type { Agent, Message } from "./chat-view";
 
 function IconButton({
@@ -56,19 +57,6 @@ export function OnitWorking({ label }: { label: string }) {
       </span>
     </div>
   );
-}
-
-/** Splits a trailing ```options block off an answer into clickable choices. */
-function splitOptions(content: string): { body: string; options: string[] } {
-  const m = content.match(/```options\s*\n([\s\S]*?)\n?```\s*$/);
-  if (!m || m.index === undefined) return { body: content, options: [] };
-  const options = m[1]
-    .split("\n")
-    .map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim())
-    .filter(Boolean)
-    .slice(0, 8);
-  if (!options.length) return { body: content, options: [] };
-  return { body: content.slice(0, m.index).trimEnd(), options };
 }
 
 export function MessageRow({
