@@ -187,7 +187,7 @@ const en = {
   heroTitle: "Tell us your idea.",
   heroAccent: "We're on it.",
   heroTagline:
-    "Describe your idea once. A full AI product team challenges it, shapes it, and turns it into a plan you can build on.",
+    "Describe it once, and a full AI product team challenges it, shapes it, and turns it into a plan you can build on.",
   howKicker: "How it works",
   how1Title: "Tell us your idea",
   how1Body:
@@ -422,7 +422,7 @@ const tr: Record<I18nKey, string> = {
   heroTitle: "Fikrini söyle.",
   heroAccent: "Ekibin üretsin.",
   heroTagline:
-    "Fikrini bir kez anlat. Tam bir yapay zeka ürün ekibi onu sorgular, biçimlendirir ve üzerine inşa edebileceğin bir plana dönüştürür.",
+    "Bir kez anlat; tam bir yapay zeka ürün ekibi onu sorgular, biçimlendirir ve üzerine inşa edebileceğin bir plana dönüştürür.",
   howKicker: "Nasıl çalışır",
   how1Title: "Fikrini yaz",
   how1Body:
