@@ -1,14 +1,25 @@
 import { translate, type AppLanguage } from "@/lib/i18n";
 
 /**
- * Quick-start prompts shown on the home hero and the empty chat state.
- * Each is a sentence the user completes, so the request arrives with intent
- * already shaped (and the matching skill's trigger words already present).
+ * Quick-start prompts. The home hero shows concrete app ideas to get a brand-new
+ * visitor going; an empty chat (an existing project) leads with product tasks
+ * since the user already has context.
  */
 export type Starter = { label: string; prompt: string };
 
-export function getStarters(lang: AppLanguage): Starter[] {
+export function getStarters(
+  lang: AppLanguage,
+  variant: "home" | "chat" = "home",
+): Starter[] {
   const t = (k: Parameters<typeof translate>[1]) => translate(lang, k);
+  if (variant === "chat") {
+    return [
+      { label: t("starterPrdLabel"), prompt: t("starterPrdPrompt") },
+      { label: t("starterTestsLabel"), prompt: t("starterTestsPrompt") },
+      { label: t("starterProblemLabel"), prompt: t("starterProblemPrompt") },
+      { label: t("starterFlowLabel"), prompt: t("starterFlowPrompt") },
+    ];
+  }
   return [
     { label: t("starterCalorieLabel"), prompt: t("starterCaloriePrompt") },
     { label: t("starterVacationLabel"), prompt: t("starterVacationPrompt") },

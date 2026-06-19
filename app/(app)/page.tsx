@@ -24,7 +24,6 @@ export default async function HomePage() {
       <div className="min-h-0 flex-1 overflow-auto">
         <HomeComposer
           authed={!!user}
-          userName={user?.name ?? null}
           agents={agentList}
           defaultAgentKey={agentList[0]?.key ?? "analyst"}
         />

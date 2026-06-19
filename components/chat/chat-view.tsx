@@ -1310,7 +1310,7 @@ export function ChatView({
                   </p>
                 </div>
                 <div className="flex max-w-md flex-wrap justify-center gap-1.5">
-                  {getStarters(uiLang).map((s) => (
+                  {getStarters(uiLang, "chat").map((s) => (
                     <button
                       key={s.label}
                       type="button"

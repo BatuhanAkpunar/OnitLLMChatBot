@@ -251,6 +251,10 @@ const en = {
   starterPrdPrompt: "Write a PRD for ",
   starterTestsLabel: "Design test cases",
   starterTestsPrompt: "Design test cases for ",
+  starterProblemLabel: "Frame the problem",
+  starterProblemPrompt: "Frame this as a problem statement before we build: ",
+  starterFlowLabel: "Map a user flow",
+  starterFlowPrompt: "Map the user flow for ",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -483,6 +487,10 @@ const tr: Record<I18nKey, string> = {
   starterPrdPrompt: "Şunun için bir PRD yaz: ",
   starterTestsLabel: "Test senaryoları tasarla",
   starterTestsPrompt: "Şunun için test senaryoları tasarla: ",
+  starterProblemLabel: "Problemi çerçevele",
+  starterProblemPrompt: "Üretmeden önce bunu problem tanımı olarak çerçevele: ",
+  starterFlowLabel: "Kullanıcı akışı çıkar",
+  starterFlowPrompt: "Şunun için kullanıcı akışını çıkar: ",
 };
 
 const DICTS: Record<AppLanguage, Record<I18nKey, string>> = { en, tr };

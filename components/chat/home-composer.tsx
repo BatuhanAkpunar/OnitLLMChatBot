@@ -36,11 +36,9 @@ function stripAt(handle: string) {
 
 export function HomeComposer({
   authed,
-  userName,
   agents,
 }: {
   authed: boolean;
-  userName: string | null;
   agents: Agent[];
   defaultAgentKey?: string;
 }) {
