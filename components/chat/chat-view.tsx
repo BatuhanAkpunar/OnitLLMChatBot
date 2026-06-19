@@ -28,6 +28,7 @@ const toast = Object.assign((..._a: unknown[]) => {}, {
 import { RoutingControl, AgentMenu } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
 import { MessageRow, OnitWorking } from "./message-row";
+import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
@@ -314,6 +315,7 @@ export function ChatView({
     ]);
     const ac = new AbortController();
     abortRef.current = ac;
+    let row = initialRow();
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -345,29 +347,13 @@ export function ChatView({
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = "";
-      let thinkingAcc = "";
-      let answerAcc = "";
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buf.indexOf("\n")) >= 0) {
-          const ln = buf.slice(0, nl);
-          buf = buf.slice(nl + 1);
-          if (!ln.trim()) continue;
-          let evt: {
-            type: string;
-            delta?: string;
-            status?: string;
-            content?: string;
-            messageId?: string;
-          };
-          try {
-            evt = JSON.parse(ln);
-          } catch {
-            continue;
-          }
+        const drained = drainEvents(buf);
+        buf = drained.rest;
+        for (const evt of drained.events) {
           if (evt.type === "meta" && evt.messageId) {
             // Swap the optimistic id for the real one so feedback works.
             // Capture the CURRENT id in a const: the updater runs later, after
@@ -377,22 +363,17 @@ export function ChatView({
             const tmp = aid;
             setMessages((m) => m.map((x) => (x.id === tmp ? { ...x, id: real } : x)));
             aid = real;
-          } else if (evt.type === "thinking") {
-            thinkingAcc += evt.delta ?? "";
-            setMessages((m) => m.map((x) => (x.id === aid ? { ...x, thinking: thinkingAcc } : x)));
-          } else if (evt.type === "answer") {
-            answerAcc += evt.delta ?? "";
-            setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: answerAcc } : x)));
-          } else if (evt.type === "final") {
-            const finalContent = evt.content ?? answerAcc;
-            setMessages((m) => m.map((x) => (x.id === aid ? { ...x, content: finalContent } : x)));
-          } else if (evt.type === "done") {
-            setMessages((m) =>
-              m.map((x) =>
-                x.id === aid ? { ...x, status: evt.status === "error" ? "error" : "complete" } : x,
-              ),
-            );
+            continue;
           }
+          row = applyEvent(row, evt);
+          const snap = row;
+          setMessages((m) =>
+            m.map((x) =>
+              x.id === aid
+                ? { ...x, content: snap.content, thinking: snap.thinking, status: snap.status }
+                : x,
+            ),
+          );
         }
       }
     } catch (err) {
@@ -411,9 +392,10 @@ export function ChatView({
       abortRef.current = null;
       // If the stream ended without a "done" event (proxy cut, failover edge
       // case), never leave the row stuck in the streaming state.
+      const closedStatus = finalizeRow(row).status;
       setMessages((m) =>
         m.map((x) =>
-          x.id === aid && x.status === "streaming" ? { ...x, status: "complete" } : x,
+          x.id === aid && x.status === "streaming" ? { ...x, status: closedStatus } : x,
         ),
       );
     }

@@ -7,6 +7,7 @@ import { splitOptions } from "@/lib/options";
 import { modelCost } from "@/lib/ai/model-prices";
 import { parseOrchestration } from "@/lib/ai/orchestration";
 import { exceedsFreeDailyLimit } from "@/lib/billing";
+import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 
 const agents = [
   { key: "analyst", handle: "@Analyst" },
@@ -32,6 +33,25 @@ describe("parseMentions", () => {
 
   it("is case-insensitive", () => {
     expect(parseMentions("ping @developer", agents)).toEqual(["developer"]);
+  });
+
+  it("[Yıkıcı] does not fire on an @handle glued inside another token", () => {
+    // Regression: an email like sam@qa-team.com must NOT route to @QA. A plain
+    // substring match used to return ["qa"] here.
+    expect(parseMentions("email me at sam@qa-team.com", agents)).toEqual([]);
+  });
+
+  it("[Yıkıcı] does not match a short handle inside a longer one", () => {
+    const roster = [
+      { key: "qa", handle: "@QA" },
+      { key: "qa_lead", handle: "@QAlead" },
+    ];
+    expect(parseMentions("ping @QAlead about the release", roster)).toEqual(["qa_lead"]);
+  });
+
+  it("[Yıkıcı] still matches a handle next to punctuation", () => {
+    expect(parseMentions("thanks @QA!", agents)).toEqual(["qa"]);
+    expect(parseMentions("(@Developer)", agents)).toEqual(["developer"]);
   });
 });
 
@@ -235,6 +255,97 @@ describe("exceedsFreeDailyLimit", () => {
   it("treats a missing or null plan as Free", () => {
     expect(exceedsFreeDailyLimit(null, 20)).toBe(true);
     expect(exceedsFreeDailyLimit(undefined, 5)).toBe(false);
+  });
+});
+
+describe("chat stream state machine", () => {
+  const line = (o: unknown) => JSON.stringify(o) + "\n";
+
+  // Replays a raw NDJSON stream exactly as the client does: feed arbitrary
+  // network chunks, drain only complete lines, accumulate, then close.
+  function replay(chunks: string[]) {
+    let buf = "";
+    let row = initialRow();
+    for (const c of chunks) {
+      buf += c;
+      const { events, rest } = drainEvents(buf);
+      buf = rest;
+      for (const evt of events) {
+        if (evt.type === "meta") continue; // id swap is the caller's job
+        row = applyEvent(row, evt);
+      }
+    }
+    return finalizeRow(row);
+  }
+
+  it("[SM] runs meta -> thinking -> answer -> final -> done(complete)", () => {
+    const stream =
+      line({ type: "meta", messageId: "real-1", agentKey: "qa" }) +
+      line({ type: "thinking", delta: "weighing" }) +
+      line({ type: "answer", delta: "Hello " }) +
+      line({ type: "answer", delta: "world" }) +
+      line({ type: "final", content: "Hello world." }) +
+      line({ type: "done", status: "complete" });
+    const row = replay([stream]);
+    expect(row).toEqual({ content: "Hello world.", thinking: "weighing", status: "complete" });
+  });
+
+  it("[SM] a done(error) lands the row in the error state", () => {
+    const row = replay([
+      line({ type: "answer", delta: "partial" }) + line({ type: "done", status: "error" }),
+    ]);
+    expect(row.status).toBe("error");
+    expect(row.content).toBe("partial");
+  });
+
+  it("[Ağ] reassembles an event split across two network chunks", () => {
+    // The JSON for one answer event arrives in two reads; nothing should be lost.
+    const full = line({ type: "answer", delta: "streamed" });
+    const cut = Math.floor(full.length / 2);
+    const row = replay([full.slice(0, cut), full.slice(cut) + line({ type: "done", status: "complete" })]);
+    expect(row).toEqual({ content: "streamed", thinking: "", status: "complete" });
+  });
+
+  it("[Ağ] a stream cut before done is not left hanging", () => {
+    // Proxy cut: meta + some answer, then the socket dies with no done event.
+    const row = replay([
+      line({ type: "meta", messageId: "x", agentKey: "qa" }) +
+        line({ type: "answer", delta: "half an answer" }),
+    ]);
+    expect(row.status).toBe("complete"); // finalizeRow rescues it
+    expect(row.content).toBe("half an answer");
+  });
+
+  it("[Yıkıcı] skips a malformed line and keeps the surrounding events", () => {
+    const row = replay([
+      line({ type: "answer", delta: "good" }) +
+        "{not valid json\n" +
+        line({ type: "answer", delta: " more" }) +
+        line({ type: "done", status: "complete" }),
+    ]);
+    expect(row.content).toBe("good more");
+    expect(row.status).toBe("complete");
+  });
+
+  it("[Yıkıcı] tolerates missing deltas, unknown types, and blank lines", () => {
+    const row = replay([
+      "\n" +
+        line({ type: "answer" }) + // no delta -> no-op
+        line({ type: "sparkle", delta: "ignored" }) + // unknown -> ignored
+        line({ type: "answer", delta: "real" }) +
+        line({ type: "done", status: "complete" }),
+    ]);
+    expect(row.content).toBe("real");
+    expect(row.status).toBe("complete");
+  });
+
+  it("[SM] final replaces the streamed answer with the authoritative content", () => {
+    const row = replay([
+      line({ type: "answer", delta: "draft text" }) +
+        line({ type: "final", content: "polished, sanitized text" }) +
+        line({ type: "done", status: "complete" }),
+    ]);
+    expect(row.content).toBe("polished, sanitized text");
   });
 });
 
