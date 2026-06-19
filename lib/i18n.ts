@@ -236,25 +236,37 @@ const en = {
   signinSub: "Your brief is saved. We'll pick it up right after.",
   openSub: "Opening your chat. This takes a second.",
 
-  // quick starters: concrete app ideas + a couple of product tasks
-  starterCalorieLabel: "Calorie-counting app",
-  starterCaloriePrompt: "I want to build a calorie-counting and tracking app.",
-  starterVacationLabel: "Vacation planner",
-  starterVacationPrompt: "I want to build a vacation-planning app.",
-  starterMealLabel: "Meal-prep app",
-  starterMealPrompt:
-    "I want to build a meal-prep app that plans a week of dinners and builds the grocery list.",
-  starterHabitLabel: "Habit tracker",
-  starterHabitPrompt:
-    "I want to build a habit tracker that nudges you at the right moment.",
-  starterPrdLabel: "Write a PRD",
-  starterPrdPrompt: "Write a PRD for ",
-  starterTestsLabel: "Design test cases",
-  starterTestsPrompt: "Design test cases for ",
-  starterProblemLabel: "Frame the problem",
-  starterProblemPrompt: "Frame this as a problem statement before we build: ",
-  starterFlowLabel: "Map a user flow",
-  starterFlowPrompt: "Map the user flow for ",
+  // quick starters: concrete opening lines, grouped by what the team can do
+  // home (new visitor): 2 build, 2 QA, 1 plan, 1 data
+  starterCalLabel: "Calorie tracker from a meal photo",
+  starterCalPrompt: "Build a calorie tracker where I log a meal by snapping a photo.",
+  starterHabitLabel: "Habit app that nudges at the right time",
+  starterHabitPrompt: "Build a habit tracker that nudges me right when I'm about to slip.",
+  starterCheckoutLabel: "Edge cases for a checkout flow",
+  starterCheckoutPrompt:
+    "List the edge cases and test scenarios for an e-commerce checkout flow.",
+  starterLoginLabel: "Test plan for login and 2FA",
+  starterLoginPrompt:
+    "Write a test plan for a login screen with email, Google sign-in, and 2FA.",
+  starterSprintLabel: "Turn an idea into a 2-week sprint",
+  starterSprintPrompt:
+    "Break my idea into a prioritized 2-week sprint with clear acceptance criteria.",
+  starterChurnLabel: "Find what's driving churn",
+  starterChurnPrompt:
+    "I have user activity data. Help me find what's driving churn and which metrics to watch.",
+  // chat (existing project): task-oriented, the user already has context
+  starterBacklogLabel: "Prioritize the backlog",
+  starterBacklogPrompt: "Turn what we've discussed into a prioritized backlog.",
+  starterTestsLabel: "Write test cases",
+  starterTestsPrompt: "Write test cases for what we just built.",
+  starterMetricsLabel: "Pick the metrics to track",
+  starterMetricsPrompt: "What metrics should we track to know this is working?",
+  starterPrdLabel: "Draft the PRD",
+  starterPrdPrompt: "Draft a PRD for this feature.",
+  catBuild: "Build",
+  catQa: "Test",
+  catPlan: "Plan",
+  catData: "Data",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -473,24 +485,34 @@ const tr: Record<I18nKey, string> = {
   signinSub: "Brief'in kaydedildi. Girişten hemen sonra kaldığın yerden devam.",
   openSub: "Sohbetin açılıyor. Bir saniye sürer.",
 
-  starterCalorieLabel: "Kalori hesaplama uygulaması",
-  starterCaloriePrompt: "Bir kalori hesaplama ve takip uygulaması yapmak istiyorum.",
-  starterVacationLabel: "Tatil planlama uygulaması",
-  starterVacationPrompt: "Bir tatil planlama uygulaması yapmak istiyorum.",
-  starterMealLabel: "Yemek planlama uygulaması",
-  starterMealPrompt:
-    "Bir haftalık akşam yemeklerini planlayan ve market listesi çıkaran bir uygulama yapmak istiyorum.",
-  starterHabitLabel: "Alışkanlık takip uygulaması",
-  starterHabitPrompt:
-    "Doğru anda dürten bir alışkanlık takip uygulaması yapmak istiyorum.",
-  starterPrdLabel: "PRD yaz",
-  starterPrdPrompt: "Şunun için bir PRD yaz: ",
-  starterTestsLabel: "Test senaryoları tasarla",
-  starterTestsPrompt: "Şunun için test senaryoları tasarla: ",
-  starterProblemLabel: "Problemi çerçevele",
-  starterProblemPrompt: "Üretmeden önce bunu problem tanımı olarak çerçevele: ",
-  starterFlowLabel: "Kullanıcı akışı çıkar",
-  starterFlowPrompt: "Şunun için kullanıcı akışını çıkar: ",
+  starterCalLabel: "Fotoğraftan kalori takibi",
+  starterCalPrompt: "Yemeğin fotoğrafını çekince kaloriyi kaydeden bir uygulama yapalım.",
+  starterHabitLabel: "Doğru anda dürten alışkanlık uygulaması",
+  starterHabitPrompt: "Tam pes edeceğim anda beni dürten bir alışkanlık takip uygulaması yapalım.",
+  starterCheckoutLabel: "Ödeme akışı için uç durumlar",
+  starterCheckoutPrompt:
+    "Bir e-ticaret ödeme akışı için uç durumları ve test senaryolarını çıkar.",
+  starterLoginLabel: "Giriş ve 2FA için test planı",
+  starterLoginPrompt:
+    "E-posta, Google ile giriş ve 2FA içeren bir giriş ekranı için test planı yaz.",
+  starterSprintLabel: "Fikri 2 haftalık sprinte dök",
+  starterSprintPrompt:
+    "Fikrimi, net kabul kriterleriyle önceliklendirilmiş 2 haftalık bir sprinte böl.",
+  starterChurnLabel: "Kaybı neyin tetiklediğini bul",
+  starterChurnPrompt:
+    "Kullanıcı aktivite verim var. Kaybı neyin tetiklediğini ve hangi metrikleri izlemem gerektiğini bulmama yardım et.",
+  starterBacklogLabel: "Backlog'u önceliklendir",
+  starterBacklogPrompt: "Konuştuklarımızı önceliklendirilmiş bir backlog'a dönüştür.",
+  starterTestsLabel: "Test senaryoları yaz",
+  starterTestsPrompt: "Az önce yaptığımız şey için test senaryoları yaz.",
+  starterMetricsLabel: "İzlenecek metrikleri seç",
+  starterMetricsPrompt: "Bunun işe yaradığını anlamak için hangi metrikleri izlemeliyiz?",
+  starterPrdLabel: "PRD taslağı çıkar",
+  starterPrdPrompt: "Bu özellik için bir PRD taslağı çıkar.",
+  catBuild: "Üret",
+  catQa: "Test",
+  catPlan: "Plan",
+  catData: "Veri",
 };
 
 const DICTS: Record<AppLanguage, Record<I18nKey, string>> = { en, tr };

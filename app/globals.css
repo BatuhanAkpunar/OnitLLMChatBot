@@ -755,6 +755,96 @@
   }
 }
 
+/* --- Spotlight card: cursor-following radial glow (reactbits-style). --- */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  --spot-x: 50%;
+  --spot-y: -30%;
+}
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    240px circle at var(--spot-x) var(--spot-y),
+    color-mix(in oklab, var(--spot-color, var(--primary)) 24%, transparent),
+    transparent 68%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+.spotlight-card > * {
+  position: relative;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-card::before {
+    display: none;
+  }
+}
+
+/* --- Shiny text: a slow highlight sweep, for live "working" labels. --- */
+.shiny-text {
+  background: linear-gradient(
+    110deg,
+    color-mix(in oklab, var(--muted-foreground) 85%, transparent) 35%,
+    var(--foreground) 50%,
+    color-mix(in oklab, var(--muted-foreground) 85%, transparent) 65%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: onit-shiny-sweep 2.4s linear infinite;
+}
+@keyframes onit-shiny-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text {
+    animation: none;
+    -webkit-text-fill-color: var(--muted-foreground);
+    color: var(--muted-foreground);
+  }
+}
+
+/* --- Wordmark: a one-shot highlight sweep on hover. --- */
+.logo-wordmark {
+  background-image: linear-gradient(110deg, var(--foreground), var(--foreground));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--foreground);
+}
+a:hover .logo-wordmark {
+  background-image: linear-gradient(
+    110deg,
+    var(--foreground) 38%,
+    color-mix(in oklab, var(--primary) 80%, white) 50%,
+    var(--foreground) 62%
+  );
+  animation: onit-shiny-sweep 0.85s ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  a:hover .logo-wordmark {
+    animation: none;
+  }
+}
+
 /* --- Scanlines overlay (CRT). Subtle in light, visible in dark. --- */
 .scanlines::after {
   content: "";

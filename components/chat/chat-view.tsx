@@ -31,6 +31,7 @@ import { MessageRow, OnitWorking } from "./message-row";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { getStarters } from "./starters";
+import { STARTER_META } from "./starter-meta";
 import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
 import { useI18n } from "@/components/i18n-provider";
@@ -1294,19 +1295,24 @@ export function ChatView({
                   </p>
                 </div>
                 <div className="flex max-w-md flex-wrap justify-center gap-1.5">
-                  {getStarters(uiLang, "chat").map((s) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => {
-                        setInput(s.prompt);
-                        taRef.current?.focus();
-                      }}
-                      className="rounded-xl border border-border bg-card px-3 py-1.5 text-[13px] text-foreground/80 transition-colors hover:border-violet-500/40 hover:bg-violet-500/[0.06] hover:text-foreground"
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                  {getStarters(uiLang, "chat").map((s) => {
+                    const meta = STARTER_META[s.cat];
+                    const Icon = meta.Icon;
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        onClick={() => {
+                          setInput(s.prompt);
+                          taRef.current?.focus();
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 text-[13px] text-foreground/80 transition-colors hover:border-foreground/35 hover:text-foreground"
+                      >
+                        <Icon size={14} weight="bold" style={{ color: meta.color }} />
+                        {s.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : null}

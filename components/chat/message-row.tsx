@@ -13,6 +13,7 @@ import { RoleAvatar } from "./role-visual";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import { splitOptions } from "@/lib/options";
+import { ShinyText } from "@/components/ui/shiny-text";
 import type { Agent, Message } from "./chat-view";
 
 function IconButton({
@@ -47,8 +48,8 @@ export function OnitWorking({ label }: { label: string }) {
       <span className="grid h-[34px] w-[34px] shrink-0 place-items-center">
         <OrbMark size={24} />
       </span>
-      <span className="inline-flex items-center gap-2.5 rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3 text-xs text-muted-foreground">
-        {label}
+      <span className="inline-flex items-center gap-2.5 rounded-2xl rounded-tl-md border border-border/70 bg-card px-4 py-3 text-xs">
+        <ShinyText className="font-medium">{label}</ShinyText>
         <span className="typing-dots" aria-hidden>
           <span />
           <span />

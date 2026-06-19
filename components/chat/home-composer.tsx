@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { getStarters } from "./starters";
+import { STARTER_META } from "./starter-meta";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
@@ -349,19 +351,43 @@ export function HomeComposer({
 
         </div>
 
-        {/* Quick quests: show what the team can do, one tap to begin. */}
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          {getStarters(lang).map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              onClick={() => pickStarter(s.prompt)}
-              className="pressable is-shadowed rounded-lg border-2 border-foreground/80 bg-card px-3 py-1.5 text-[13px] font-medium text-foreground/85 transition-colors hover:bg-accent dark:border-border"
-              style={{ boxShadow: "2px 2px 0 0 color-mix(in oklab, var(--foreground) 35%, transparent)" }}
-            >
-              {s.label}
-            </button>
-          ))}
+        {/* Quick quests: concrete opening lines, one tap to begin. */}
+        <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {getStarters(lang).map((s) => {
+            const meta = STARTER_META[s.cat];
+            const Icon = meta.Icon;
+            return (
+              <SpotlightCard
+                key={s.label}
+                color={meta.color}
+                onClick={() => pickStarter(s.prompt)}
+                ariaLabel={s.label}
+                className="pressable flex w-full items-center gap-3 rounded-xl border-[1.5px] border-border bg-card px-3.5 py-3 text-left transition-colors hover:border-foreground/35"
+              >
+                <span
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border-[1.5px]"
+                  style={{
+                    borderColor: `color-mix(in oklab, ${meta.color} 42%, transparent)`,
+                    background: `color-mix(in oklab, ${meta.color} 13%, transparent)`,
+                    color: meta.color,
+                  }}
+                >
+                  <Icon size={17} weight="bold" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span
+                    className="block font-mono text-[10px] font-semibold uppercase tracking-[0.16em]"
+                    style={{ color: meta.color }}
+                  >
+                    {t(meta.tag)}
+                  </span>
+                  <span className="mt-0.5 block text-[13px] font-medium leading-snug text-foreground/90">
+                    {s.label}
+                  </span>
+                </span>
+              </SpotlightCard>
+            );
+          })}
         </div>
 
         {/* How it works */}
