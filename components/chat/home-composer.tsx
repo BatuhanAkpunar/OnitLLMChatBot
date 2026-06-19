@@ -284,7 +284,7 @@ export function HomeComposer({
               {t("heroAccent")}
             </span>
           </h1>
-          <p className="mt-6 max-w-xl text-balance text-[15px] leading-[1.7] text-muted-foreground sm:text-base">
+          <p className="mt-6 max-w-xl text-balance font-mono text-[13.5px] leading-[1.7] tracking-tight text-muted-foreground sm:text-[14.5px]">
             {t("heroTagline")}
           </p>
         </div>
@@ -371,14 +371,14 @@ export function HomeComposer({
           </h2>
           <ol className="grid gap-4 sm:grid-cols-3">
             {HOW_STEPS.map((s) => (
-              <li key={s.n} className="pixel-panel p-5">
-                <span className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-foreground bg-card font-pixel text-sm text-foreground">
+              <li key={s.n} className="how-card pixel-panel p-5">
+                <span className="how-num mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border-[1.5px] border-foreground bg-card font-pixel text-sm text-foreground">
                   {s.n}
                 </span>
-                <h3 className="text-[15px] font-semibold leading-snug text-foreground">
+                <h3 className="font-mono text-[14px] font-semibold leading-snug tracking-tight text-foreground">
                   {t(s.title)}
                 </h3>
-                <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
+                <p className="mt-1.5 font-mono text-[12.5px] leading-relaxed tracking-tight text-muted-foreground">
                   {t(s.body)}
                 </p>
               </li>
