@@ -3,14 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import {
-  PaperPlaneRight,
-  Check,
-  Target,
-  ShieldCheck,
-  Brain,
-  type Icon,
-} from "@phosphor-icons/react";
+import { PaperPlaneRight } from "@phosphor-icons/react";
 import { getStarters } from "./starters";
 import { createProjectAndGetId } from "@/app/(app)/actions";
 import { signInWithGoogle } from "@/app/login/actions";
@@ -20,7 +13,6 @@ import { RoutingControl, AgentMenu } from "./routing-control";
 import { OrbMark } from "@/components/brand/orb";
 import { useI18n } from "@/components/i18n-provider";
 import type { I18nKey } from "@/lib/i18n";
-import { RoleAvatar, rolePersona } from "./role-visual";
 import type { Agent } from "./chat-view";
 
 type Mode = "build" | "plan" | "discuss";
@@ -36,18 +28,6 @@ const HOW_STEPS: { n: number; title: I18nKey; body: I18nKey }[] = [
   { n: 1, title: "how1Title", body: "how1Body" },
   { n: 2, title: "how2Title", body: "how2Body" },
   { n: 3, title: "how3Title", body: "how3Body" },
-];
-
-const WHY_POINTS: { icon: Icon; title: I18nKey; body: I18nKey }[] = [
-  { icon: Target, title: "why1Title", body: "why1Body" },
-  { icon: ShieldCheck, title: "why2Title", body: "why2Body" },
-  { icon: Brain, title: "why3Title", body: "why3Body" },
-];
-
-const EXAMPLES: { label: I18nKey; prompt: I18nKey }[] = [
-  { label: "ex1Label", prompt: "ex1Prompt" },
-  { label: "ex2Label", prompt: "ex2Prompt" },
-  { label: "ex3Label", prompt: "ex3Prompt" },
 ];
 
 function stripAt(handle: string) {
@@ -87,7 +67,6 @@ export function HomeComposer({
   const [tokenStart, setTokenStart] = useState<number | null>(null);
   const [highlight, setHighlight] = useState(0);
 
-  const firstName = userName?.trim().split(/\s+/)[0] || null;
 
   const filteredAgents = useMemo(() => {
     const q = filter.toLowerCase();
@@ -293,11 +272,6 @@ export function HomeComposer({
 
       <div className="relative z-10 w-full max-w-2xl">
         <div className="mb-9 flex flex-col items-center text-center">
-          {firstName ? (
-            <span className="mb-4 font-pixel text-xs uppercase tracking-[0.22em] text-violet-600 dark:text-violet-300">
-              {t("welcomeBack", { name: firstName })}
-            </span>
-          ) : null}
           <h1 className="font-pixel text-balance text-[2.9rem] leading-[1.05] tracking-tight sm:text-[3.9rem]">
             <span className="text-foreground">{t("heroTitle")}</span>
             <br />
@@ -392,27 +366,6 @@ export function HomeComposer({
           ))}
         </div>
 
-        {/* Onboarding: one tap fills a full example brief, ready to send. */}
-        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[12.5px] text-muted-foreground">
-          <span>{t("exampleLead")}</span>
-          {EXAMPLES.map((ex, i) => (
-            <span key={ex.label} className="inline-flex items-center gap-2">
-              {i > 0 ? (
-                <span aria-hidden className="text-muted-foreground/40">
-                  ·
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => pickStarter(t(ex.prompt))}
-                className="font-medium text-foreground/80 underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground"
-              >
-                {t(ex.label)}
-              </button>
-            </span>
-          ))}
-        </p>
-
         {/* How it works */}
         <section className="mt-20">
           <h2 className="mb-7 text-center font-pixel text-2xl tracking-tight text-foreground sm:text-3xl">
@@ -442,29 +395,6 @@ export function HomeComposer({
             taRef.current?.focus();
           }}
         />
-
-        {/* Why Onit */}
-        <section className="mt-16">
-          <h2 className="mb-7 text-center font-pixel text-2xl tracking-tight text-foreground sm:text-3xl">
-            {t("whyKicker")}
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {WHY_POINTS.map((p) => {
-              const PointIcon = p.icon;
-              return (
-                <div key={p.title} className="pixel-panel p-5">
-                  <PointIcon size={22} weight="bold" className="mb-3 text-foreground" />
-                  <h3 className="text-[15px] font-semibold leading-snug text-foreground">
-                    {t(p.title)}
-                  </h3>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
-                    {t(p.body)}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
       </div>
 
       {transition

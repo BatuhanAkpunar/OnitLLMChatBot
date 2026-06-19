@@ -184,39 +184,19 @@ const en = {
   planPro: "Pro",
 
   // home / landing
-  welcomeBack: "Welcome back, {name}",
-  heroTitle: "Brief your team.",
-  heroAccent: "Ship it.",
+  heroTitle: "Tell us your idea.",
+  heroAccent: "We're on it.",
   heroTagline:
     "Describe your idea once. A full AI product team challenges it, shapes it, and turns it into a plan you can build on.",
   howKicker: "How it works",
-  how1Title: "Write one brief",
-  how1Body: "Describe your idea or problem in plain words. No forms, no setup.",
-  how2Title: "The team takes it apart",
+  how1Title: "Tell us your idea",
+  how1Body:
+    "Describe the app or idea you have in plain words. No forms, no long setup.",
+  how2Title: "The team gets to work",
   how2Body:
-    "Onit routes it to the right specialists. They challenge the idea, surface the risks, and shape a plan.",
-  how3Title: "Refine and build",
-  how3Body: "Edit the plan until it reads right, then push it to build.",
-  whyKicker: "Why Onit",
-  why1Title: "It challenges your idea",
-  why1Body:
-    "Onit pushes back and surfaces the blind spots you did not raise, instead of just agreeing.",
-  why2Title: "It never invents data",
-  why2Body:
-    "It separates what is known from what is assumed, and never fabricates numbers.",
-  why3Title: "It remembers your project",
-  why3Body:
-    "Decisions, tasks and rules stay with the project and shape every answer.",
-  exampleLead: "New here? Try:",
-  ex1Label: "Meal-prep app",
-  ex1Prompt:
-    "A meal-prep app that plans a week of dinners for busy parents and builds the grocery list.",
-  ex2Label: "Habit tracker",
-  ex2Prompt:
-    "A habit tracker that nudges you at the right moment instead of just logging streaks.",
-  ex3Label: "Tutor marketplace",
-  ex3Prompt:
-    "A marketplace that matches high-school students with affordable online tutors.",
+    "Onit hands it to the right specialists. They ask the right questions, spot the risks, and shape a clear plan.",
+  how3Title: "Like the plan, start building",
+  how3Body: "Tweak the plan however you want, then move to build when it is ready.",
   askAnything: "Ask your team anything…",
   agentsChip: "agents",
   nAgents: "{n} agents",
@@ -236,7 +216,7 @@ const en = {
   storyKicker: "Meet the team",
   storyNext: "Continue",
   storyTapHint: "Click the box to continue, or a character to hear them",
-  storyCta: "Write your brief",
+  storyCta: "Write your idea",
   storyIntro1: "You have an idea.",
   storyIntro2: "You shouldn't have to build it alone. Meet your team.",
   storyAnalyst:
@@ -256,20 +236,21 @@ const en = {
   signinSub: "Your brief is saved. We'll pick it up right after.",
   openSub: "Opening your chat. This takes a second.",
 
-  // quick starters (label + sentence the user completes)
+  // quick starters: concrete app ideas + a couple of product tasks
+  starterCalorieLabel: "Calorie-counting app",
+  starterCaloriePrompt: "I want to build a calorie-counting and tracking app.",
+  starterVacationLabel: "Vacation planner",
+  starterVacationPrompt: "I want to build a vacation-planning app.",
+  starterMealLabel: "Meal-prep app",
+  starterMealPrompt:
+    "I want to build a meal-prep app that plans a week of dinners and builds the grocery list.",
+  starterHabitLabel: "Habit tracker",
+  starterHabitPrompt:
+    "I want to build a habit tracker that nudges you at the right moment.",
   starterPrdLabel: "Write a PRD",
   starterPrdPrompt: "Write a PRD for ",
-  starterBacklogLabel: "Prioritize a backlog",
-  starterBacklogPrompt: "Help me prioritize our backlog: ",
-  starterProblemLabel: "Frame a problem",
-  starterProblemPrompt: "Frame this as a problem statement before we build anything: ",
   starterTestsLabel: "Design test cases",
   starterTestsPrompt: "Design test cases for ",
-  starterAssumptionLabel: "Test an assumption",
-  starterAssumptionPrompt:
-    "Design the cheapest probe to test this assumption before we build: ",
-  starterSprintLabel: "Plan a sprint",
-  starterSprintPrompt: "Plan a two week sprint for ",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -438,39 +419,19 @@ const tr: Record<I18nKey, string> = {
   planFree: "Free",
   planPro: "Pro",
 
-  welcomeBack: "Tekrar hoş geldin, {name}",
   heroTitle: "Fikrini söyle.",
   heroAccent: "Ekibin üretsin.",
   heroTagline:
     "Fikrini bir kez anlat. Tam bir yapay zeka ürün ekibi onu sorgular, biçimlendirir ve üzerine inşa edebileceğin bir plana dönüştürür.",
   howKicker: "Nasıl çalışır",
-  how1Title: "Tek bir brief yaz",
-  how1Body: "Fikrini ya da problemini sade kelimelerle anlat. Form yok, kurulum yok.",
-  how2Title: "Ekip onu didikler",
+  how1Title: "Fikrini yaz",
+  how1Body:
+    "Aklındaki uygulamayı ya da fikri gündelik dille anlat. Form yok, uzun kurulum yok.",
+  how2Title: "Ekip işe koyulur",
   how2Body:
-    "Onit doğru uzmanlara dağıtır. Fikre meydan okur, riskleri çıkarır ve bir plan biçimlendirir.",
-  how3Title: "İnce ayar ve üretim",
-  how3Body: "Planı doğru olana dek düzenle, sonra üretime gönder.",
-  whyKicker: "Neden Onit",
-  why1Title: "Fikrine meydan okur",
-  why1Body:
-    "Onit sadece onaylamaz; senin görmediğin kör noktaları çıkarır, gerektiğinde itiraz eder.",
-  why2Title: "Veri uydurmaz",
-  why2Body:
-    "Bilineni varsayılandan ayırır ve asla uydurma sayı üretmez.",
-  why3Title: "Projeni hatırlar",
-  why3Body:
-    "Kararlar, görevler ve kurallar projeyle kalır ve her yanıtı şekillendirir.",
-  exampleLead: "Buralı değil misin? Şunu dene:",
-  ex1Label: "Yemek planlama",
-  ex1Prompt:
-    "Yoğun ebeveynler için bir haftalık akşam yemeklerini planlayan ve market listesi çıkaran bir uygulama.",
-  ex2Label: "Alışkanlık takibi",
-  ex2Prompt:
-    "Sadece seri tutmak yerine doğru anda dürten bir alışkanlık takip uygulaması.",
-  ex3Label: "Özel ders pazarı",
-  ex3Prompt:
-    "Lise öğrencilerini uygun fiyatlı online özel öğretmenlerle eşleştiren bir pazar yeri.",
+    "Onit doğru uzmanlara dağıtır; doğru soruları sorar, riskleri görür ve sana net bir plan çıkarır.",
+  how3Title: "Planı beğen, başla",
+  how3Body: "Planı dilediğin gibi düzenle, hazır olunca üretime geç.",
   askAnything: "Ekibine ne istersen sor…",
   agentsChip: "ajanlar",
   nAgents: "{n} ajan",
@@ -488,7 +449,7 @@ const tr: Record<I18nKey, string> = {
   storyKicker: "Takımla tanış",
   storyNext: "Devam",
   storyTapHint: "İlerlemek için kutuya, dinlemek için karaktere tıkla",
-  storyCta: "Brief'ini yaz",
+  storyCta: "Fikrini yaz",
   storyIntro1: "Bir fikrin var.",
   storyIntro2: "Onu tek başına inşa etmek zorunda değilsin. Ekibinle tanış.",
   storyAnalyst:
@@ -508,20 +469,20 @@ const tr: Record<I18nKey, string> = {
   signinSub: "Brief'in kaydedildi. Girişten hemen sonra kaldığın yerden devam.",
   openSub: "Sohbetin açılıyor. Bir saniye sürer.",
 
+  starterCalorieLabel: "Kalori hesaplama uygulaması",
+  starterCaloriePrompt: "Bir kalori hesaplama ve takip uygulaması yapmak istiyorum.",
+  starterVacationLabel: "Tatil planlama uygulaması",
+  starterVacationPrompt: "Bir tatil planlama uygulaması yapmak istiyorum.",
+  starterMealLabel: "Yemek planlama uygulaması",
+  starterMealPrompt:
+    "Bir haftalık akşam yemeklerini planlayan ve market listesi çıkaran bir uygulama yapmak istiyorum.",
+  starterHabitLabel: "Alışkanlık takip uygulaması",
+  starterHabitPrompt:
+    "Doğru anda dürten bir alışkanlık takip uygulaması yapmak istiyorum.",
   starterPrdLabel: "PRD yaz",
   starterPrdPrompt: "Şunun için bir PRD yaz: ",
-  starterBacklogLabel: "Backlog önceliklendir",
-  starterBacklogPrompt: "Backlog'umuzu önceliklendirmeme yardım et: ",
-  starterProblemLabel: "Problemi çerçevele",
-  starterProblemPrompt:
-    "Bir şey üretmeden önce bunu problem tanımı olarak çerçevele: ",
   starterTestsLabel: "Test senaryoları tasarla",
   starterTestsPrompt: "Şunun için test senaryoları tasarla: ",
-  starterAssumptionLabel: "Varsayım test et",
-  starterAssumptionPrompt:
-    "Üretmeden önce şu varsayımı test edecek en ucuz deneyi tasarla: ",
-  starterSprintLabel: "Sprint planla",
-  starterSprintPrompt: "Şunun için iki haftalık bir sprint planla: ",
 };
 
 const DICTS: Record<AppLanguage, Record<I18nKey, string>> = { en, tr };

@@ -183,10 +183,10 @@ export function Party({
         <button
           type="button"
           onClick={onCta}
-          className="pressable is-shadowed inline-flex items-center gap-2 rounded-xl border-[1.5px] border-foreground bg-primary px-5 py-2.5 font-pixel text-sm text-primary-foreground"
+          className="pressable is-shadowed inline-flex items-center gap-2.5 rounded-2xl border-[1.5px] border-foreground bg-primary px-7 py-3.5 text-[16px] font-semibold tracking-tight text-primary-foreground"
           style={{ boxShadow: "3px 3px 0 0 var(--foreground)" }}
         >
-          <PlayCircle size={16} weight="fill" />
+          <PlayCircle size={20} weight="fill" />
           {t("storyCta")}
         </button>
       </div>
