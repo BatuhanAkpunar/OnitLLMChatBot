@@ -9,7 +9,6 @@ import { signInWithGoogle, signInWithDevPassword } from "@/app/login/actions";
 const ROLES: { handle: string; color: string }[] = [
   { handle: "@Analyst", color: "analyst" },
   { handle: "@ProductManager", color: "product-manager" },
-  { handle: "@Developer", color: "developer" },
   { handle: "@ProjectManager", color: "project-manager" },
   { handle: "@Designer", color: "product-designer" },
   { handle: "@QA", color: "qa" },
@@ -58,7 +57,7 @@ export function LoginHero({
         </div>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Welcome to Onit AI</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Bring in AI roles for your software team: Analyst, PM, Developer, QA and more. Sign in to
+          Brief one AI product team: Analyst, PM, Designer, Project Manager and QA. Sign in to
           start.
         </p>
       </div>

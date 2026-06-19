@@ -14,6 +14,26 @@ P2 = high impact / medium effort, P3 = nice to have.
 - **LLM = Gemini, single model** (`gemini-3.5-flash`) for chat, summaries and
   fallback. Runs free on the owner's Google AI Studio key; no other provider.
 
+## PM audit rebuild (June 2026)
+
+An independent PM audit drove a phased rebuild (see docs/PRODUCT.md for the
+north star). What shipped:
+- **Cleanup**: removed dead components (DynamicIsland, Terminal, BorderBeam),
+  dead i18n (vision pillars, command palette, island, web-search), and the dead
+  web-search path in the chat route.
+- **Prompt engine**: the Product OS is now proportional (small tasks answered
+  directly, challenge/lenses only for strategic asks); identity is leaner and
+  never volunteers the maker or model; the gate welcomes product-thinking work.
+- **Positioning**: sharper hero, plus "How it works" and "Why Onit" sections.
+- **Design**: pixel display font reserved for accents and the team surface; body
+  and labels use the readable Geist (premium main flow, arcade as accent).
+- **Activation + measurement**: one-click example briefs; the admin dashboard
+  derives activation/engagement from existing tables (no events pipeline).
+- **Monetization**: Free/Pro plan with a daily message cap and an upgrade dialog
+  (`profiles.plan`, `lib/billing.ts`); Stripe is the remaining wiring.
+- **Architecture**: extracted MessageRow into its own module; `actions.ts` split
+  is deferred (wide blast radius).
+
 ## P1: quick wins
 
 - [ ] **Project Team Rules (constitution)** (claude-team-os `CLAUDE.md`)
