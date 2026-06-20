@@ -179,7 +179,13 @@ export function HomeComposer({
       } catch {}
       setBusy(true);
       setTransition({ kind: "signin", text });
-      await signInWithGoogle();
+      const { url } = await signInWithGoogle();
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      setBusy(false);
+      setTransition(null);
       return;
     }
     openChat(text, mode, pinned);

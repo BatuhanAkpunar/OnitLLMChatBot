@@ -4,7 +4,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function signInWithGoogle() {
+// Returns the Google OAuth URL for the client to navigate to. We do NOT call
+// redirect() here: redirecting to an external URL from a server action is
+// unreliable (it can surface as a generic error boundary). The client does
+// window.location with the returned url instead.
+export async function signInWithGoogle(): Promise<{
+  url?: string;
+  error?: string;
+}> {
   const supabase = await createClient();
   const headersList = await headers();
   const origin =
@@ -19,13 +26,9 @@ export async function signInWithGoogle() {
     },
   });
 
-  if (error) {
-    redirect(`/?error=${encodeURIComponent(error.message)}`);
-  }
-
-  if (data.url) {
-    redirect(data.url);
-  }
+  if (error) return { error: error.message };
+  if (data.url) return { url: data.url };
+  return { error: "Could not start sign-in. Please try again." };
 }
 
 // Local-only email/password sign-in for development testing (Google stays the

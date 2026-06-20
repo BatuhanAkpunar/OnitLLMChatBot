@@ -48,6 +48,18 @@ export function LoginHero({
 }) {
   const [mode, setMode] = useState<"plan" | "build">("build");
   const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function startGoogle() {
+    if (busy) return;
+    setBusy(true);
+    const { url } = await signInWithGoogle();
+    if (url) {
+      window.location.href = url;
+      return;
+    }
+    setBusy(false);
+  }
 
   return (
     <div className="w-full max-w-xl">
@@ -69,7 +81,12 @@ export function LoginHero({
       ) : null}
 
       {/* Chat-style preview: using it signs you in */}
-      <form action={signInWithGoogle}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          startGoogle();
+        }}
+      >
         <BorderGlow radius={16} innerClassName="p-2">
           <textarea
             value={input}
@@ -92,7 +109,8 @@ export function LoginHero({
             <button
               type="submit"
               aria-label="Send"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90"
+              disabled={busy}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               <PaperPlaneRight size={16} weight="fill" />
             </button>
@@ -115,15 +133,15 @@ export function LoginHero({
         ))}
       </div>
 
-      <form action={signInWithGoogle} className="mt-6">
-        <button
-          type="submit"
-          className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-      </form>
+      <button
+        type="button"
+        onClick={startGoogle}
+        disabled={busy}
+        className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:opacity-60"
+      >
+        <GoogleIcon />
+        Continue with Google
+      </button>
 
       {!configured ? (
         <p className="mt-4 text-center text-xs text-muted-foreground">
