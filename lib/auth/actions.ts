@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function signOut() {
   if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    await supabase.auth.signOut();
+    try {
+      const supabase = await createClient();
+      await supabase.auth.signOut();
+    } catch {}
   }
   redirect("/");
 }

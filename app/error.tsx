@@ -1,6 +1,9 @@
 "use client";
 
-export default function Error({ reset }: { error: Error; reset: () => void }) {
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
+  if (isRedirectError(error)) throw error;
   return (
     <div className="flex min-h-dvh items-center justify-center p-6">
       <div className="max-w-sm text-center">
