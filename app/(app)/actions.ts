@@ -13,7 +13,6 @@ import { modelCost } from "@/lib/ai/model-prices";
 import { exceedsFreeDailyLimit, startOfDayISO } from "@/lib/billing";
 import {
   parseOrchestration,
-  type OrchestrateTask,
   type OrchestrateResult,
 } from "@/lib/ai/orchestration";
 import {
@@ -65,8 +64,6 @@ async function logUsage(
     // usage logging is best-effort
   }
 }
-
-export type { OrchestrateTask, OrchestrateResult };
 
 /**
  * Smart orchestrator: reads the request (with recent context) and either asks
