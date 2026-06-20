@@ -42,7 +42,7 @@ export function TopBar({
         className="pressable flex shrink-0 items-center gap-2 rounded-xl px-1.5 py-1"
       >
         <OrbMark size={22} />
-        <span className="logo-wordmark font-pixel text-[17px] tracking-tight">onit</span>
+        <span className="font-pixel text-[17px] tracking-tight">onit</span>
       </Link>
 
       {title ? (

@@ -675,172 +675,56 @@
   box-shadow: 0 0 0 0 transparent !important;
 }
 
-/* --- "How it works" cards: scroll reveal + hover lift, sheen, badge glow --- */
-.how-card {
-  overflow: hidden;
+/* --- Motion language: ONE vocabulary, applied everywhere. ---------------------
+   Interaction is "arcade tactile": surfaces press down on click (.pressable),
+   and interactive cards lift with a growing hard offset-shadow on hover
+   (.lift-card). Sectioned content reveals once with a small fade-up
+   (.reveal-up). Deliberately no soft radial glows or gradient shimmers - those
+   are a different design language and made the site feel like a grab-bag. */
+
+/* Reusable card lift: pair with .pixel-panel on any interactive card. */
+.lift-card {
   transition:
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.28s ease;
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.26s ease;
 }
-/* Diagonal sheen that sweeps across on hover. */
-.how-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    115deg,
-    transparent 32%,
-    color-mix(in oklab, var(--foreground) 10%, transparent) 48%,
-    transparent 64%
-  );
-  transform: translateX(-130%);
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  pointer-events: none;
+.lift-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--foreground) 50%, transparent);
+  box-shadow: 6px 8px 0 0 color-mix(in oklab, var(--foreground) 85%, transparent);
 }
-.how-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in oklab, var(--primary) 55%, var(--foreground));
-  box-shadow: 7px 9px 0 0 color-mix(in oklab, var(--foreground) 88%, transparent);
+.dark .lift-card:hover {
+  border-color: color-mix(in oklab, var(--foreground) 38%, transparent);
+  box-shadow: 6px 8px 0 0 rgba(0, 0, 0, 0.55);
 }
-.dark .how-card:hover {
-  border-color: color-mix(in oklab, var(--primary) 65%, transparent);
-  box-shadow:
-    7px 9px 0 0 rgba(0, 0, 0, 0.55),
-    0 0 24px -6px color-mix(in oklab, var(--primary) 60%, transparent);
-}
-.how-card:hover::after {
-  transform: translateX(130%);
-}
-/* Number badge: gentle pop + colored ring as the card lifts. */
-.how-num {
-  transition:
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.28s ease,
-    border-color 0.28s ease;
-}
-.how-card:hover .how-num {
-  transform: translateY(-1px);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 22%, transparent);
-}
-/* Scroll-driven reveal, only where supported so other browsers stay visible. */
-@keyframes how-reveal {
+
+/* One entrance: a small fade-up as the element scrolls into view. Gated by
+   @supports so browsers without scroll timelines just show content normally. */
+@keyframes reveal-up {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 @supports (animation-timeline: view()) {
-  .how-card {
-    animation: how-reveal linear both;
+  .reveal-up {
+    animation: reveal-up linear both;
     animation-timeline: view();
-    animation-range: entry 8% cover 26%;
+    animation-range: entry 6% cover 24%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .how-card,
-  .how-card::after,
-  .how-num {
-    animation: none;
+  .lift-card,
+  .lift-card:hover {
     transition: none;
-  }
-  .how-card:hover {
     transform: none;
   }
-}
-
-/* --- Spotlight card: cursor-following radial glow (reactbits-style). --- */
-.spotlight-card {
-  position: relative;
-  overflow: hidden;
-  --spot-x: 50%;
-  --spot-y: -30%;
-}
-.spotlight-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    240px circle at var(--spot-x) var(--spot-y),
-    color-mix(in oklab, var(--spot-color, var(--primary)) 24%, transparent),
-    transparent 68%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 0;
-}
-.spotlight-card:hover::before {
-  opacity: 1;
-}
-.spotlight-card > * {
-  position: relative;
-  z-index: 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  .spotlight-card::before {
-    display: none;
-  }
-}
-
-/* --- Shiny text: a slow highlight sweep, for live "working" labels. --- */
-.shiny-text {
-  background: linear-gradient(
-    110deg,
-    color-mix(in oklab, var(--muted-foreground) 85%, transparent) 35%,
-    var(--foreground) 50%,
-    color-mix(in oklab, var(--muted-foreground) 85%, transparent) 65%
-  );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: onit-shiny-sweep 2.4s linear infinite;
-}
-@keyframes onit-shiny-sweep {
-  from {
-    background-position: 200% 0;
-  }
-  to {
-    background-position: -120% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .shiny-text {
-    animation: none;
-    -webkit-text-fill-color: var(--muted-foreground);
-    color: var(--muted-foreground);
-  }
-}
-
-/* --- Wordmark: a one-shot highlight sweep on hover. --- */
-.logo-wordmark {
-  background-image: linear-gradient(110deg, var(--foreground), var(--foreground));
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: var(--foreground);
-}
-a:hover .logo-wordmark {
-  background-image: linear-gradient(
-    110deg,
-    var(--foreground) 38%,
-    color-mix(in oklab, var(--primary) 80%, white) 50%,
-    var(--foreground) 62%
-  );
-  animation: onit-shiny-sweep 0.85s ease-out 1;
-}
-@media (prefers-reduced-motion: reduce) {
-  a:hover .logo-wordmark {
+  .reveal-up {
     animation: none;
   }
 }

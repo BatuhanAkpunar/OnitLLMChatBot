@@ -42,6 +42,26 @@ Decided: keep the arcade identity but balance it.
   never for body or critical UI labels (those stay readable, Geist).
 - Motion is purposeful and respects `prefers-reduced-motion` everywhere.
 
+## Motion and interaction language (ONE vocabulary)
+Coherence beats a pile of effects. The whole app uses a single tactile
+"arcade" interaction language; do not add a second one. Mixing idioms (soft
+radial spotlights, gradient text shimmer, sheen sweeps, per-effect colors) is
+what made the site feel amateur, so those are banned.
+- **Surfaces**: one card, `.pixel-panel` (1.5px border + hard offset shadow).
+- **Click**: `.pressable` presses the surface down (translate 2px, shadow
+  collapses). On every clickable thing.
+- **Hover (interactive cards)**: `.lift-card` lifts 3px and the hard offset
+  shadow grows; the border tightens toward foreground. No glows.
+- **Entrance**: `.reveal-up`, one small fade-up as a section scrolls in.
+- **Easing/timing**: `cubic-bezier(0.22, 1, 0.36, 1)`, ~0.26s. Reuse, do not
+  invent per-component curves.
+- **Type roles**: Pixelify = wordmark + section headings; Geist Mono = system
+  texture (tagline, card body, chips, tags); Geist Sans = long-form reading.
+- **Accent**: the brand gradient is reserved for the hero accent and active
+  states, not sprinkled on hovers.
+Before adding any new animation, map it to one of the above. If it does not
+fit, it is the wrong effect for this product.
+
 ## Voice and tone
 Direct, confident, plain. Short sentences. No hype, no filler, no em-dash. Name
 the trade-off, not just the upside. Speak the user's language (TR/EN).

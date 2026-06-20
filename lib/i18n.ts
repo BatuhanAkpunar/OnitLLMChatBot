@@ -236,22 +236,23 @@ const en = {
   signinSub: "Your brief is saved. We'll pick it up right after.",
   openSub: "Opening your chat. This takes a second.",
 
-  // quick starters: concrete opening lines, grouped by what the team can do
+  // quick starters: a lead-in then short example chips that insert a full prompt
+  starterLead: "Try one of these:",
   // home (new visitor): 2 build, 2 QA, 1 plan, 1 data
-  starterCalLabel: "Calorie tracker from a meal photo",
+  starterCalLabel: "Calorie tracker",
   starterCalPrompt: "Build a calorie tracker where I log a meal by snapping a photo.",
-  starterHabitLabel: "Habit app that nudges at the right time",
+  starterHabitLabel: "Habit app",
   starterHabitPrompt: "Build a habit tracker that nudges me right when I'm about to slip.",
-  starterCheckoutLabel: "Edge cases for a checkout flow",
+  starterCheckoutLabel: "Checkout edge cases",
   starterCheckoutPrompt:
     "List the edge cases and test scenarios for an e-commerce checkout flow.",
-  starterLoginLabel: "Test plan for login and 2FA",
+  starterLoginLabel: "Login test plan",
   starterLoginPrompt:
     "Write a test plan for a login screen with email, Google sign-in, and 2FA.",
-  starterSprintLabel: "Turn an idea into a 2-week sprint",
+  starterSprintLabel: "2-week sprint plan",
   starterSprintPrompt:
     "Break my idea into a prioritized 2-week sprint with clear acceptance criteria.",
-  starterChurnLabel: "Find what's driving churn",
+  starterChurnLabel: "Find churn drivers",
   starterChurnPrompt:
     "I have user activity data. Help me find what's driving churn and which metrics to watch.",
   // chat (existing project): task-oriented, the user already has context
@@ -259,14 +260,10 @@ const en = {
   starterBacklogPrompt: "Turn what we've discussed into a prioritized backlog.",
   starterTestsLabel: "Write test cases",
   starterTestsPrompt: "Write test cases for what we just built.",
-  starterMetricsLabel: "Pick the metrics to track",
+  starterMetricsLabel: "Pick metrics to track",
   starterMetricsPrompt: "What metrics should we track to know this is working?",
   starterPrdLabel: "Draft the PRD",
   starterPrdPrompt: "Draft a PRD for this feature.",
-  catBuild: "Build",
-  catQa: "Test",
-  catPlan: "Plan",
-  catData: "Data",
 } as const;
 
 export type I18nKey = keyof typeof en;
@@ -485,34 +482,31 @@ const tr: Record<I18nKey, string> = {
   signinSub: "Brief'in kaydedildi. Girişten hemen sonra kaldığın yerden devam.",
   openSub: "Sohbetin açılıyor. Bir saniye sürer.",
 
-  starterCalLabel: "Fotoğraftan kalori takibi",
+  starterLead: "Şunlardan birini dene:",
+  starterCalLabel: "Kalori takibi",
   starterCalPrompt: "Yemeğin fotoğrafını çekince kaloriyi kaydeden bir uygulama yapalım.",
-  starterHabitLabel: "Doğru anda dürten alışkanlık uygulaması",
+  starterHabitLabel: "Alışkanlık uygulaması",
   starterHabitPrompt: "Tam pes edeceğim anda beni dürten bir alışkanlık takip uygulaması yapalım.",
-  starterCheckoutLabel: "Ödeme akışı için uç durumlar",
+  starterCheckoutLabel: "Ödeme uç durumları",
   starterCheckoutPrompt:
     "Bir e-ticaret ödeme akışı için uç durumları ve test senaryolarını çıkar.",
-  starterLoginLabel: "Giriş ve 2FA için test planı",
+  starterLoginLabel: "Giriş test planı",
   starterLoginPrompt:
     "E-posta, Google ile giriş ve 2FA içeren bir giriş ekranı için test planı yaz.",
-  starterSprintLabel: "Fikri 2 haftalık sprinte dök",
+  starterSprintLabel: "2 haftalık sprint",
   starterSprintPrompt:
     "Fikrimi, net kabul kriterleriyle önceliklendirilmiş 2 haftalık bir sprinte böl.",
-  starterChurnLabel: "Kaybı neyin tetiklediğini bul",
+  starterChurnLabel: "Kayıp nedenleri",
   starterChurnPrompt:
     "Kullanıcı aktivite verim var. Kaybı neyin tetiklediğini ve hangi metrikleri izlemem gerektiğini bulmama yardım et.",
   starterBacklogLabel: "Backlog'u önceliklendir",
   starterBacklogPrompt: "Konuştuklarımızı önceliklendirilmiş bir backlog'a dönüştür.",
   starterTestsLabel: "Test senaryoları yaz",
   starterTestsPrompt: "Az önce yaptığımız şey için test senaryoları yaz.",
-  starterMetricsLabel: "İzlenecek metrikleri seç",
+  starterMetricsLabel: "Metrikleri seç",
   starterMetricsPrompt: "Bunun işe yaradığını anlamak için hangi metrikleri izlemeliyiz?",
   starterPrdLabel: "PRD taslağı çıkar",
   starterPrdPrompt: "Bu özellik için bir PRD taslağı çıkar.",
-  catBuild: "Üret",
-  catQa: "Test",
-  catPlan: "Plan",
-  catData: "Veri",
 };
 
 const DICTS: Record<AppLanguage, Record<I18nKey, string>> = { en, tr };
