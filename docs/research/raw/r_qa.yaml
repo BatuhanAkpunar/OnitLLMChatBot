@@ -1,0 +1,60 @@
+- author: YamTrick1200
+  gallery_urls: []
+  post_hint: self
+  preview_image_url: >-
+    https://external-preview.redd.it/xYU-3tSLHWzv99fBSxrTGTABVVpSUDn9HhddJ89lYXs.png?auto=webp&s=d71ea46a0afd01b2f595a765602d088ced609155
+  score: 1
+  text: >-
+    I'm a QA engineer. After Claude wrote # TODO in my 100th test, I built an MCP server.
+
+
+    **TL;DR** — [mk-qa-master](https://github.com/kao273183/mk-qa-master) is an open-source MCP server that lets Claude
+    / Cursor / Codex / Gemini **drive your real test suite** — pytest, Jest, Cypress, Go test, and Maestro for mobile.
+    16 tools, 5 categories, a three-layer QA knowledge architecture. uvx-installable. MIT.
+
+
+    The moment I stopped blaming the model  
+
+    The 5th time Claude wrote # TODO: add real selector here in a generated test, I tried a smarter prompt. The 20th
+    time, I switched models. The 100th time, I stopped blaming the LLM.  
+
+    I'm a QA engineer. I've watched LLMs write beautiful-looking test scaffolds for two years now, and every one of them
+    collapses at the same place:  
+
+    The model can **read your code**. It cannot see your **live DOM**, your **mobile view hierarchy**, your **last 10
+    test runs**, or that checkout-flow.spec.ts has been red 7 times in 14 days.  
+
+    So it guesses. Guesses are how you get # TODO.  
+
+    The fix isn't a smarter prompt. It's giving the LLM **access** to the things it's currently guessing about.  
+
+    That's what the Model Context Protocol (MCP) is for. And that's why I built **mk-qa-master**.
+
+
+    What "AI for QA" usually means  
+
+    Most AI-for-testing products today fall into one of three buckets:  
+
+    **IDE plugins that emit test files** — Copilot Tests, Cursor's test generator. Great in a screenshot. They write the
+    file, *you* fix the selectors.  
+
+    **"Just prompt ChatGPT" tutorials** — works for one test, falls apart at ten. No persistence, no awareness of what's
+    actually flaky, no runtime feedback.  
+
+    **End-to-end AI testing SaaS** — record-and-playback wrappers. They own your test infrastructure, charge per seat,
+    and you're locked in.  
+
+    What's missing from all three: **the AI never touches the runner**. It writes code; you run; you debug; you tell the
+    AI what broke. It's a chatbot pretending to be an engineer.  
+
+    The reframe: stop asking AI to *write* tests. **Make it drive your test runner.**
+
+
+    What MCP changes  
+
+    MCP (introduced by Anthropic in lat
+
+    ... [truncated]
+  type: POST
+  url_overridden_by_dest: ''
+

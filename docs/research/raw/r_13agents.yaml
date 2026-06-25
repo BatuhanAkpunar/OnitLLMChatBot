@@ -1,0 +1,585 @@
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 0
+  text: "I Ship Software with 13 AI Agents. Here's What That Actually Looks Like\n\nThis is my terminal right now.\n\nhttps://preview.redd.it/siksnhhv1bmg1.png?width=1674&format=png&auto=webp&s=4b9f0385029bb77d4331493d7ee183de5a3c0f44\n\n13 Claude Code agents, each in its own tmux pane, working on the same codebase. Not as an experiment. Not as a flex. This is how I ship software every single day.\n\nThe project is\_[Beadbox](https://beadbox.app/), a real-time dashboard for monitoring AI coding agents. It's built by the very agent fleet it monitors. The agents write the code, test it, review it, package it, and ship it. I coordinate.\n\nIf you're running more than two or three agents and wondering how to keep track of what they're all doing, this is what I've landed on after months of iteration. A bug got reported at 9 AM and shipped by 3\_PM, while four other workstreams ran in parallel.\_[It doesn't always go smoothly](https://beadbox.app/en/blog/coding-with-13-agents#what-goes-wrong), but the throughput is real.\n\n# The Roster\n\nEvery agent has a\_[`CLAUDE.md`](http://CLAUDE.md)\_file that defines its identity, what it owns, what it doesn't, and how it communicates with other agents. These aren't generic \"do anything\" assistants. Each one has a narrow job and explicit boundaries.\n\n|Group|Agents|What they own|\n|:-|:-|:-|\n|Coordination|super,\_pm,\_owner|Work dispatch, product specs, business priorities|\n|Engineering|eng1,\_eng2,\_arch|Implementation, system design, test suites|\n|Quality|qa1,\_qa2|Independent validation, release gates|\n|Operations|ops,\_shipper|Platform testing, builds, release execution|\n|Growth|growth,\_pmm,\_pmm2|Analytics, positioning, public content|\n\nThe key word is\_*boundaries*.\_eng2\_can't close issues.\_qa1\_doesn't write code.\_pmm\_never touches the app source.\_Super\_dispatches work but doesn't implement. The boundaries exist because without them, agents drift. They \"help\" by refactoring code that didn't need refactoring, or closing issues that weren't verified, or making architectural decisions they're not qualified to make.\n\nEvery [CLAUDE.md](ht\n... [truncated]"
+  type: POST
+  url_overridden_by_dest: ''
+- author: gopietz
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 24
+  text: >-
+    I give you the benefit of the doubt, but all people who I respect in terms of their coding abilities use a pretty
+    vanilla setup. Whereas only on reddit will you find people with 13 agents in parallel and the most complicated meta
+    framework you can imagine. I'm just not convinced.
+  type: L0
+  url_overridden_by_dest: ''
+- author: FreeEye5
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 3
+  text: '  > Yup. Bug reported at 9am and shipped by 3pm after passing through 13 hands doesn''t sound like a flex to me. Sounds like why even bother with AI.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: Marcostbo
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: '  > If you know what you are doing you can do much better and cheaper than this mess by using a single Claude Code terminal and Copilot if you want some hands on action'
+  type: L1
+  url_overridden_by_dest: ''
+- author: AManHere
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: -2
+  text: "  > Very short minded of you. You can't even articulate \"why\" you think something, you just delegate that the SWEs you have seen before have simple setups\_"
+  type: L1
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: -3
+  text: '  > Curious if you find the end result interesting though. It’s that Beadbox app I linked in the post. Tauri app.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+2 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: Marcostbo
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 6
+  text: It's so sad that a part of SWE became this mess
+  type: L0
+  url_overridden_by_dest: ''
+- author: lunatuna215
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 15
+  text: >-
+    I'm not trying to hate, but posts like this REALLY validate my personal choice of having opted out of integrating
+    LLMs into my workflow entirely. They're just not for me. This is just such an unintuitive way of interacting with a
+    computer for me, and if creating things in general. Glad it's all working well for you though.
+  type: L0
+  url_overridden_by_dest: ''
+- author: LibertyCap10
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 14
+  text: |2-
+      > I feel like it's largely overthinking the problem. 
+      > I literally just tell Opus 4.6 what to do and make sure it's using scalable patterns. It creates the subagents and manages all that complexity. I think people who are working this way, coordinating agents manually, are just engaging in technical masturbation
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: '  > Respect. To each their own 🤷'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: itsgreater9000
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > running 13 agents concurrently feels like the monkeys writing shakespeare problem. we really are trying to figure out how to force the probability in our favor.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: Available_Ostrich888
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > Seems like OP could be a person who likes to masturbate with condoms.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: justacow
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: -1
+  text: '  > If you’re looking to validate yourself you can surely do it as Reddit is a feedback chamber, but you’d be doing yourself more of a favor not to'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '  [+2 more replies]'
+  type: L1
+  url_overridden_by_dest: ''
+- author: Thin_Command3196
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 5
+  text: As a security engineer and architect, i must confess i love vibecoding!   It keeps me relevant.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 0
+  text: '  > I have a cybersecurity background. There’s a reason this app is built to be fully offline'
+  type: L1
+  url_overridden_by_dest: ''
+- author: cant_pass_CAPTCHA
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 5
+  text: >-
+    This feels like the epitome of AI slop. AI systems to build AI systems to pump out slop at ever increasing rates
+    making output nobody checks. I couldn't get past the first few sentences because it's just a dense wall of slop. I
+    assume it was also written by 13 AI agents.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 0
+  text: '  > It’s only slop if it’s buggy or doesn’t provide value.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: Omikron
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 3
+  text: >-
+    There's no way this generates production quality code that can be trusted to be scalable and secure and
+    maintainability is probably trash.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > Why not?'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: Upset-Reflection-382
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: >-
+    Not sure if youve got their communication figured out or not, but I just built an inter-LLM mailbox that might be
+    useful to you 🙂
+
+
+    https://github.com/latentcollapse/Tether
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: '  > Interesting! Will check it out. Thanks!'
+  type: L1
+  url_overridden_by_dest: ''
+- author: zaalp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: '  > Woah very cool stared this!'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: Jumpy-Possibility754
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: Curious what constraint pushed this to 13. In most projects I’ve found tighter scoping beats parallel agent sprawl.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > I work in enterprise software in my day job so I just modeled roles after people I work with. Ended up with that amount between go to market and product development. Not all of my agents are engineering'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: '[deleted]'
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: '[deleted]'
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > It’s not at orchestrator. It’s a dashboard for an issue database'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ultrathink-art
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 4
+  text: >-
+    The fleet architecture is the part people underestimate.
+
+
+    Single agent vibe coding and 13-agent production systems are almost different activities. The single-agent
+    experience is flow and improvisation. The fleet experience is coordination policy: which agent owns which domain,
+    what happens when two agents reach conflicting conclusions, how do you route tasks without an agent taking on work
+    it wasn't scoped for.
+
+
+    We run 6 agents on a real e-commerce store. The biggest lesson: agents that are too general create ambiguity that
+    compounds. Narrow scope + clear handoffs beats capable-but-broad agents every time.
+  type: L0
+  url_overridden_by_dest: ''
+- author: IkuraNugget
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    Isn’t the biggest bottle neck burning tons of tokens? Might end up costing a lot of capital just running all these
+    agents concurrently
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > See my other answers. I only run 2 Max accounts, almost never run out. I may post a 20 min video I recorded the other day of them working'
+  type: L1
+  url_overridden_by_dest: ''
+- author: Ecaglar
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    ah yes 13 agents, 13 tmux panes, and probably a token bill that makes your accountant cry. jokes aside the qa
+    boundary thing is smart - every time ive let agents self-verify their own work something slips through. curious what
+    your monthly api spend looks like because at 13 agents it cant be pretty
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: |2-
+      > Only 400 a month. I’m splitting the work between 2 Claude Max accounts. I’m supervising 90% of the work they do so don’t need them to run overnight or anything. 
+      > If the agents stay on their rails more of the time i found you dont need an insane amount of tokens. The hard part is keeping them aligned
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+2 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: SilenceYous
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: How much does it cost to operate?
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > The agent swarm or the app? For the agent swarm I’m using 2 Claude Max accounts. The app is free to operate (completely offline)'
+  type: L1
+  url_overridden_by_dest: ''
+- author: Cast_Iron_Skillet
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    Man, I can't even get browser automation to work reliably most of the time. It's been an uphill battle. Antigravity
+    has pretty good browser controls but sucks at reading consoles and network logs. 
+
+
+    When/where do you take the time to define requirements for various things your agents are building, how do you avoid
+    agents tripping over each other working in the same folder/on the same files? 
+
+
+    Do you just create a bunch of beads epics with specs, then hand those off to the agents to process and break down? 
+
+
+    Everytime I've tried to hand off something like a multiphasic multi step implementation plan to multiple agents,
+    inevitably they get tripped up spiraling on test issues, tool call problems, other harness issues, or actually
+    finish but then I go to test and so much shit is unfinished or improperly implemented - then it's a process of
+    creating new branches to fix everything, test again, etc. 
+
+
+    Maybe I'm just not spending enough time trial and erroring this stuff. I love automation, but I haven't had ANY
+    success with effectively automating agentic coding tasks.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > Been working on it for a couple of months. One day at a time like anything'
+  type: L1
+  url_overridden_by_dest: ''
+- author: phatdoof
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    How do your customers react to the product produced by this setup, given there is less human oversight?
+
+
+    They may see features produced faster but do they report mistakes/inconsistencies in the product more due to less
+    human oversight?
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > I find its similar quality as a mid sized engineering team. There are bugs of course, but o iterate fast and have a fully automated release process. It helps that its a desktop app with no cloud dependency'
+  type: L1
+  url_overridden_by_dest: ''
+- author: eufemiapiccio77
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: "Agents get stuck.\_Sometimes an agent hits an error loop and just keeps retrying the same failing command.\_Super's patrol loop catches this, but only if you're checking frequently enough you need another two agents monitoring that then."
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > Super sets a background task to check the state of each agent every 3 mins, so it gets woken up.'
+  type: L1
+  url_overridden_by_dest: ''
+- author: AManHere
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: Have you tried evaluating your setup, running benchmarks like SweBech?
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > No. Could be interesting'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: jointheredditarmy
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    I’m not following what the point of this is… the bottleneck is clearly human judgement at this point, not agent
+    parallelization. I doubt a human can provide more “judgement” than 1-3 agents worth of code output…
+
+
+    Conversely if AI agents can operate entirely without human judgement why do I even need this dashboard? Just let
+    them run on their own. 
+
+
+    It’s pretty binary, and in neither scenario is this a good tool for developing quality products…
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > I’m just trying to provide visibility into the underlying issue database that agents drive'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ryan_the_dev
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: I do it better with one.
+  type: L0
+  url_overridden_by_dest: ''
+- author: beadboxapp
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > Show us'
+  type: L1
+  url_overridden_by_dest: ''
+- author: ''
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: ''
+  text: '    [+1 more replies]'
+  type: L2
+  url_overridden_by_dest: ''
+- author: warandomm
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: Nice
+  type: L0
+  url_overridden_by_dest: ''
+- author: issdn
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: Can u summarize this post
+  type: L0
+  url_overridden_by_dest: ''
+- author: dsolonenko
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: Sorry mate but you have to release the source code
+  type: L0
+  url_overridden_by_dest: ''
+- author: Lyukah
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: This is fucking horrific. Not something I would brag about
+  type: L0
+  url_overridden_by_dest: ''
+- author: kai_reflectt
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    The coordination layer between agents is exactly the hard part. Claude Code teams share a task list, but once you
+    scale beyond 3-4 agents you need more: presence tracking (who is active vs stuck), task ownership with mutex so two
+    agents do not claim the same work, and a communication channel that does not route through the human.
+
+
+    We run 9 agents coordinating through an HTTP API — task board, presence, team chat, all REST endpoints. Key finding:
+    agents with defined roles and explicit boundaries produce better results than general-purpose agents trying to do
+    everything.
+
+
+    Open source coordination server if anyone is interested: https://github.com/reflectt/reflectt-node
+  type: L0
+  url_overridden_by_dest: ''
+

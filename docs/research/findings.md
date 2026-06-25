@@ -89,3 +89,47 @@ Asıl bağlayıcılar: (a) entegrasyon/export (Linear/Notion tek tık), (b) coac
 4. **En basit arayüz:** Sohbet ekranı sade. 5 ajanı sürekli göstermek
    "tiyatro" hissi verir. Varsayılan: tek akış + tek artefakt; ekip detayı
    isteyene açılır.
+
+## 5. Genişletilmiş araştırma (2. tur)
+
+### 5.1 Çoklu-ajan gerçeği: sınırlar şart, ama kullanıcı filo koordine etmemeli
+"I Ship Software with 13 AI Agents" postu (pro çoklu-ajan pratisyeni) + yüksek
+oylu şüpheci yorumlar birlikte okununca net ders çıkıyor.
+- Savunucunun #1 dersi: **BOUNDARIES**. "Sınır olmadan ajanlar drift eder: gereksiz
+  refactor yapar, doğrulanmamış işi kapatır, yetkisi olmayan mimari kararı
+  verir." → Onit'in rol-sözleşmeleri (non-overlap) doğru içgüdü, korunmalı.
+- Şüpheciler (yüksek oy): "Saygı duyduğum herkes vanilla setup kullanıyor; 13
+  paralel ajan yalnız Reddit'te." / "Opus'a söylerim, alt-ajanları kendi yönetir;
+  manuel ajan koordinasyonu technical masturbation." / "9'dan 3'e, 13 elden
+  geçerek shipping flex değil."
+- **Onit çıkarımı:** Kullanıcı bir filoyu koordine ettiğini HİSSETMEMELİ.
+  Koordinasyon görünmez altyapı olmalı; kullanıcı niyetini söyler, TEK sonuç
+  döner. Bu, Faz 4b'yi (sentez-önce, tek ses, orchestration'ı gizle) doğrular.
+
+### 5.2 QA + AI: "mühendis taklidi yapan chatbot"
+QA mühendisi postu (mk-qa-master): LLM güzel görünen test iskeletleri yazar ama
+hep aynı yerde çöker. "Model kodu OKUYABİLİR; ama canlı DOM'u, mobil view
+hiyerarşisini, son 10 test koşusunu, checkout.spec'in 14 günde 7 kez kırmızı
+olduğunu GÖREMEZ. O yüzden tahmin eder. Tahmin = `# TODO`." Mevcut AI-QA
+ürünlerinin üçü de aynı kusur: "AI runner'a hiç dokunmaz; kod yazar, sen
+çalıştırıp debug edersin."
+- **Onit çıkarımı:** Onit'in QA rolü test KOŞMAZ, test PLANI üretir. O yüzden
+  dürüst olmalı: göremediğini (runtime, gerçek veri, flaky geçmiş) açıkça
+  işaretlemeli, uydurmamalı; her test vakasını konuşmadaki gerçek kabul
+  kriterine bağlamalı. "Looks good" yasak (zaten qa.md'de Definition-of-Done
+  bloğu var, korunmalı). Onit'in QA değeri = gereksinime bağlı düşünen plan,
+  test koşan robot taklidi değil.
+
+### 5.3 Workslop: cila değil, aşağı-akış eforu düşürmek
+"Workslop" (Stanford/HBR kavramı, çok sayıda yüksek-oylu thread): iş gibi
+GÖRÜNEN ama özü olmayan, gerçek işi alıcıya iten AI çıktısı. C-suite seviyor
+çünkü "slayt/e-posta/strateji" üretiyor; çalışan altında eziliyor.
+- **Onit çıkarımı:** Onit'in çıktısı aşağı-akış eforunu DÜŞÜRMELİ, yaratmamalı.
+  Her satır işi ilerletmeli; jenerik, herhangi-bir-ürün-için-doğru cümleler
+  yasak. (Bu tura product-os.ts'e "no workslop" kuralı olarak eklendi.)
+
+### 5.4 Cevap formatı: net progress > uzunluk
+Doğrudan sinyal zayıf ama tutarlı: "Tokens net useful progress ile ölçülmeli,
+uzunlukla değil." Workslop + "duvar-metin = tiyatro" ile birleşince varsayılan
+cevap kısa, karar-önce, taranabilir (başlık/liste/tablo) olmalı; uzun düzyazı
+yalnız kullanıcı isterse.
