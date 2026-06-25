@@ -30,6 +30,7 @@ import { RoutingControl, AgentMenu } from "./routing-control";
 import { RoleAvatar } from "./role-visual";
 import { MessageRow, OnitWorking } from "./message-row";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
+import { buildChatExport } from "@/lib/chat/export";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
@@ -808,18 +809,21 @@ export function ChatView({
   }
 
   function exportChat() {
-    const lines = [`# ${title}`, "", "> Exported from Onit AI", ""];
-    for (const m of messages) {
-      if (!m.content) continue;
-      const who =
-        m.role === "user"
-          ? t("you")
-          : m.agent_key === "coordinator"
-            ? "Onit"
-            : (agentByKey[m.agent_key ?? ""]?.display_name ?? "Agent");
-      lines.push(`## ${who}`, "", m.content, "");
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const md = buildChatExport(
+      title,
+      messages.map((m) => ({
+        role: m.role,
+        agentKey: m.agent_key,
+        content: m.content ?? "",
+      })),
+      {
+        exportedNote: t("exportedNote"),
+        brief: t("exportBrief"),
+        coordinatorName: "Onit",
+        nameFor: (key) => agentByKey[key]?.display_name ?? "Agent",
+      },
+    );
+    const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

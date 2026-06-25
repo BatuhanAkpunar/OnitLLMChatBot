@@ -8,6 +8,7 @@ import { modelCost } from "@/lib/ai/model-prices";
 import { parseOrchestration } from "@/lib/ai/orchestration";
 import { exceedsFreeDailyLimit } from "@/lib/billing";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
+import { buildChatExport } from "@/lib/chat/export";
 
 const agents = [
   { key: "analyst", handle: "@Analyst" },
@@ -368,5 +369,59 @@ describe("security", () => {
     expect(sanitizeOutput("Here is a normal helpful answer.")).toBe(
       "Here is a normal helpful answer.",
     );
+  });
+});
+
+describe("buildChatExport", () => {
+  const labels = {
+    exportedNote: "Exported from Onit AI",
+    brief: "Brief",
+    coordinatorName: "Onit",
+    nameFor: (key: string) =>
+      ({ analyst: "Analyst", qa: "QA Engineer" })[key] ?? "Agent",
+  };
+
+  it("uses the first user message as the brief and includes team outputs", () => {
+    const md = buildChatExport(
+      "Habit app",
+      [
+        { role: "user", content: "Build a habit tracker" },
+        { role: "agent", agentKey: "analyst", content: "Requirements: ..." },
+        { role: "agent", agentKey: "coordinator", content: "In short, ship X." },
+      ],
+      labels,
+    );
+    expect(md).toContain("# Habit app");
+    expect(md).toContain("## Brief\n\nBuild a habit tracker");
+    expect(md).toContain("## Analyst\n\nRequirements: ...");
+    expect(md).toContain("## Onit\n\nIn short, ship X.");
+  });
+
+  it("drops follow-up user prompts and empty messages", () => {
+    const md = buildChatExport(
+      "Spec",
+      [
+        { role: "user", content: "First idea" },
+        { role: "agent", agentKey: "qa", content: "" },
+        { role: "user", content: "Actually also add export" },
+        { role: "agent", agentKey: "qa", content: "Test cases: ..." },
+      ],
+      labels,
+    );
+    // brief kept, follow-up prompt dropped, empty message dropped
+    expect(md).toContain("First idea");
+    expect(md).not.toContain("Actually also add export");
+    expect(md).toContain("## QA Engineer\n\nTest cases: ...");
+    expect(md.match(/## /g)?.length).toBe(2); // Brief + QA only
+  });
+
+  it("resolves unknown agent keys to a generic name and trims content", () => {
+    const md = buildChatExport(
+      "X",
+      [{ role: "agent", agentKey: "ghost", content: "  hello  " }],
+      labels,
+    );
+    expect(md).toContain("## Agent\n\nhello");
+    expect(md.endsWith("\n")).toBe(true);
   });
 });
