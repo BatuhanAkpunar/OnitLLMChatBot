@@ -30,6 +30,21 @@ We lead with the job, not the title.
 - Memory: decisions, tasks and rules persist with the project and shape every
   answer.
 
+## Differentiation under pressure (from 2026-06 market research)
+Reddit research (`docs/research/findings.md`) shows this category faces two
+existential critiques. Onit's design must answer both, on purpose.
+- "It's just an LLM wrapper." As base models improve, generation alone is not a
+  moat. Onit's moat is what a fresh LLM chat structurally cannot do: persistent
+  project memory (decisions/tasks/rules that compound and are cited in the
+  output), an opinionated process that challenges the idea, and a concrete
+  buildable artifact (PRD + tasks + test plan) you can push to build.
+- "Agent teams are theater, not leverage." Multiple voices add coordination
+  cost, redundancy, and a mushy aggregate with no accountability. So Onit's team
+  must resolve into ONE decisive voice and ONE authoritative artifact. Rule:
+  default to a single role; multi-role only when parts are genuinely distinct,
+  and always reconciled into one synthesized answer. Each role's contribution is
+  labeled, non-redundant, and short. Less chat, more decision. No workslop.
+
 ## Brand and design rule (the balance)
 Decided: keep the arcade identity but balance it.
 - **Main flow is calm and premium** (composer, thread, plan, profile, project
