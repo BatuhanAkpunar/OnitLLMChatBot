@@ -17,6 +17,7 @@ import {
   Plus,
   ListNumbers,
   RocketLaunch,
+  PencilSimple,
   X,
 } from "@phosphor-icons/react";
 // Toasts are intentionally disabled on the chat screen (user preference): the
@@ -140,6 +141,10 @@ export function ChatView({
     tasks: { role: string; task: string; done: string; skill: string }[];
     text: string;
   } | null>(null);
+  // The plan card defaults to a calm one-line summary; the editable grid is
+  // behind "Edit" so the user is not forced to read and approve a full plan
+  // before seeing any output.
+  const [planExpanded, setPlanExpanded] = useState(false);
   // Step-by-step runs pause here between tasks so the user stays in control.
   const [pendingNext, setPendingNext] = useState<{
     tasks: { role: string; task?: string; done?: string; skill?: string }[];
@@ -545,6 +550,7 @@ export function ChatView({
 
     // Multi-role auto plans wait for the user's approval before the team runs.
     if (recordAs === "auto" && plan.length > 1) {
+      setPlanExpanded(false);
       setPendingPlan({
         tasks: plan.map((p) => ({
           role: p.role,
@@ -1353,10 +1359,30 @@ export function ChatView({
                   <span className="text-sm font-semibold">
                     {t("planDrafted", { n: pendingPlan.tasks.length })}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {t("planEditHint")}
-                  </span>
+                  {planExpanded ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("planEditHint")}
+                    </span>
+                  ) : null}
                 </div>
+                {!planExpanded ? (
+                  <ol className="space-y-1 px-4 py-3.5 text-sm">
+                    {pendingPlan.tasks.map((step, i) => {
+                      const a = agentByKey[step.role];
+                      return (
+                        <li key={i} className="flex gap-2 leading-snug">
+                          <span
+                            className="shrink-0 font-mono text-[12px] font-semibold"
+                            style={a ? { color: `var(--agent-${a.color})` } : undefined}
+                          >
+                            {a?.handle ?? step.role}
+                          </span>
+                          <span className="text-foreground/85">{step.task}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
                 <ul className="space-y-2 px-4 py-3.5">
                   {pendingPlan.tasks.map((step, i) => {
                     const a = agentByKey[step.role];
@@ -1436,6 +1462,7 @@ export function ChatView({
                     </button>
                   </li>
                 </ul>
+                )}
                 <div className="flex flex-wrap gap-2 border-t border-violet-500/15 px-4 py-3">
                   <button
                     type="button"
@@ -1456,6 +1483,14 @@ export function ChatView({
                       {t("runStepByStep")}
                     </button>
                   ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setPlanExpanded((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-xs font-medium transition-colors hover:bg-accent"
+                  >
+                    <PencilSimple size={13} weight="bold" />
+                    {planExpanded ? t("done") : t("edit")}
+                  </button>
                   <button
                     type="button"
                     onClick={cancelPlan}
