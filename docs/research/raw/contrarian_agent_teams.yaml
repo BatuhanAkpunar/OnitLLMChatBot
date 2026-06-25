@@ -1,0 +1,58 @@
+- author: keamo
+  gallery_urls: []
+  post_hint: image
+  preview_image_url: https://preview.redd.it/wqfdn6but59h1.png?auto=webp&s=fbbfeaeb159569321a02e89bd83efaa0a128cd35
+  score: 1
+  text: >-
+    The Contrarian Take: Why AI Agent Teams Are Overrated (and What to Do Instead)
+
+
+    Everyone's excited about "AI agent teams"-a planner agent, a researcher agent, a coder agent, a critic agent, all
+    chatting in a neat little swarm. It sounds like a mini-company in a box.
+
+
+    Here's the contrarian view: in most real workflows, agent teams are more theater than leverage. They add
+    coordination costs, compound mistakes, and make it harder to know what actually happened. If you've tried them and
+    felt like you got a lot of words but not a lot of progress, you're not crazy.
+
+
+    ## The hidden costs: coordination, redundancy, and blame-shifting
+
+    Agent teams are expensive in the ways that don't show up on the demo.
+
+
+    First, coordination overhead. Every "handoff" between agents is another chance for lost context: the researcher
+    summarizes poorly, the planner misreads the summary, the executor confidently implements the wrong thing. You end up
+    spending your time reconciling agents instead of moving the work forward.
+
+
+    Second, redundancy masquerading as robustness. Two agents "independently" researching often means two slightly
+    different hallucinations, both delivered with confidence. Or they scrape the same surface-level sources and present
+    it as consensus.
+
+
+    Third, accountability disappears. When a single assistant produces a result, you can interrogate the chain of
+    reasoning. With a team, it's easy to get a mushy aggregate: "Agent A said X, Agent B disagreed, Agent C merged it."
+    Great-so what's true?
+
+
+    Practical example: drafting a product requirements doc. A team might create (1) an overlong market summary, (2) a
+    feature list that doesn't match constraints, (3) a critical review that nitpicks tone, then (4) a final merge that
+    contradicts itself. A single well-instructed assistant, working with your real constraints and a crisp template,
+    often produces a tighter PRD in less time.
+
+
+    ## When a single agent beats a swarm (most of the time)
+
+    Most business tasks are not "parallelizable" the way people think. They're bottlenecked by decisions, context, and
+    verification.
+
+
+    If the
+
+    ... [truncated]
+
+    https://i.redd.it/wqfdn6but59h1.png
+  type: POST
+  url_overridden_by_dest: https://i.redd.it/wqfdn6but59h1.png
+

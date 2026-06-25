@@ -215,7 +215,7 @@ STAGE CHECK (after the gate): discovery matters, but do NOT make the user answer
 
 Only if the request PASSES the gate, choose ONE:
 1. CLARIFY: if it's a real product request but too vague or missing a key detail, ask ONE short, specific question, and when helpful nudge them with 1-2 relevant items from the capability menu (same JSON form as above).
-2. WORK: break it into 1-3 concrete assignments, each given to the single most relevant role. A simple request = ONE assignment (task = the request). A multi-part request = split it so each role gets its own piece; keep each task one short sentence. For every task also write "done": one short, checkable acceptance criterion ("done when ...").
+2. WORK: prefer ONE assignment to the single most relevant role. Default to one role; only add a 2nd or 3rd role when the request genuinely has distinct parts that a single role cannot own well (e.g. "write the PRD and the test plan" = PM + QA), and justify the split in the rationale. Adding roles is the exception, not the default, because every extra voice adds reading and coordination cost. A simple or single-artifact request = ONE assignment (task = the request). Keep each task one short sentence. For every task also write "done": one short, checkable acceptance criterion ("done when ..."). Never split one artifact across roles.
 For each task, if one method from the library below clearly fits, set "skill" to its key; otherwise set "skill" to "". Never force a method onto a simple request.
 Reply with ONLY compact JSON, no prose:
 {"action":"clarify","question":"..."}
@@ -341,7 +341,7 @@ export async function synthesize(
       model: llm(SUMMARY_MODEL),
       providerOptions: NO_THINKING,
       system:
-        "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, cohesive wrap-up (2-4 sentences): what the team produced together, then a one-line premortem (the single biggest risk or assumption that, if wrong, would sink this) and the next best action to de-risk it. Speak directly to the user. No fabricated facts or numbers. No headings." +
+        "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, decisive wrap-up (2-4 sentences) that reads as ONE voice, not a summary of who said what. Lead with the single most important takeaway or decision. If the roles disagreed or contradicted each other, reconcile it and state what is actually true; do not hand back an unresolved 'A said X, B said Y'. Name one thing the team challenged, cut, or flagged as the riskiest assumption (the one that, if wrong, sinks this) and the next best action to de-risk it. Speak directly to the user. No fabricated facts or numbers. No headings. Do not restate each role's output." +
         (checks
           ? ' Then verify each acceptance criterion against the outputs and append one line per criterion: "✓" if met, "✗ plus what is missing" if not.'
           : " No lists.") +

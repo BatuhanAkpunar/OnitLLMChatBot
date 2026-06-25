@@ -1,0 +1,172 @@
+- author: Round_Ad_3709
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 0
+  text: >-
+    ChatPRD - Looking for advice
+
+
+    I'm somewhat skeptical about ChatPRD and want to learn from those who have successfully used it. How does ChatPRD
+    distinguish itself from a PRD created by other advanced LLMs? For example, if I'm working on an SAP implementation,
+    can ChatPRD also produce technical requirements documents? That's where most of our project's challenges lie. Thank
+    you for your assistance.
+  type: POST
+  url_overridden_by_dest: ''
+- author: krucksdev
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 43
+  text: That's nothing ChatPRD can do that Claude can't do with the right skill instructions and context
+  type: L0
+  url_overridden_by_dest: ''
+- author: TYoungprofessional
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: '  > This 100% '
+  type: L1
+  url_overridden_by_dest: ''
+- author: brg36
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 17
+  text: >-
+    I am also a skeptic for this same reason. ChatPRD feels like a cash grab by Claire Vo (is she on here? Hi Claire!)
+    and, based on what I understand from those on my team who have tested it out, the value of it over a general purpose
+    LLM is rapidly diminishing. There are certainly custom GPTs and Claude skills that you could add that would further
+    enhance what those LLMs can do. I certainly would not pay for ChatPRD at this point, but that’s just me. 
+  type: L0
+  url_overridden_by_dest: ''
+- author: gefahr
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 3
+  text: |2-
+      > I mean, are all value-add businesses "cash grabs"?
+      > 
+      > When ChatPRD came out, effectively prompting (and feeding context to) LLMs was *way* harder than it is with the current models and harnesses.
+      > 
+      > I don't use it personally so I can't speak to OP's question about how much better it is over using vanilla tools, but I'm sure it still comes down to how good the user is at promoting. And in my experience seeing hundreds of people use these tools at $job, the vast majority are quite bad at it. So there's probably still value, even for the average PM.
+      > 
+      > But I agree with you, if you're an effective power user of Claude, I would lean into that and develop your own skills etc.
+  type: L1
+  url_overridden_by_dest: ''
+- author: weekapaugrooove
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 5
+  text: >-
+    Check out
+    [https://github.com/anombyte93/prd-taskmaster/issues](https://github.com/anombyte93/prd-taskmaster/issues) 
+
+
+    I've worked that into a flow with agent-os and feel really good about the PRD output being both technical and
+    product functionally oriented. 
+
+
+    This is how I use use them together. [https://github.com/bzellman/earp-kit](https://github.com/bzellman/earp-kit)
+    but just note that for me, the skills are mostly coupled around iOS, Vue, and GCP. 
+
+
+    If you go through agent-OS's discovery and setup steps, you'll be in a good spot, I didn't start greenfield and had
+    minimal issues grounding. 
+  type: L0
+  url_overridden_by_dest: ''
+- author: cornelln
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 4
+  text: >-
+    I feel like so many of these the business is thin template wrapper exist for people who already have no idea what a
+    PRD is. So they service a purpose and are helpful. No harm. But if you have experience or already understand this
+    process why use it? And or you likely have personal opinions on the format to the point that those are in fact a
+    competitive edge for you somehow.
+  type: L0
+  url_overridden_by_dest: ''
+- author: ImpressiveChoice3487
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 3
+  text: >-
+    I used it at an org where I had no time to build context in an LLM. It was nice for someone who knew what they
+    wanted to do, but didn’t have the time to build it. 
+
+
+    Now, I’m a heavy user of Claude skills and Cowork and see absolutely zero need for the LLM wrapper that is chatprd. 
+  type: L0
+  url_overridden_by_dest: ''
+- author: ConditionLopsided
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 4
+  text: Do not pay for something like ChatPRD, ever. 🙄
+  type: L0
+  url_overridden_by_dest: ''
+- author: istealreceipts
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 3
+  text: ChatPRD is horseshit, and anyone with half a brain can write a prompt in ANY LLM tool to the same outcomes.
+  type: L0
+  url_overridden_by_dest: ''
+- author: megatronVI
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 4
+  text: 'ChatPRD is a scam. Use Claude  '
+  type: L0
+  url_overridden_by_dest: ''
+- author: Round_Ad_3709
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 2
+  text: Thanks for the insights everyone!
+  type: L0
+  url_overridden_by_dest: ''
+- author: ConstantKooky3329
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: 'You can use claude to create your own PRDs and RFCs. You''ll have to configure projects, cowork and skills. '
+  type: L0
+  url_overridden_by_dest: ''
+- author: Dylando_Calrissian
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: "As models have got better (especially Claude), there's less value add from prompt wrapper tools like chatPRD.\_\n\n\nIt was good at first but now the delta between what you get from chatPRD and what you get from Claude Opus is not really enough to justify using a whole separate tool, imo."
+  type: L0
+  url_overridden_by_dest: ''
+- author: re-11111
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: it's a wrapper , use Claude Skills
+  type: L0
+  url_overridden_by_dest: ''
+- author: th3chainrule
+  gallery_urls: []
+  post_hint: ''
+  preview_image_url: ''
+  score: 1
+  text: >-
+    It’s just a wrapper and I’m pretty sure all of the system prompts were leaked and posted on GitHub if you search for
+    it. 
+  type: L0
+  url_overridden_by_dest: ''
+
