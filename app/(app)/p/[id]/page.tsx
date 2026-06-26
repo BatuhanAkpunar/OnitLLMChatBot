@@ -32,7 +32,7 @@ export default async function ProjectPage(props: {
   ] = await Promise.all([
     supabase
       .from("messages")
-      .select("id, role, agent_key, content, thinking, status, feedback, edited_at")
+      .select("id, role, agent_key, content, thinking, status, feedback, edited_at, kind")
       .eq("project_id", id)
       .order("created_at", { ascending: true }),
     getAgentRoster(),

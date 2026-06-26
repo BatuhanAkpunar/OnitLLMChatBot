@@ -258,6 +258,7 @@ export async function orchestrate(
 export async function saveCoordinatorMessage(
   projectId: string,
   content: string,
+  kind?: string,
 ): Promise<{ id: string | null }> {
   const user = await getCurrentUser();
   if (!user) return { id: null };
@@ -277,6 +278,8 @@ export async function saveCoordinatorMessage(
       agent_key: "coordinator",
       content,
       status: "complete",
+      // Only set `kind` when given so plan/clarify saves stay column-agnostic.
+      ...(kind ? { kind } : {}),
     })
     .select("id")
     .single();

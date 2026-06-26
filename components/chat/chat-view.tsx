@@ -599,7 +599,7 @@ export function ChatView({
           .map((p) => ({ role: p.role, done: p.done! })),
       );
       if (wrap) {
-        const { id } = await saveCoordinatorMessage(projectId, wrap);
+        const { id } = await saveCoordinatorMessage(projectId, wrap, "synthesis");
         setMessages((m) => [
           ...m,
           {
