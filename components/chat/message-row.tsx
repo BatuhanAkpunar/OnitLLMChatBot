@@ -75,6 +75,7 @@ export function MessageRow({
   canPickOption,
   onPickOption,
   suppressWaiting,
+  thinkingLabel,
 }: {
   message: Message;
   agent?: Agent;
@@ -93,6 +94,8 @@ export function MessageRow({
   /** During a coordinated team run, a single run-level progress line replaces
    *  the per-teammate thinking pill, so callers can suppress it here. */
   suppressWaiting?: boolean;
+  /** "Thinking" label in the conversation language (falls back to UI language). */
+  thinkingLabel?: string;
 }) {
   const { t } = useI18n();
   if (message.role === "user") {
@@ -217,7 +220,9 @@ export function MessageRow({
               <span />
               <span />
             </span>
-            <span className="font-pixel tracking-wide">{t("thinking")}</span>
+            <span className="font-pixel tracking-wide">
+              {thinkingLabel ?? t("thinking")}
+            </span>
           </span>
         ) : null}
 

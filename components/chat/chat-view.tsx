@@ -37,6 +37,7 @@ import { OrbMark } from "@/components/brand/orb";
 import { TopBar } from "@/components/nav/top-bar";
 import { useI18n } from "@/components/i18n-provider";
 import { translate } from "@/lib/i18n";
+import { detectLang } from "@/lib/lang-detect";
 import type { ProjectListItem } from "@/components/nav/history-button";
 import type { CurrentUser } from "@/lib/auth/user";
 import { parseMentions } from "@/lib/mentions";
@@ -99,6 +100,7 @@ export function ChatView({
   initialTasks = [],
   initialDecisions = [],
   lang = "en",
+  replyPref = "auto",
   user = null,
   projects = [],
 }: {
@@ -113,6 +115,8 @@ export function ChatView({
   initialDecisions?: ProjectDecision[];
   /** Conversation language: the user's reply preference, app language as fallback. */
   lang?: "en" | "tr";
+  /** Raw reply-language preference. "auto" means follow what the user writes. */
+  replyPref?: "auto" | "en" | "tr";
   user?: CurrentUser | null;
   projects?: ProjectListItem[];
 }) {
@@ -217,6 +221,22 @@ export function ChatView({
   }, [projectId]);
 
   const isStreaming = messages.some((m) => m.status === "streaming");
+
+  // The language Onit's own UI (thinking pill, status lines, switch notice)
+  // speaks in. A fixed reply preference wins; in "auto" we follow the language
+  // the user is actually writing in (latest confident detection), falling back
+  // to the server-resolved `lang`.
+  const convLang: "en" | "tr" = useMemo(() => {
+    if (replyPref === "tr" || replyPref === "en") return replyPref;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === "user" && m.content) {
+        const d = detectLang(m.content);
+        if (d) return d;
+      }
+    }
+    return lang;
+  }, [messages, replyPref, lang]);
 
   useEffect(() => {
     if (atBottom || isStreaming) {
@@ -451,10 +471,40 @@ export function ChatView({
 
     const inline = parseMentions(text, agents.map((a) => ({ key: a.key, handle: a.handle })));
 
+    // Auto reply-language: if the user confidently switches the language they
+    // write in, Onit acknowledges it once (in the new language) and points to
+    // settings. Skipped when the user has fixed a reply language.
+    let switchNote: Message | null = null;
+    if (replyPref === "auto") {
+      const newLang = detectLang(text);
+      let priorLang: "en" | "tr" | null = null;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const m = messages[i];
+        if (m.role === "user" && m.content) {
+          const d = detectLang(m.content);
+          if (d) {
+            priorLang = d;
+            break;
+          }
+        }
+      }
+      if (newLang && priorLang && newLang !== priorLang) {
+        switchNote = {
+          id: `tmp-langsw-${Date.now()}`,
+          role: "agent",
+          agent_key: "coordinator",
+          content: translate(newLang, "langSwitched"),
+          status: "complete",
+          kind: "lang-switch",
+        };
+      }
+    }
+
     const tmpUserId = `tmp-u-${Date.now()}`;
     setMessages((m) => [
       ...m,
       { id: tmpUserId, role: "user", agent_key: null, content: text, status: "complete" },
+      ...(switchNote ? [switchNote] : []),
     ]);
     setAtBottom(true);
     await sendUserMessage(projectId, text);
@@ -1027,6 +1077,7 @@ export function ChatView({
       onCancelEdit={() => setEditingId(null)}
       onFeedback={giveFeedback}
       suppressWaiting={runProgress != null}
+      thinkingLabel={translate(convLang, "thinking")}
       canPickOption={
         m.id === lastMessage?.id &&
         m.role === "agent" &&
@@ -1417,16 +1468,20 @@ export function ChatView({
                 rowFor(it.m)
               ),
             )}
-            {routing ? <OnitWorking label={t("routingWorking")} /> : null}
+            {routing ? (
+              <OnitWorking label={translate(convLang, "routingWorking")} />
+            ) : null}
             {runProgress ? (
               <OnitWorking
-                label={t("teamWorking", {
+                label={translate(convLang, "teamWorking", {
                   x: runProgress.current,
                   n: runProgress.total,
                 })}
               />
             ) : null}
-            {synthesizing ? <OnitWorking label={t("synthWorking")} /> : null}
+            {synthesizing ? (
+              <OnitWorking label={translate(convLang, "synthWorking")} />
+            ) : null}
             {pendingPlan && !busy ? (
               <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">
                 <div className="flex items-baseline gap-2.5 px-4 pt-3.5">

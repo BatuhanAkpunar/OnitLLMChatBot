@@ -8,6 +8,7 @@ import { modelCost } from "@/lib/ai/model-prices";
 import { parseOrchestration } from "@/lib/ai/orchestration";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { buildChatExport } from "@/lib/chat/export";
+import { detectLang } from "@/lib/lang-detect";
 
 const agents = [
   { key: "analyst", handle: "@Analyst" },
@@ -350,6 +351,29 @@ describe("security", () => {
     expect(sanitizeOutput("Here is a normal helpful answer.")).toBe(
       "Here is a normal helpful answer.",
     );
+  });
+});
+
+describe("detectLang", () => {
+  it("detects Turkish from Turkish-only letters", () => {
+    expect(detectLang("Bir alışkanlık takip uygulaması yap")).toBe("tr");
+    expect(detectLang("Login ekranı için test senaryoları çıkar")).toBe("tr");
+  });
+
+  it("detects Turkish from stopwords even without special chars", () => {
+    expect(detectLang("bana bir plan yapar misin")).toBe("tr");
+  });
+
+  it("detects English", () => {
+    expect(detectLang("Write a PRD for a habit tracker app")).toBe("en");
+    expect(detectLang("can you make the checkout flow")).toBe("en");
+  });
+
+  it("returns null for short or ambiguous input (no false switch)", () => {
+    expect(detectLang("ok")).toBeNull();
+    expect(detectLang("@QA")).toBeNull();
+    expect(detectLang("Onit")).toBeNull();
+    expect(detectLang("123 456")).toBeNull();
   });
 });
 

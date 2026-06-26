@@ -89,6 +89,12 @@ export default async function ProjectPage(props: {
       initialTasks={(tasks ?? []) as ProjectTask[]}
       initialDecisions={(decisions ?? []) as ProjectDecision[]}
       lang={convLang}
+      replyPref={
+        profile?.preferred_language === "tr" ||
+        profile?.preferred_language === "en"
+          ? profile.preferred_language
+          : "auto"
+      }
       user={user}
       projects={projects ?? []}
     />

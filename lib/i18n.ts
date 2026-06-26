@@ -50,6 +50,8 @@ const en = {
   appLanguage: "App language",
   repliesIn: "Replies in",
   langAuto: "Auto",
+  langSwitched:
+    "Got it, I switched to English and will keep going in English. You can change this anytime in settings (Replies in).",
   usage: "Usage",
   statChats: "Chats",
   statMessages: "Messages",
@@ -295,6 +297,8 @@ const tr: Record<I18nKey, string> = {
   appLanguage: "Uygulama dili",
   repliesIn: "Yanıt dili",
   langAuto: "Otomatik",
+  langSwitched:
+    "Anladım, dili Türkçeye çevirdim ve bundan sonra Türkçe devam edeceğim. İstersen bunu ayarlardan değiştirebilirsin (Yanıt dili).",
   usage: "Kullanım",
   statChats: "Sohbet",
   statMessages: "Mesaj",
