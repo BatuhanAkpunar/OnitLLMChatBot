@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed:agents": "node --env-file=.env.local scripts/seed-agents.mjs",
-    "seed:skills": "node --env-file=.env.local scripts/seed-skills.mjs"
+    "seed:skills": "node --env-file=.env.local scripts/seed-skills.mjs",
+    "eval:routing": "node --env-file=.env.local evals/routing.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.81",
