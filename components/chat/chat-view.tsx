@@ -146,6 +146,13 @@ export function ChatView({
   // behind "Edit" so the user is not forced to read and approve a full plan
   // before seeing any output.
   const [planExpanded, setPlanExpanded] = useState(false);
+  // During a multi-role run, show ONE "Onit team is working (x/N)" line instead
+  // of a separate thinking pill popping up for each teammate, so the run reads
+  // as one coordinated partner rather than several bots booting up.
+  const [runProgress, setRunProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   // Step-by-step runs pause here between tasks so the user stays in control.
   const [pendingNext, setPendingNext] = useState<{
     tasks: { role: string; task?: string; done?: string; skill?: string }[];
@@ -649,12 +656,15 @@ export function ChatView({
       return;
     }
 
+    const coordinated = plan.length > 1;
     for (let i = 0; i < plan.length; i++) {
+      if (coordinated) setRunProgress({ current: i + 1, total: plan.length });
       markBacklogTask(persistedIds, i, "doing");
       await runAgent(plan[i].role, plan[i].task, plan[i].skill);
       if (stoppedRef.current) break;
       markBacklogTask(persistedIds, i, "done");
     }
+    setRunProgress(null);
 
     if (plan.length > 1 && !stoppedRef.current) {
       await wrapUp(plan, text);
@@ -1338,6 +1348,7 @@ export function ChatView({
                 onSaveEdit={saveEdit}
                 onCancelEdit={() => setEditingId(null)}
                 onFeedback={giveFeedback}
+                suppressWaiting={runProgress != null}
                 canPickOption={
                   m.id === lastMessage?.id &&
                   m.role === "agent" &&
@@ -1355,6 +1366,14 @@ export function ChatView({
               />
             ))}
             {routing ? <OnitWorking label={t("routingWorking")} /> : null}
+            {runProgress ? (
+              <OnitWorking
+                label={t("teamWorking", {
+                  x: runProgress.current,
+                  n: runProgress.total,
+                })}
+              />
+            ) : null}
             {synthesizing ? <OnitWorking label={t("synthWorking")} /> : null}
             {pendingPlan && !busy ? (
               <div className="overflow-hidden rounded-2xl border border-violet-500/25 bg-violet-500/[0.04]">

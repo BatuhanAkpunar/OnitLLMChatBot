@@ -74,6 +74,7 @@ export function MessageRow({
   onFeedback,
   canPickOption,
   onPickOption,
+  suppressWaiting,
 }: {
   message: Message;
   agent?: Agent;
@@ -89,6 +90,9 @@ export function MessageRow({
   onFeedback: (m: Message, value: 1 | -1) => void;
   canPickOption: boolean;
   onPickOption: (option: string) => void;
+  /** During a coordinated team run, a single run-level progress line replaces
+   *  the per-teammate thinking pill, so callers can suppress it here. */
+  suppressWaiting?: boolean;
 }) {
   const { t } = useI18n();
   if (message.role === "user") {
@@ -148,7 +152,10 @@ export function MessageRow({
       : "var(--muted-foreground)";
   const name = isCoordinator ? "Onit" : (agent?.display_name ?? "Agent");
   const waiting =
-    message.status === "streaming" && !message.content && !message.thinking;
+    !suppressWaiting &&
+    message.status === "streaming" &&
+    !message.content &&
+    !message.thinking;
 
   return (
     <div className="group flex gap-3">
