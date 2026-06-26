@@ -18,6 +18,7 @@ import {
   ListNumbers,
   RocketLaunch,
   PencilSimple,
+  CaretDown,
   X,
 } from "@phosphor-icons/react";
 // Toasts are intentionally disabled on the chat screen (user preference): the
@@ -78,6 +79,10 @@ export type Message = {
   status: string;
   feedback?: number | null;
   edited_at?: string | null;
+  /** Client-only tag (not persisted yet): "synthesis" marks Onit's wrap-up so
+   *  a finished multi-role run renders as one headline with the teammate
+   *  outputs collapsed beneath it. Absent on history reload (old flat view). */
+  kind?: string | null;
 };
 
 
@@ -614,6 +619,7 @@ export function ChatView({
             agent_key: "coordinator",
             content: wrap,
             status: "complete",
+            kind: "synthesis",
           },
         ]);
       }
@@ -1016,6 +1022,74 @@ export function ChatView({
     </>
   );
 
+  const rowFor = (m: Message) => (
+    <MessageRow
+      key={m.id}
+      message={m}
+      agent={m.agent_key ? agentByKey[m.agent_key] : undefined}
+      busy={busy}
+      editing={editingId === m.id}
+      editValue={editValue}
+      onEditChange={setEditValue}
+      onCopy={copyMessage}
+      onRegenerate={regenerate}
+      onStartEdit={startEdit}
+      onSaveEdit={saveEdit}
+      onCancelEdit={() => setEditingId(null)}
+      onFeedback={giveFeedback}
+      suppressWaiting={runProgress != null}
+      canPickOption={
+        m.id === lastMessage?.id &&
+        m.role === "agent" &&
+        m.status === "complete" &&
+        !busy
+      }
+      onPickOption={(opt) =>
+        submit(
+          opt,
+          m.agent_key && m.agent_key !== "coordinator" ? [m.agent_key] : undefined,
+        )
+      }
+    />
+  );
+
+  // A finished multi-role run renders as ONE headline (Onit's synthesis) with
+  // the teammate outputs collapsed beneath it: group a synthesis message with
+  // the contiguous teammate messages immediately before it. During the run
+  // (no synthesis yet) everything renders flat, so progress stays visible.
+  type ThreadItem =
+    | { type: "msg"; m: Message }
+    | { type: "team"; synthesis: Message; contributors: Message[] };
+  const threadItems: ThreadItem[] = [];
+  for (const m of messages) {
+    const isSynthesis =
+      m.role === "agent" &&
+      m.agent_key === "coordinator" &&
+      m.kind === "synthesis";
+    if (isSynthesis) {
+      const contributors: Message[] = [];
+      let prev = threadItems[threadItems.length - 1];
+      while (
+        prev &&
+        prev.type === "msg" &&
+        prev.m.role === "agent" &&
+        prev.m.agent_key !== "coordinator"
+      ) {
+        contributors.unshift(prev.m);
+        threadItems.pop();
+        prev = threadItems[threadItems.length - 1];
+      }
+      if (contributors.length >= 2) {
+        threadItems.push({ type: "team", synthesis: m, contributors });
+      } else {
+        for (const c of contributors) threadItems.push({ type: "msg", m: c });
+        threadItems.push({ type: "msg", m });
+      }
+    } else {
+      threadItems.push({ type: "msg", m });
+    }
+  }
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RetroBackdrop grid={false} className="opacity-70" />
@@ -1333,38 +1407,33 @@ export function ChatView({
                 </div>
               </div>
             ) : null}
-            {messages.map((m) => (
-              <MessageRow
-                key={m.id}
-                message={m}
-                agent={m.agent_key ? agentByKey[m.agent_key] : undefined}
-                busy={busy}
-                editing={editingId === m.id}
-                editValue={editValue}
-                onEditChange={setEditValue}
-                onCopy={copyMessage}
-                onRegenerate={regenerate}
-                onStartEdit={startEdit}
-                onSaveEdit={saveEdit}
-                onCancelEdit={() => setEditingId(null)}
-                onFeedback={giveFeedback}
-                suppressWaiting={runProgress != null}
-                canPickOption={
-                  m.id === lastMessage?.id &&
-                  m.role === "agent" &&
-                  m.status === "complete" &&
-                  !busy
-                }
-                onPickOption={(opt) =>
-                  submit(
-                    opt,
-                    m.agent_key && m.agent_key !== "coordinator"
-                      ? [m.agent_key]
-                      : undefined,
-                  )
-                }
-              />
-            ))}
+            {threadItems.map((it) =>
+              it.type === "team" ? (
+                <div key={it.synthesis.id} className="space-y-3">
+                  {rowFor(it.synthesis)}
+                  <details className="group ml-0 rounded-xl border border-border bg-card/40 px-3.5 py-2.5 sm:ml-[58px] [&_summary::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground">
+                      <CaretDown size={13} className="transition-transform group-open:rotate-180" />
+                      {t("teamContributed", {
+                        roles: it.contributors
+                          .map(
+                            (c) =>
+                              agentByKey[c.agent_key ?? ""]?.handle ??
+                              c.agent_key ??
+                              "",
+                          )
+                          .join(", "),
+                      })}
+                    </summary>
+                    <div className="mt-4 space-y-6">
+                      {it.contributors.map((c) => rowFor(c))}
+                    </div>
+                  </details>
+                </div>
+              ) : (
+                rowFor(it.m)
+              ),
+            )}
             {routing ? <OnitWorking label={t("routingWorking")} /> : null}
             {runProgress ? (
               <OnitWorking
