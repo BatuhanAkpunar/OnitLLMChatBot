@@ -1,6 +1,8 @@
 // USD per 1M tokens (input, output) for the models we expose. Prices are
 // Google AI Studio list prices; unknown models cost 0 so logging never breaks.
 const PRICES: Record<string, { input: number; output: number }> = {
+  "gemini-2.5-flash": { input: 0.3, output: 2.5 },
+  "gemini-2.0-flash": { input: 0.1, output: 0.4 },
   "gemini-3.5-flash": { input: 1.5, output: 9 },
 };
 

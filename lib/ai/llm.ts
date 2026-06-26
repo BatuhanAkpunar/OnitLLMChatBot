@@ -8,16 +8,21 @@ export const google = createGoogleGenerativeAI({
     "",
 });
 
+// gemini-3.5-flash is the newest model but is frequently overloaded (503
+// "high demand"), which left users with empty answers. We default to the
+// stable, generally-available gemini-2.5-flash and fall back to gemini-2.0-flash
+// if it ever errors, so the app keeps working through any single-model outage.
+// All overridable via env.
 export const DEFAULT_MODEL =
-  process.env.GEMINI_DEFAULT_MODEL ?? "gemini-3.5-flash";
+  process.env.GEMINI_DEFAULT_MODEL ?? "gemini-2.5-flash";
 
 /** Lightweight model for thinking bubbles, titles and summaries. */
 export const SUMMARY_MODEL =
-  process.env.GEMINI_SUMMARY_MODEL ?? "gemini-3.5-flash";
+  process.env.GEMINI_SUMMARY_MODEL ?? "gemini-2.5-flash";
 
-/** Used when the primary model errors or times out mid-request. */
+/** A DIFFERENT model used when the primary errors or times out mid-request. */
 export const FALLBACK_MODEL =
-  process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash";
+  process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.0-flash";
 
 /** Legacy agent rows may still hold OpenRouter ids ("openai/gpt-4o-mini"). */
 export function llm(model: string) {
