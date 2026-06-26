@@ -10,7 +10,6 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { llm, SUMMARY_MODEL, NO_THINKING } from "@/lib/ai/llm";
 import { modelCost } from "@/lib/ai/model-prices";
-import { exceedsFreeDailyLimit, startOfDayISO } from "@/lib/billing";
 import {
   parseOrchestration,
   type OrchestrateResult,
@@ -401,7 +400,7 @@ export async function createProjectAndGetId(): Promise<{ id: string | null }> {
 export async function sendUserMessage(
   projectId: string,
   content: string,
-): Promise<{ ok: boolean; limit?: boolean }> {
+): Promise<{ ok: boolean }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false };
   const text = content.trim();
@@ -414,25 +413,6 @@ export async function sendUserMessage(
     .eq("id", projectId)
     .maybeSingle();
   if (!project) return { ok: false };
-
-  // Free plan: cap daily messages. The count comes from the user's own rows
-  // (RLS + owner_id), so no counter column is needed. Pro is unlimited.
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  if ((prof?.plan ?? "free") !== "pro") {
-    const { count } = await supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id)
-      .eq("role", "user")
-      .gte("created_at", startOfDayISO());
-    if (exceedsFreeDailyLimit(prof?.plan, count ?? 0)) {
-      return { ok: false, limit: true };
-    }
-  }
 
   const { error } = await supabase.from("messages").insert({
     project_id: projectId,

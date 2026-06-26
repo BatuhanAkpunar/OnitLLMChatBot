@@ -6,7 +6,6 @@ import { detectInjectionAttempt, sanitizeOutput } from "@/lib/security";
 import { splitOptions } from "@/lib/options";
 import { modelCost } from "@/lib/ai/model-prices";
 import { parseOrchestration } from "@/lib/ai/orchestration";
-import { exceedsFreeDailyLimit } from "@/lib/billing";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { buildChatExport } from "@/lib/chat/export";
 
@@ -238,24 +237,6 @@ describe("parseOrchestration", () => {
 
   it("throws on a clarify decision with a blank question", () => {
     expect(() => parseOrchestration('{"action":"clarify","question":"   "}', opts)).toThrow();
-  });
-});
-
-describe("exceedsFreeDailyLimit", () => {
-  it("never caps a Pro user, no matter the count", () => {
-    expect(exceedsFreeDailyLimit("pro", 9999)).toBe(false);
-  });
-
-  it("blocks a Free user exactly at the cap", () => {
-    // Boundary: the cap is 20 and the check is inclusive, so the 21st send (20
-    // already sent today) is the one that gets blocked.
-    expect(exceedsFreeDailyLimit("free", 20)).toBe(true);
-    expect(exceedsFreeDailyLimit("free", 19)).toBe(false);
-  });
-
-  it("treats a missing or null plan as Free", () => {
-    expect(exceedsFreeDailyLimit(null, 20)).toBe(true);
-    expect(exceedsFreeDailyLimit(undefined, 5)).toBe(false);
   });
 });
 
