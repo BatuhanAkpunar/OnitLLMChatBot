@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -34,7 +34,16 @@ function PreBlock({ children }: { children?: React.ReactNode }) {
   );
 }
 
-export function Markdown({ children }: { children: string }) {
+// Memoized: markdown parsing (remark-gfm + syntax highlight) is the most
+// expensive work in a message row. During streaming, setMessages fires on every
+// token and re-renders the whole thread; without memo, every row would re-parse
+// its markdown each token. Keyed on the content string, so only the row whose
+// text actually changed re-parses; unchanged rows skip the work.
+export const Markdown = memo(function Markdown({
+  children,
+}: {
+  children: string;
+}) {
   return (
     <div className="markdown">
       <ReactMarkdown
@@ -46,4 +55,4 @@ export function Markdown({ children }: { children: string }) {
       </ReactMarkdown>
     </div>
   );
-}
+});

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ReactScan } from "@/components/dev/react-scan";
 import { I18nProvider } from "@/components/i18n-provider";
 import { resolveAppLanguage } from "@/lib/i18n-server";
 
@@ -42,6 +43,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${pixelifySans.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
+        <ReactScan />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
