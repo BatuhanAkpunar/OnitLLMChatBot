@@ -250,7 +250,9 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {t("usage")}
                   </div>
-                  <div className="grid grid-cols-4 divide-x divide-border rounded-xl border-[1.5px] border-border bg-muted/30 py-2.5">
+                  {/* Cost is internal telemetry: the app is free, so the user
+                      panel shows only what is theirs (admin keeps costs). */}
+                  <div className="grid grid-cols-3 divide-x divide-border rounded-xl border-[1.5px] border-border bg-muted/30 py-2.5">
                     <Stat
                       label={t("statChats")}
                       value={stats ? fmt(stats.chats) : "·"}
@@ -262,14 +264,6 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                     <Stat
                       label={t("statTokens")}
                       value={stats ? fmt(stats.tokens) : "·"}
-                    />
-                    <Stat
-                      label={t("statCost")}
-                      value={
-                        stats
-                          ? `$${stats.costUsd.toFixed(stats.costUsd < 1 ? 3 : 2)}`
-                          : "·"
-                      }
                     />
                   </div>
                 </div>

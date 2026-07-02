@@ -156,7 +156,7 @@ export function Party({
       </div>
 
       {/* the crew row (Onit is the coordinator, not listed here) */}
-      <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5">
+      <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
         {roles.map((a, i) => {
           const isActive = active.key === a.key;
           return (
@@ -173,7 +173,7 @@ export function Party({
               }`}
               style={isActive ? { borderColor: `var(--agent-${a.color})` } : undefined}
             >
-              <RoleAvatar roleKey={a.key} color={a.color} size={46} rounded="rounded-[10px]" />
+              <RoleAvatar roleKey={a.key} color={a.color} size={56} rounded="rounded-[10px]" />
             </button>
           );
         })}

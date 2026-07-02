@@ -33,6 +33,16 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="relative z-10 min-h-0 flex-1">{children}</main>
+
+      {/* Quiet close: the page used to end abruptly right after the CTA. */}
+      <footer className="relative z-10 border-t border-border/60 px-5 py-5">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 font-mono text-[11.5px] text-muted-foreground">
+          <span>© 2026 Onit AI</span>
+          <span className="hidden sm:block">
+            Analyst · PM · Designer · Project Manager · QA
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

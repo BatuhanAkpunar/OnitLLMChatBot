@@ -3,7 +3,7 @@
 import { memo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
+import { rehypeHighlightLite } from "@/lib/rehype-highlight-lite";
 import { Copy } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
@@ -48,7 +48,7 @@ export const Markdown = memo(function Markdown({
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        rehypePlugins={[rehypeHighlightLite]}
         components={{ pre: PreBlock }}
       >
         {children}

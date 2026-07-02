@@ -140,6 +140,8 @@ export function RoleAvatar({
         alt=""
         width={size}
         height={size}
+        loading="lazy"
+        decoding="async"
         draggable={false}
         onError={() => {
           // A missing gesture frame just disables the wave; base failing hides.

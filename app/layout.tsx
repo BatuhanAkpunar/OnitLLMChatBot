@@ -25,9 +25,26 @@ const pixelifySans = Pixelify_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://onit-ai.vercel.app",
+  ),
   title: "Onit AI · Your AI product team",
   description:
     "Brief a party of AI specialists - Analyst, PM, Designer, QA - in one chat. They plan, debate, and build with you.",
+  openGraph: {
+    title: "Onit AI · Your AI product team",
+    description:
+      "Describe your idea once. A full AI product team challenges it, shapes it, and turns it into a plan you can build on.",
+    url: "/",
+    siteName: "Onit AI",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Onit AI · Your AI product team",
+    description:
+      "Describe your idea once. A full AI product team turns it into a plan you can build on.",
+  },
 };
 
 export default async function RootLayout({

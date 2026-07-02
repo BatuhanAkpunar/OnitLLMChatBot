@@ -56,7 +56,6 @@ const en = {
   statChats: "Chats",
   statMessages: "Messages",
   statTokens: "Tokens",
-  statCost: "Cost",
   adminPanel: "Admin panel",
   signOut: "Sign out",
 
@@ -303,7 +302,6 @@ const tr: Record<I18nKey, string> = {
   statChats: "Sohbet",
   statMessages: "Mesaj",
   statTokens: "Token",
-  statCost: "Maliyet",
   adminPanel: "Yönetim paneli",
   signOut: "Çıkış yap",
 

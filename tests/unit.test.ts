@@ -9,6 +9,8 @@ import { parseOrchestration } from "@/lib/ai/orchestration";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { buildChatExport } from "@/lib/chat/export";
 import { detectLang } from "@/lib/lang-detect";
+import { rehypeHighlightLite } from "@/lib/rehype-highlight-lite";
+import type { Root as HastRoot, Element as HastElement } from "hast";
 
 const agents = [
   { key: "analyst", handle: "@Analyst" },
@@ -351,6 +353,44 @@ describe("security", () => {
     expect(sanitizeOutput("Here is a normal helpful answer.")).toBe(
       "Here is a normal helpful answer.",
     );
+  });
+});
+
+describe("rehypeHighlightLite", () => {
+  const codeBlock = (lang: string | null, value: string): HastRoot => ({
+    type: "root",
+    children: [
+      {
+        type: "element",
+        tagName: "pre",
+        properties: {},
+        children: [
+          {
+            type: "element",
+            tagName: "code",
+            properties: lang ? { className: [`language-${lang}`] } : {},
+            children: [{ type: "text", value }],
+          },
+        ],
+      },
+    ],
+  });
+
+  it("highlights a registered language and adds the hljs class", () => {
+    const tree = codeBlock("ts", "const x: number = 1;");
+    rehypeHighlightLite()(tree);
+    const code = (tree.children[0] as HastElement).children[0] as HastElement;
+    expect(code.properties?.className).toContain("hljs");
+    expect(code.children.some((c) => c.type === "element")).toBe(true); // spans
+  });
+
+  it("leaves unknown or unlabeled blocks untouched", () => {
+    for (const tree of [codeBlock("brainfuck", "+++"), codeBlock(null, "plain")]) {
+      rehypeHighlightLite()(tree);
+      const code = (tree.children[0] as HastElement).children[0] as HastElement;
+      expect(code.properties?.className ?? []).not.toContain("hljs");
+      expect(code.children[0]?.type).toBe("text");
+    }
   });
 });
 
