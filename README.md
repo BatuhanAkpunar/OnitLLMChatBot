@@ -143,7 +143,7 @@ Apply the schema in the Supabase SQL editor by running the files in
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server only) |
-| `GEMINI_API_KEY` | Google AI Studio API key |
+| `GEMINI_API_KEY` | Google AI Studio API key. Optional: the hosted app is bring-your-own-key (each user pastes their own key in Settings, stored in an httpOnly cookie), so production leaves this unset. Set it only for local dev or a self-hosted single-key deploy. |
 | `GEMINI_DEFAULT_MODEL` | Chat model (default `gemini-2.5-flash`) |
 | `GEMINI_FALLBACK_MODEL` | Failover model when the primary is overloaded |
 | `NEXT_PUBLIC_SITE_URL` | App URL, used for the OAuth redirect |
@@ -173,9 +173,10 @@ npm run eval:routing   # live routing eval against the model
 
 ## Status
 
-Live at [onit-ai.vercel.app](https://onit-ai.vercel.app) and free to use. Actively
-built. The working notes, product north star, and competitive research live under
-[`docs/`](docs/).
+Live at [onit-ai.vercel.app](https://onit-ai.vercel.app) and free: you bring your
+own Google Gemini API key (getting one is free), pasted once in Settings and kept
+only in your browser session, never on the server. Actively built. The working
+notes, product north star, and competitive research live under [`docs/`](docs/).
 
 ---
 

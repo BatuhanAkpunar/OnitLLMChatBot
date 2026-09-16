@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth/user";
 import { generateText } from "ai";
 import { llm, SUMMARY_MODEL, NO_THINKING } from "@/lib/ai/llm";
+import { getUserGeminiKey } from "@/lib/ai/user-key";
 import { modelCost } from "@/lib/ai/model-prices";
 import {
   parseOrchestration,
@@ -226,7 +227,7 @@ export async function orchestrate(
     let lastErr = "";
     for (let attempt = 0; attempt < 2; attempt++) {
       const { text: out, usage } = await generateText({
-        model: llm(SUMMARY_MODEL),
+        model: llm(SUMMARY_MODEL, await getUserGeminiKey()),
         providerOptions: NO_THINKING,
         system,
         prompt:
@@ -330,7 +331,7 @@ export async function synthesize(
     .join("\n");
   try {
     const { text, usage } = await generateText({
-      model: llm(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL, await getUserGeminiKey()),
       providerOptions: NO_THINKING,
       system:
         "You are Onit, the team coordinator. The team just finished working on the user's request. Write a brief, decisive wrap-up (2-4 sentences) that reads as ONE voice, not a summary of who said what. Lead with the single most important takeaway or decision. If the roles disagreed or contradicted each other, reconcile it and state what is actually true; do not hand back an unresolved 'A said X, B said Y'. Name one thing the team challenged, cut, or flagged as the riskiest assumption (the one that, if wrong, sinks this) and the next best action to de-risk it. Speak directly to the user. No fabricated facts or numbers. No headings. Do not restate each role's output." +
@@ -787,7 +788,7 @@ export async function captureDecisions(
 
   try {
     const { text: out, usage } = await generateText({
-      model: llm(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL, await getUserGeminiKey()),
       providerOptions: NO_THINKING,
       system: `You extract DECISIONS from a software team's outputs: choices that constrain future work (stack picks, scope cuts, architectural or process commitments, prioritization verdicts). Not summaries, not tasks, not opinions.
 Reply with ONLY compact JSON: {"decisions":[{"title":"short imperative title","because":["concrete reason",...],"despite":["accepted downside",...],"constraints":["rule future work MUST follow",...]}]}
@@ -897,7 +898,7 @@ export async function statusSummary(projectId: string): Promise<{ text: string }
     .join("\n");
   try {
     const { text, usage } = await generateText({
-      model: llm(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL, await getUserGeminiKey()),
       providerOptions: NO_THINKING,
       system:
         "You are Onit, the team coordinator. Give the user a crisp status report of this project: 1) What was decided or produced so far (2-3 bullets). 2) The backlog state (done / in progress / open, by count and the most important open item). 3) The single most useful next step. Keep it under 120 words, use short bullets, speak directly to the user." +

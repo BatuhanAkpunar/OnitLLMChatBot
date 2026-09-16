@@ -31,6 +31,8 @@ import { RoleAvatar } from "./role-visual";
 import { MessageRow, OnitWorking } from "./message-row";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { buildChatExport } from "@/lib/chat/export";
+import { GeminiKeyGate } from "./gemini-key-gate";
+import { geminiKeyStatus } from "@/app/(app)/key-actions";
 import { RetroBackdrop } from "@/components/ui/retro-backdrop";
 import { getStarters } from "./starters";
 import { OrbMark } from "@/components/brand/orb";
@@ -161,6 +163,14 @@ export function ChatView({
     current: number;
     total: number;
   } | null>(null);
+  // Bring-your-own-key: null while loading, then whether the user has stored a
+  // Gemini key. When false, the composer is replaced by the key gate.
+  const [keySet, setKeySet] = useState<boolean | null>(null);
+  useEffect(() => {
+    geminiKeyStatus()
+      .then((r) => setKeySet(r.set))
+      .catch(() => setKeySet(true));
+  }, []);
   // Step-by-step runs pause here between tasks so the user stays in control.
   const [pendingNext, setPendingNext] = useState<{
     tasks: { role: string; task?: string; done?: string; skill?: string }[];
@@ -1775,6 +1785,9 @@ export function ChatView({
               </div>
             ) : null}
 
+            {keySet === false ? (
+              <GeminiKeyGate onSaved={() => setKeySet(true)} />
+            ) : (
             <div ref={composerBoxRef} className="pixel-panel p-2">
               <textarea
                 ref={taRef}
@@ -1841,6 +1854,7 @@ export function ChatView({
                 <AgentMenu agents={agents} pinned={pinned} onChange={setPinned} />
               ) : null}
             </div>
+            )}
           </div>
         </div>
       </div>

@@ -16,6 +16,7 @@ export async function maybeSummarizeProject(
   supabase: SupabaseClient,
   projectId: string,
   ownerId: string,
+  apiKey?: string,
 ): Promise<void> {
   const { count } = await supabase
     .from("messages")
@@ -42,7 +43,7 @@ export async function maybeSummarizeProject(
     .join("\n");
 
   const { text: summary } = await generateText({
-    model: llm(SUMMARY_MODEL),
+    model: llm(SUMMARY_MODEL, apiKey),
     providerOptions: NO_THINKING,
     system:
       "Summarize this conversation excerpt in 3-5 concise bullet points, emphasizing decisions made, conclusions reached, and open questions. Output only the bullets.",
@@ -74,7 +75,7 @@ export async function maybeSummarizeProject(
   if (rollings && rollings.length > MAX_ROLLING) {
     const toCollapse = rollings.slice(0, rollings.length - MAX_ROLLING);
     const { text: intro } = await generateText({
-      model: llm(SUMMARY_MODEL),
+      model: llm(SUMMARY_MODEL, apiKey),
       providerOptions: NO_THINKING,
       system:
         "Compress these summaries into a SINGLE sentence capturing what this project is about and its key decisions so far.",

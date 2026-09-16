@@ -52,6 +52,19 @@ const en = {
   langAuto: "Auto",
   langSwitched:
     "Got it, I switched to English and will keep going in English. You can change this anytime in settings (Replies in).",
+  keyGateTitle: "Bring your own Gemini key",
+  keyGateBody:
+    "Onit runs on your own Google Gemini API key. Add it once to start. Getting a key is free.",
+  keyGet: "Get a free key",
+  keySave: "Save key",
+  keyInvalid: "That does not look like a valid API key.",
+  keyPrivacy:
+    "Stored only in your browser session as a secure cookie. It is never saved to our servers.",
+  keySection: "Gemini API key",
+  keyStatusSet: "Added",
+  keyStatusUnset: "Not added",
+  keyRemove: "Remove",
+  keyComposerHint: "Add your Gemini key above to start",
   usage: "Usage",
   statChats: "Chats",
   statMessages: "Messages",
@@ -298,6 +311,19 @@ const tr: Record<I18nKey, string> = {
   langAuto: "Otomatik",
   langSwitched:
     "Anladım, dili Türkçeye çevirdim ve bundan sonra Türkçe devam edeceğim. İstersen bunu ayarlardan değiştirebilirsin (Yanıt dili).",
+  keyGateTitle: "Kendi Gemini anahtarını getir",
+  keyGateBody:
+    "Onit senin kendi Google Gemini API anahtarınla çalışır. Başlamak için bir kez ekle. Anahtar almak ücretsiz.",
+  keyGet: "Ücretsiz anahtar al",
+  keySave: "Anahtarı kaydet",
+  keyInvalid: "Bu geçerli bir API anahtarına benzemiyor.",
+  keyPrivacy:
+    "Yalnızca senin tarayıcı oturumunda güvenli bir çerez olarak saklanır. Sunucularımıza asla kaydedilmez.",
+  keySection: "Gemini API anahtarı",
+  keyStatusSet: "Ekli",
+  keyStatusUnset: "Ekli değil",
+  keyRemove: "Kaldır",
+  keyComposerHint: "Başlamak için yukarıdan Gemini anahtarını ekle",
   usage: "Kullanım",
   statChats: "Sohbet",
   statMessages: "Mesaj",

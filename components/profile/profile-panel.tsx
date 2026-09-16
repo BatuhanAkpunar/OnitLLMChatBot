@@ -13,6 +13,7 @@ import {
   SignOut as SignOutIcon,
   X,
   CaretRight,
+  ArrowSquareOut,
 } from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
 import {
@@ -21,6 +22,11 @@ import {
   setPreferredLanguage,
   setAppLanguage,
 } from "@/app/(app)/actions";
+import {
+  saveGeminiKey,
+  clearGeminiKey,
+  geminiKeyStatus,
+} from "@/app/(app)/key-actions";
 import { useI18n } from "@/components/i18n-provider";
 import type { CurrentUser } from "@/lib/auth/user";
 import type { PreferredLanguage } from "@/lib/ai/guardrails";
@@ -63,6 +69,10 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
   const [mode, setMode] = useState("build");
   const [replyLang, setReplyLang] = useState<PreferredLanguage | null>(null);
   const [appLang, setAppLang] = useState<AppLanguagePref | null>(null);
+  const [keySet, setKeySet] = useState<boolean | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [keyErr, setKeyErr] = useState(false);
+  const [keyBusy, setKeyBusy] = useState(false);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -86,7 +96,32 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
         setReplyLang("auto");
         setAppLang("auto");
       });
+    geminiKeyStatus()
+      .then((r) => setKeySet(r.set))
+      .catch(() => setKeySet(null));
   }, [open]);
+
+  async function saveKey() {
+    const k = keyInput.trim();
+    if (!k || keyBusy) return;
+    setKeyBusy(true);
+    setKeyErr(false);
+    const res = await saveGeminiKey(k);
+    setKeyBusy(false);
+    if (res.ok) {
+      setKeyInput("");
+      setKeySet(true);
+    } else {
+      setKeyErr(true);
+    }
+  }
+
+  async function removeKey() {
+    setKeyBusy(true);
+    await clearGeminiKey().catch(() => {});
+    setKeyBusy(false);
+    setKeySet(false);
+  }
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -243,6 +278,71 @@ export function ProfilePanel({ user }: { user: CurrentUser | null }) {
                       ))}
                     </Segmented>
                   </PrefRow>
+                </div>
+
+                {/* Gemini API key: bring your own */}
+                <div className="mt-5">
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {t("keySection")}
+                  </div>
+                  <div className="rounded-xl border-[1.5px] border-border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            keySet ? "bg-emerald-500" : "bg-muted-foreground/40"
+                          }`}
+                        />
+                        {keySet ? t("keyStatusSet") : t("keyStatusUnset")}
+                      </span>
+                      {keySet ? (
+                        <button
+                          type="button"
+                          onClick={removeKey}
+                          disabled={keyBusy}
+                          className="rounded-md px-2 py-1 text-[12px] font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                        >
+                          {t("keyRemove")}
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="mt-2.5 flex gap-2">
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        spellCheck={false}
+                        value={keyInput}
+                        onChange={(e) => {
+                          setKeyInput(e.target.value);
+                          setKeyErr(false);
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && saveKey()}
+                        placeholder="AIza..."
+                        className="min-w-0 flex-1 rounded-lg border-[1.5px] border-border bg-background px-2.5 py-1.5 font-mono text-[12.5px] outline-none focus:border-foreground/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveKey}
+                        disabled={keyBusy || !keyInput.trim()}
+                        className="pressable shrink-0 rounded-lg border-[1.5px] border-foreground bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        {t("keySave")}
+                      </button>
+                    </div>
+                    {keyErr ? (
+                      <p className="mt-1.5 text-[11.5px] font-medium text-destructive">
+                        {t("keyInvalid")}
+                      </p>
+                    ) : null}
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="mt-2 inline-flex items-center gap-1 text-[11.5px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    >
+                      {t("keyGet")} <ArrowSquareOut size={12} weight="bold" />
+                    </a>
+                  </div>
                 </div>
 
                 {/* usage: one quiet strip, not four boxes */}

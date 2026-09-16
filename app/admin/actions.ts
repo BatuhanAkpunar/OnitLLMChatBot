@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAgentColor } from "@/lib/agent-colors";
 import { generateText } from "ai";
 import { llm, DEFAULT_MODEL } from "@/lib/ai/llm";
+import { getUserGeminiKey } from "@/lib/ai/user-key";
 import { modelCost, MODEL_CHOICES } from "@/lib/ai/model-prices";
 import { buildSystemPrompt } from "@/lib/ai/guardrails";
 
@@ -102,7 +103,7 @@ export async function testAgentPrompt(
   const started = Date.now();
   try {
     const { text, usage } = await generateText({
-      model: llm(m),
+      model: llm(m, await getUserGeminiKey()),
       system: buildSystemPrompt(draftPrompt),
       prompt: sample,
       maxOutputTokens: 700,

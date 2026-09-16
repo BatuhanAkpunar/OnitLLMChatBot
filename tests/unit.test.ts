@@ -9,6 +9,7 @@ import { parseOrchestration } from "@/lib/ai/orchestration";
 import { drainEvents, applyEvent, initialRow, finalizeRow } from "@/lib/chat/stream";
 import { buildChatExport } from "@/lib/chat/export";
 import { detectLang } from "@/lib/lang-detect";
+import { looksLikeGeminiKey } from "@/lib/ai/user-key";
 import { rehypeHighlightLite } from "@/lib/rehype-highlight-lite";
 import type { Root as HastRoot, Element as HastElement } from "hast";
 
@@ -468,5 +469,25 @@ describe("buildChatExport", () => {
     );
     expect(md).toContain("## Agent\n\nhello");
     expect(md.endsWith("\n")).toBe(true);
+  });
+});
+
+describe("looksLikeGeminiKey", () => {
+  it("accepts a legacy AIza key", () => {
+    expect(looksLikeGeminiKey("AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx012")).toBe(
+      true,
+    );
+  });
+  it("accepts a newer AQ. key (current Google AI Studio format)", () => {
+    // Shape of a current key, with fake body: "AQ." prefix, dot/dash/underscore.
+    expect(
+      looksLikeGeminiKey("AQ.Ab8_EXAMPLEexampleEXAMPLEexample_fake-KEY-000"),
+    ).toBe(true);
+  });
+  it("rejects junk: empty, too short, or containing spaces", () => {
+    expect(looksLikeGeminiKey("")).toBe(false);
+    expect(looksLikeGeminiKey("   ")).toBe(false);
+    expect(looksLikeGeminiKey("short")).toBe(false);
+    expect(looksLikeGeminiKey("has spaces in it not a key")).toBe(false);
   });
 });

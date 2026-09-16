@@ -13,6 +13,7 @@ import { modelCost } from "@/lib/ai/model-prices";
 import { buildSystemPrompt, languageRule } from "@/lib/ai/guardrails";
 import { buildContext } from "@/lib/context";
 import { maybeSummarizeProject } from "@/lib/summarize";
+import { getUserGeminiKey } from "@/lib/ai/user-key";
 import {
   detectInjectionAttempt,
   sanitizeOutput,
@@ -62,6 +63,16 @@ export async function POST(req: Request) {
     typeof body.task === "string" ? body.task.slice(0, 600).trim() : "";
   if (!projectId || !agentKey) {
     return new Response("Missing required fields.", { status: 400 });
+  }
+
+  // Bring-your-own-key: read the user's Gemini key here, while the request's
+  // cookie scope is still available (it is gone inside the streaming callback).
+  const userKey = await getUserGeminiKey();
+  if (!userKey) {
+    return new Response(
+      "Add your own Gemini API key in Settings to start chatting.",
+      { status: 400 },
+    );
   }
 
   const admin = createAdminClient();
@@ -259,7 +270,7 @@ export async function POST(req: Request) {
 
         async function runAnswer(model: string) {
           const s = streamText({
-            model: llm(model),
+            model: llm(model, userKey),
             system: sysFull,
             messages: ctx,
             abortSignal: timeout.signal,
@@ -333,7 +344,7 @@ export async function POST(req: Request) {
             // usage logging is best-effort
           }
           try {
-            await maybeSummarizeProject(admin, projectId, user.id);
+            await maybeSummarizeProject(admin, projectId, user.id, userKey);
           } catch {
             // auto-summarization is best-effort
           }
